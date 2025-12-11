@@ -1,0 +1,13 @@
+# 用户数据（不要上传到 GitHub）
+users/
+users.json
+history.json
+
+# Python
+__pycache__/
+*.pyc
+.env
+
+# IDE
+.vscode/
+.idea/
