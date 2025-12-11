@@ -105,7 +105,39 @@ def get_user_history_file(username):
     """获取用户的历史记录文件路径"""
     return os.path.join(USERS_DIR, username, "history.json")
 
+def get_user_config_file(username):
+    """获取用户的配置文件路径"""
+    return os.path.join(USERS_DIR, username, "config.json")
+
 # ==================== 文件操作（基于当前用户）====================
+
+def load_user_config():
+    """读取当前用户的 API 配置"""
+    if "current_user" not in st.session_state or not st.session_state.current_user:
+        return {"api_url": DEFAULT_API_URL, "api_key": DEFAULT_API_KEY, "model": DEFAULT_MODEL}
+    try:
+        config_file = get_user_config_file(st.session_state.current_user)
+        with open(config_file, "r", encoding="utf-8") as f:
+            config = json.load(f)
+            return {
+                "api_url": config.get("api_url", DEFAULT_API_URL),
+                "api_key": config.get("api_key", DEFAULT_API_KEY),
+                "model": config.get("model", DEFAULT_MODEL)
+            }
+    except:
+        return {"api_url": DEFAULT_API_URL, "api_key": DEFAULT_API_KEY, "model": DEFAULT_MODEL}
+
+def save_user_config(api_url, api_key, model):
+    """保存当前用户的 API 配置"""
+    if "current_user" not in st.session_state or not st.session_state.current_user:
+        return False
+    try:
+        config_file = get_user_config_file(st.session_state.current_user)
+        with open(config_file, "w", encoding="utf-8") as f:
+            json.dump({"api_url": api_url, "api_key": api_key, "model": model}, f, ensure_ascii=False, indent=2)
+        return True
+    except:
+        return False
 
 def load_history():
     """读取当前用户的历史记录"""
@@ -530,6 +562,7 @@ if not st.session_state.current_user:
                             create_user_dir(username)  # 确保用户目录存在
                             # 重置所有数据状态，强制重新加载用户数据
                             st.session_state.history = None
+                            st.session_state.user_config = None  # 重新加载用户配置
                             st.session_state.ai_results = []
                             st.session_state.final_result = ""
                             st.session_state.translated_result = ""
@@ -588,14 +621,28 @@ with col_user:
 # 创建标签页
 tab1, tab2, tab3 = st.tabs(["🤖 AI 修改", "📋 规则管理", "⚙️ API 配置"])
 
+# 加载用户的 API 配置
+if "user_config" not in st.session_state or st.session_state.user_config is None:
+    st.session_state.user_config = load_user_config()
+
 # API 配置放在第三个标签页
 with tab3:
+    st.subheader("API 配置")
+    st.caption("配置会自动保存到您的账户")
+    
     col1, col2 = st.columns(2)
     with col1:
-        api_url = st.text_input("API URL", value=DEFAULT_API_URL)
-        api_key = st.text_input("API Key", value=DEFAULT_API_KEY, type="password")
+        api_url = st.text_input("API URL", value=st.session_state.user_config.get("api_url", DEFAULT_API_URL), key="api_url_input")
+        api_key = st.text_input("API Key", value=st.session_state.user_config.get("api_key", DEFAULT_API_KEY), type="password", key="api_key_input")
     with col2:
-        model = st.text_input("模型名称", value=DEFAULT_MODEL)
+        model = st.text_input("模型名称", value=st.session_state.user_config.get("model", DEFAULT_MODEL), key="model_input")
+    
+    if st.button("💾 保存配置", type="primary"):
+        if save_user_config(api_url, api_key, model):
+            st.session_state.user_config = {"api_url": api_url, "api_key": api_key, "model": model}
+            st.success("✅ 配置已保存")
+        else:
+            st.error("❌ 保存失败")
 
 # 初始化 session state
 if "ai_results" not in st.session_state:
