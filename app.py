@@ -2,8 +2,8 @@ import sys
 import os
 import hashlib
 
-# 只有直接运行 python app.py 时才自动启动
-if len(sys.argv) == 1 and not os.environ.get("STREAMLIT_RUNTIME"):
+# 只有本地直接运行 python app.py 时才自动启动（Streamlit Cloud 不需要）
+if len(sys.argv) == 1 and not os.environ.get("STREAMLIT_RUNTIME") and not os.environ.get("STREAMLIT_SHARING"):
     os.environ["STREAMLIT_RUNTIME"] = "1"
     import subprocess
     subprocess.Popen([
