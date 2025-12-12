@@ -18,6 +18,11 @@ import re
 import json
 import requests
 import shutil
+import base64
+from io import BytesIO
+
+# 粘贴按钮组件已移除（会导致弹窗问题）
+HAS_PASTE_BUTTON = False
 
 # 默认 API 配置
 DEFAULT_API_URL = "https://apic1.ohmycdn.com/api/v1/ai/openai/cc-omg/v1/chat/completions"
@@ -444,19 +449,31 @@ STEP_NAMES = [
     "Step 7: 最终输出"
 ]
 
-def call_single_step(prompt, api_url, api_key, model):
-    """单次 API 调用"""
+def call_single_step(prompt, api_url, api_key, model, image_base64=None):
+    """单次 API 调用，支持图片"""
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
+    
+    # 构建消息内容
+    if image_base64:
+        # 带图片的消息
+        content = [
+            {"type": "text", "text": prompt},
+            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_base64}"}}
+        ]
+    else:
+        content = prompt
+    
     data = {
         "model": model,
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": [{"role": "user", "content": content}],
         "temperature": 0.3
     }
     try:
-        response = requests.post(api_url, headers=headers, json=data, timeout=120)
+        # 禁用代理直连
+        response = requests.post(api_url, headers=headers, json=data, timeout=120, proxies={"http": None, "https": None})
         response.raise_for_status()
         result = response.json()
         return result["choices"][0]["message"]["content"], True
@@ -619,14 +636,172 @@ with col_user:
         st.rerun()
 
 # 创建标签页
-tab1, tab2, tab3 = st.tabs(["🤖 AI 修改", "📋 规则管理", "⚙️ API 配置"])
+tab1, tab2, tab3, tab4 = st.tabs(["🤖 AI 修改", "📋 规则管理", "💬 聊天", "⚙️ API 配置"])
 
 # 加载用户的 API 配置
 if "user_config" not in st.session_state or st.session_state.user_config is None:
     st.session_state.user_config = load_user_config()
 
-# API 配置放在第三个标签页
+# 公共聊天室文件
+CHAT_FILE = "public_chat.json"
+
+def load_public_chat():
+    """加载公共聊天记录"""
+    try:
+        with open(CHAT_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return []
+
+def save_public_chat(messages):
+    """保存公共聊天记录（只保留最近100条）"""
+    messages = messages[-100:]
+    with open(CHAT_FILE, "w", encoding="utf-8") as f:
+        json.dump(messages, f, ensure_ascii=False, indent=2)
+
+# 用户聊天室
 with tab3:
+    st.subheader("💬 聊天室")
+    
+    # 加载聊天记录
+    chat_messages = load_public_chat()
+    
+    # 微信风格样式
+    st.markdown("""<style>
+    .msg-left{display:flex;margin:10px 0;}
+    .msg-right{display:flex;flex-direction:row-reverse;margin:10px 0;}
+    .msg-bubble{max-width:70%;padding:10px 14px;border-radius:18px;font-size:14px;line-height:1.4;word-break:break-word;overflow:hidden;display:inline-block;}
+    .msg-bubble img{max-width:200px!important;border-radius:10px;display:block;margin:0;}
+    .msg-left .msg-bubble{background:#ffffff;border:1px solid #e0e0e0;border-top-left-radius:4px;}
+    .msg-right .msg-bubble{background:#95ec69;border-top-right-radius:4px;}
+    .msg-name{font-size:11px;color:#999;margin-bottom:4px;}
+    .msg-left .msg-name{text-align:left;margin-left:4px;}
+    .msg-right .msg-name{text-align:right;margin-right:4px;}
+    /* 简化file_uploader样式 */
+    [data-testid="stFileUploader"]{
+        background:#f8f9fa;border-radius:10px;padding:8px;margin-top:5px;
+    }
+    [data-testid="stFileUploader"] section{padding:0!important;}
+    [data-testid="stFileUploader"] [data-testid="stFileUploaderDropzone"]{
+        padding:10px!important;min-height:auto!important;
+    }
+    [data-testid="stFileUploader"] small{display:none!important;}
+    </style>""", unsafe_allow_html=True)
+    
+    # 显示聊天记录
+    chat_container = st.container(height=320)
+    with chat_container:
+        if not chat_messages:
+            st.caption("👋 还没有消息，发送第一条吧！")
+        for msg in chat_messages:
+            is_me = msg.get("user") == st.session_state.current_user
+            align = "msg-right" if is_me else "msg-left"
+            name = "我" if is_me else msg.get("user", "匿名")
+            content = msg.get("content", "") or ""
+            has_image = msg.get("image")
+            
+            if has_image and not content:
+                # 纯图片消息，不显示气泡
+                st.markdown(f'''<div class="{align}">
+                    <div>
+                        <div class="msg-name">{name} · {msg.get("time", "")}</div>
+                        <img src="data:image/png;base64,{msg["image"]}" style="max-width:200px;border-radius:10px;">
+                    </div>
+                </div>''', unsafe_allow_html=True)
+            elif has_image and content:
+                # 图文混合消息：图片在上，文字在下
+                st.markdown(f'''<div class="{align}">
+                    <div>
+                        <div class="msg-name">{name} · {msg.get("time", "")}</div>
+                        <img src="data:image/png;base64,{msg["image"]}" style="max-width:200px;border-radius:10px;margin-bottom:6px;">
+                        <div class="msg-bubble">{content}</div>
+                    </div>
+                </div>''', unsafe_allow_html=True)
+            else:
+                # 纯文字消息
+                st.markdown(f'''<div class="{align}">
+                    <div>
+                        <div class="msg-name">{name} · {msg.get("time", "")}</div>
+                        <div class="msg-bubble">{content}</div>
+                    </div>
+                </div>''', unsafe_allow_html=True)
+    
+    # 表情列表
+    EMOJIS = ["😀", "😂", "🥰", "😎", "🤔", "👍", "❤️", "🔥", "🎉", "😭", "😡", "🙏", "💪", "✨", "👏", "🤝"]
+    
+    # 初始化状态
+    if "show_emoji" not in st.session_state:
+        st.session_state.show_emoji = False
+    if "pending_img" not in st.session_state:
+        st.session_state.pending_img = None
+    
+    # 表情选择器
+    if st.session_state.show_emoji:
+        st.markdown("**选择表情：**")
+        cols = st.columns(8)
+        for i, emoji in enumerate(EMOJIS):
+            with cols[i % 8]:
+                if st.button(emoji, key=f"emoji_{i}", use_container_width=True):
+                    import datetime
+                    chat_messages.append({
+                        "user": st.session_state.current_user,
+                        "content": emoji,
+                        "image": None,
+                        "time": datetime.datetime.now().strftime("%H:%M")
+                    })
+                    save_public_chat(chat_messages)
+                    st.session_state.show_emoji = False
+                    st.rerun()
+    
+    # 待发送图片预览
+    if st.session_state.pending_img:
+        col_prev, col_del = st.columns([1, 5])
+        with col_prev:
+            st.image(f"data:image/png;base64,{st.session_state.pending_img}", width=60)
+        with col_del:
+            if st.button("✕ 取消", key="cancel_img"):
+                st.session_state.pending_img = None
+                st.rerun()
+    
+    # 输入区域
+    col_emoji, col_img, col_input, col_send = st.columns([0.5, 0.5, 8, 1])
+    with col_emoji:
+        if st.button("😊", key="toggle_emoji", help="表情"):
+            st.session_state.show_emoji = not st.session_state.show_emoji
+            st.rerun()
+    with col_img:
+        if "show_img_upload" not in st.session_state:
+            st.session_state.show_img_upload = False
+        if st.button("🖼️", key="toggle_img", help="图片"):
+            st.session_state.show_img_upload = not st.session_state.show_img_upload
+            st.rerun()
+    with col_input:
+        new_msg = st.text_input("消息", key="chat_input", label_visibility="collapsed", placeholder="输入消息...")
+    with col_send:
+        send_clicked = st.button("发送", type="primary", use_container_width=True, key="send_chat")
+    
+    # 图片上传区域（点击按钮后显示）
+    if st.session_state.show_img_upload:
+        uploaded = st.file_uploader("选择图片", type=["png", "jpg", "jpeg", "gif"], key="chat_img_upload")
+        if uploaded:
+            st.session_state.pending_img = base64.b64encode(uploaded.read()).decode('utf-8')
+            st.session_state.show_img_upload = False
+            st.rerun()
+    
+    if send_clicked and (new_msg.strip() or st.session_state.pending_img):
+        import datetime
+        chat_messages.append({
+            "user": st.session_state.current_user,
+            "content": new_msg.strip(),
+            "image": st.session_state.pending_img,
+            "time": datetime.datetime.now().strftime("%H:%M")
+        })
+        save_public_chat(chat_messages)
+        st.session_state.pending_img = None
+        st.rerun()
+
+# API 配置放在第四个标签页
+with tab4:
     st.subheader("API 配置")
     st.caption("配置会自动保存到您的账户")
     
@@ -1101,7 +1276,143 @@ with tab2:
     # 章节顺序
     section_order = list(sections.keys())
     
-    # 选择操作
+    # 初始化规则历史（用于撤销）
+    if "rules_history" not in st.session_state:
+        st.session_state.rules_history = []
+    
+    # 撤销按钮（如果有历史）
+    if st.session_state.rules_history:
+        if st.button("↩️ 撤销上次修改", use_container_width=True):
+            last_rules = st.session_state.rules_history.pop()
+            save_rules(last_rules)
+            st.success("✅ 已撤销")
+            st.rerun()
+    
+    # AI 辅助修改规则
+    with st.expander("🤖 AI 辅助修改规则", expanded=False):
+        # 初始化图片列表
+        if "rule_imgs" not in st.session_state:
+            st.session_state.rule_imgs = []
+        
+        # 显示已有图片（紧凑排列）
+        if st.session_state.rule_imgs:
+            num = len(st.session_state.rule_imgs)
+            # 图片列比例1，空白列比例大，让图片紧凑靠左
+            cols = st.columns([1]*num + [12])
+            for i, img in enumerate(st.session_state.rule_imgs):
+                with cols[i]:
+                    st.image(f"data:image/png;base64,{img}", width=80)
+                    if st.button("✕", key=f"rm_img_{i}"):
+                        st.session_state.rule_imgs.pop(i)
+                        st.rerun()
+        
+        # 输入指令
+        ai_instruction = st.text_area("修改指令", height=80, placeholder="输入修改指令...", key="ai_rule_instruction")
+        
+        # 粘贴图片区域
+        if HAS_PASTE_BUTTON:
+            paste_result = paste_image_button("📋 粘贴图片", key="paste_rule_img")
+            if paste_result.image_data is not None:
+                buf = BytesIO()
+                paste_result.image_data.save(buf, format='PNG')
+                new_img = base64.b64encode(buf.getvalue()).decode('utf-8')
+                # 避免重复添加同一张图片
+                if new_img not in st.session_state.rule_imgs:
+                    st.session_state.rule_imgs.append(new_img)
+                    st.rerun()
+        else:
+            uploaded = st.file_uploader("📷 上传图片", type=["png", "jpg", "jpeg"], key="rule_img_upload")
+            if uploaded:
+                new_img = base64.b64encode(uploaded.read()).decode('utf-8')
+                if new_img not in st.session_state.rule_imgs:
+                    st.session_state.rule_imgs.append(new_img)
+                    st.rerun()
+        
+        image_base64_list = st.session_state.rule_imgs
+        
+        if st.button("🚀 AI 执行修改", type="primary", use_container_width=True):
+            if ai_instruction.strip():
+                with st.spinner("AI 正在分析并修改规则..."):
+                    full_rules = rules_content
+                    img_count = len(image_base64_list)
+                    image_hint = f"\n\n## 参考图片\n用户上传了{img_count}张参考图片，请结合图片内容理解用户的修改意图。" if img_count > 0 else ""
+                    ai_prompt = f"""你是一个规则编辑助手。用户想要修改格式规范文件。
+
+## 当前完整规则文件
+{full_rules}
+
+## 用户的修改指令
+{ai_instruction}{image_hint}
+
+## 输出格式要求
+请按以下格式输出：
+
+---CHANGES_START---
+（简要说明你做了哪些修改，用列表形式）
+---CHANGES_END---
+
+---RULES_START---
+（修改后的完整规则文件）
+---RULES_END---"""
+                    
+                    # 只传第一张图片（API 限制）
+                    first_img = image_base64_list[0] if image_base64_list else None
+                    result, success = call_single_step(ai_prompt, api_url, api_key, model, image_base64=first_img)
+                    if success:
+                        # 解析修改说明和规则内容
+                        changes = ""
+                        new_rules = result
+                        if "---CHANGES_START---" in result and "---CHANGES_END---" in result:
+                            try:
+                                changes = result.split("---CHANGES_START---")[1].split("---CHANGES_END---")[0].strip()
+                            except:
+                                changes = ""
+                        if "---RULES_START---" in result and "---RULES_END---" in result:
+                            try:
+                                new_rules = result.split("---RULES_START---")[1].split("---RULES_END---")[0].strip()
+                            except:
+                                new_rules = result
+                        
+                        st.session_state.ai_full_rule_result = new_rules
+                        st.session_state.ai_rule_changes = changes
+                    else:
+                        st.error(result)
+            else:
+                st.warning("请输入修改指令")
+        
+        # 显示 AI 结果
+        if "ai_full_rule_result" in st.session_state and st.session_state.ai_full_rule_result:
+            st.markdown("---")
+            
+            # 显示修改说明
+            if "ai_rule_changes" in st.session_state and st.session_state.ai_rule_changes:
+                st.markdown("**📝 修改内容：**")
+                st.info(st.session_state.ai_rule_changes)
+            
+            st.markdown("**🤖 修改后规则预览：**")
+            with st.container(height=200):
+                st.markdown(st.session_state.ai_full_rule_result)
+            
+            col_apply, col_clear = st.columns(2)
+            with col_apply:
+                if st.button("✅ 应用修改", use_container_width=True, type="primary"):
+                    # 保存当前规则到历史（用于撤销）
+                    st.session_state.rules_history.append(rules_content)
+                    if save_rules(st.session_state.ai_full_rule_result):
+                        st.session_state.ai_full_rule_result = ""
+                        st.session_state.ai_rule_changes = ""
+                        st.success("✅ 规则已更新（可点击撤销恢复）")
+                        st.rerun()
+                    else:
+                        st.error("❌ 保存失败")
+            with col_clear:
+                if st.button("❌ 放弃", use_container_width=True):
+                    st.session_state.ai_full_rule_result = ""
+                    st.session_state.ai_rule_changes = ""
+                    st.rerun()
+    
+    st.divider()
+    
     operation = st.radio("选择操作", ["查看/编辑章节", "添加新章节", "删除章节"], horizontal=True)
     
     if operation == "查看/编辑章节":
@@ -1109,7 +1420,7 @@ with tab2:
             selected_section = st.selectbox("选择章节", section_order, key="select_section")
             if selected_section:
                 st.markdown(f"**当前章节: {selected_section}**")
-                edited_content = st.text_area("编辑内容", value=sections[selected_section], height=400, key=f"edit_{selected_section}")
+                edited_content = st.text_area("编辑内容", value=sections[selected_section], height=300, key=f"edit_{selected_section}")
                 
                 if st.button("💾 保存修改", type="primary"):
                     sections[selected_section] = edited_content

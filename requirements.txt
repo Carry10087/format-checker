@@ -1,2 +1,4 @@
 streamlit
 requests
+streamlit-paste-button
+streamlit-js-eval
