@@ -309,7 +309,7 @@ STEP_PROMPTS = [
 
     # Step 5: 引用与标点检查
     """## Step 5: 引用与标点检查
-检查引用格式和标点符号。
+检查引用格式、标题冒号和标点符号。
 
 ## 回答
 {text}
@@ -320,7 +320,20 @@ STEP_PROMPTS = [
 ### 检查要点
 
 #### 5.1 引用规范（规则2.3）
-#### 5.2 标点规范（规则2.4）
+- 格式必须是 `[Note 数字](#)`
+- 引用必须紧跟标点符号之后（无空格），且只能在段落末尾
+- 四级标题下列表每项必须有引用
+
+#### 5.2 标题与冒号规范（规则2.4）
+- 四级标题后跟描述性内容时加冒号；下方跟列表时不加冒号
+- 一级标题后只有二级标题时不加冒号；后跟正文时加冒号
+- 禁止空一级标题（必须有后续内容）
+- 短答案后禁止直接接标题，必须跟解释文字
+
+#### 5.3 标点符号规范（规则2.5）
+- 引号内标点：逗号和句号必须包含在引号内
+- 特殊情况：引号内已有感叹号/问号时，句号可放在引号外
+
 【强制】逐条检查并列出结果。
 输出格式：
 - 规则条款：[引用规则原文] → ✅符合 或 ❌违反：[问题] → [修改为]""",
@@ -442,17 +455,31 @@ def call_single_step(prompt, api_url, api_key, model, image_base64=None):
     except Exception as e:
         return f"API 调用失败: {str(e)}", False
 
-def call_ai_api_steps(text, rules, api_url, api_key, model, progress_callback=None):
-    """分13步调用 API"""
+def call_ai_api_steps(text, rules, api_url, api_key, model, progress_callback=None, ref_notes=""):
+    """分7步调用 API"""
     results = []
     
-    # 规则分段（用于前几步的简化检查）
+    # 规则分段（用于前置检查和场景识别）
     rules_sections = {
-        "safety": "## 4. 内容安全红线 (0容忍)" + rules.split("## 4. 内容安全红线 (0容忍)")[1].split("## 5.")[0] if "## 4. 内容安全红线 (0容忍)" in rules else "",
-        "discard": "## 5. 丢弃与过滤标准" + rules.split("## 5. 丢弃与过滤标准")[1].split("## 6.")[0] if "## 5. 丢弃与过滤标准" in rules else "",
-        "terminate": "## 6. 无答案终止协议" + rules.split("## 6. 无答案终止协议")[1].split("## 7.")[0] if "## 6. 无答案终止协议" in rules else "",
-        "scene": "## 3. 场景具体细则 (SOP)" + rules.split("## 3. 场景具体细则 (SOP)")[1].split("## 4.")[0] if "## 3. 场景具体细则 (SOP)" in rules else "",
+        # Step 1 前置检查需要的规则（安全+丢弃+终止）
+        "precheck": "",
+        # Step 2 场景识别需要的规则
+        "scene": "",
     }
+    
+    # 提取前置检查规则
+    precheck_parts = []
+    if "## 4. 内容安全红线" in rules:
+        precheck_parts.append(rules.split("## 4. 内容安全红线")[1].split("## 5.")[0] if "## 5." in rules else rules.split("## 4. 内容安全红线")[1])
+    if "## 5. 丢弃与过滤标准" in rules:
+        precheck_parts.append(rules.split("## 5. 丢弃与过滤标准")[1].split("## 6.")[0] if "## 6." in rules else rules.split("## 5. 丢弃与过滤标准")[1])
+    if "## 6. 无答案终止协议" in rules:
+        precheck_parts.append(rules.split("## 6. 无答案终止协议")[1].split("## 7.")[0] if "## 7." in rules else rules.split("## 6. 无答案终止协议")[1])
+    rules_sections["precheck"] = "\n\n".join(precheck_parts)
+    
+    # 提取场景识别规则
+    if "## 3. 场景具体细则" in rules:
+        rules_sections["scene"] = rules.split("## 3. 场景具体细则")[1].split("## 4.")[0] if "## 4." in rules else rules.split("## 3. 场景具体细则")[1]
     
     scene_result = ""  # 保存场景识别结果
     all_suggestions = []  # 保存所有修改建议
@@ -461,35 +488,31 @@ def call_ai_api_steps(text, rules, api_url, api_key, model, progress_callback=No
         if progress_callback:
             progress_callback(i, STEP_NAMES[i])
         
-        # 构建 prompt
-        if i == 0:  # 安全红线
-            prompt = prompt_template.format(text=text, rules_section=rules_sections.get("safety", ""))
-        elif i == 1:  # 丢弃判断
-            prompt = prompt_template.format(text=text, rules_section=rules_sections.get("discard", ""))
-        elif i == 2:  # 无答案终止
-            prompt = prompt_template.format(text=text, rules_section=rules_sections.get("terminate", ""))
-        elif i == 3:  # 场景识别
+        # 构建 prompt（7步逻辑）
+        if i == 0:  # Step 1: 前置检查
+            prompt = prompt_template.format(text=text, rules_section=rules_sections.get("precheck", ""))
+        elif i == 1:  # Step 2: 场景识别
             prompt = prompt_template.format(text=text, rules_section=rules_sections.get("scene", ""))
-        elif i == 10:  # 特殊场景检查，需要场景信息
-            prompt = prompt_template.format(text=text, prev_result=scene_result)
-        elif i == 12:  # 最终输出，需要所有修改建议
-            prompt = prompt_template.format(text=text, prev_result="\n\n".join(all_suggestions))
-        else:  # Step 5-9, 11-12: 只需要 text
-            prompt = prompt_template.format(text=text)
+        elif i == 5:  # Step 6: 场景细则检查，需要场景识别结果
+            prompt = prompt_template.format(text=text, prev_result=scene_result, rules=rules)
+        elif i == 6:  # Step 7: 最终输出，需要所有修改建议和参考笔记
+            prompt = prompt_template.format(text=text, prev_result="\n\n".join(all_suggestions), rules=rules, ref_notes=ref_notes)
+        else:  # Step 3-5: 需要完整规则
+            prompt = prompt_template.format(text=text, rules=rules)
         
         result, success = call_single_step(prompt, api_url, api_key, model)
         results.append({"step": STEP_NAMES[i], "result": result, "success": success})
         
         # 保存场景识别结果
-        if i == 3 and success:
+        if i == 1 and success:
             scene_result = result
         
-        # 保存修改建议 (Step 5-12)
-        if 4 <= i <= 11 and success and "✅" not in result:
+        # 保存修改建议 (Step 3-6)
+        if 2 <= i <= 5 and success:
             all_suggestions.append(f"### {STEP_NAMES[i]}\n{result}")
         
-        # 检查是否需要提前终止 (只在前3步检查)
-        if i <= 2 and success and ("❌" in result and ("结束" in result or "拒绝" in result or "丢弃" in result)):
+        # 检查是否需要提前终止 (只在 Step 1 检查)
+        if i == 0 and success and ("❌" in result and ("终止" in result or "拒绝" in result or "丢弃" in result)):
             break
     
     return results
