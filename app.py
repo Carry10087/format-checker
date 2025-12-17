@@ -1986,6 +1986,10 @@ with tab1:
                         if i == 0 and success and "❌" in result and ("终止" in result or "拒绝" in result or "丢弃" in result):
                             render_progress_card(i, f'在 {step_name} 提前终止', progress_pct, is_warning=True)
                             break
+                        # API调用失败则终止后续步骤
+                        if not success:
+                            render_progress_card(i, f'{step_name} 失败，已终止', progress_pct, is_warning=True)
+                            break
                         # 保存最终结果（Step 4）
                         if i == 3:
                             st.session_state.final_result = result
