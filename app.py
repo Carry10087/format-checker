@@ -2278,6 +2278,66 @@ with tab2:
             st.success("✅ 已撤销")
             st.rerun()
     
+    # 同步更新规则功能
+    with st.expander("同步更新规则", expanded=False):
+        st.markdown("从默认规则文件同步最新规则到您的个人规则中。")
+        
+        # 读取默认规则文件
+        try:
+            with open(DEFAULT_RULES_FILE, "r", encoding="utf-8") as f:
+                default_rules_content = f.read()
+            default_available = True
+        except Exception as e:
+            default_rules_content = ""
+            default_available = False
+            st.error(f"❌ 无法读取默认规则文件: {e}")
+        
+        if default_available:
+            # 比较当前规则和默认规则
+            if rules_content.strip() == default_rules_content.strip():
+                st.success("✅ 您的规则已经与默认规则同步，无需更新。")
+            else:
+                st.warning("⚠️ 您的规则与默认规则存在差异。")
+                
+                # 显示差异统计
+                user_lines = len(rules_content.strip().split('\n'))
+                default_lines = len(default_rules_content.strip().split('\n'))
+                st.info(f"📊 当前规则: {user_lines} 行 | 默认规则: {default_lines} 行")
+                
+                # 同步选项
+                sync_mode = st.radio(
+                    "选择同步方式",
+                    ["完全替换（用默认规则覆盖您的规则）", "仅预览（查看默认规则内容）"],
+                    key="sync_mode_radio"
+                )
+                
+                if sync_mode == "仅预览（查看默认规则内容）":
+                    st.markdown("**默认规则预览：**")
+                    with st.container(height=300):
+                        st.markdown(default_rules_content)
+                
+                elif sync_mode == "完全替换（用默认规则覆盖您的规则）":
+                    st.markdown("**即将应用的默认规则：**")
+                    with st.container(height=200):
+                        st.markdown(default_rules_content)
+                    
+                    # 二次确认
+                    st.warning("⚠️ **注意：** 此操作将用默认规则完全替换您当前的规则。您的自定义修改将会丢失（但可以通过撤销恢复）。")
+                    
+                    confirm_sync = st.checkbox("我理解并确认要同步更新规则", key="confirm_sync_checkbox")
+                    
+                    if confirm_sync:
+                        if st.button("🔄 确认同步", type="primary", use_container_width=True, key="confirm_sync_btn"):
+                            # 保存当前规则到历史（用于撤销）
+                            st.session_state.rules_history.append(rules_content)
+                            st.session_state.rules_history = st.session_state.rules_history[-10:]
+                            
+                            if save_rules(default_rules_content):
+                                st.success('✅ 规则已成功同步更新！可点击顶部"撤销上次修改"恢复。')
+                                st.rerun()
+                            else:
+                                st.error("❌ 同步失败，请稍后重试。")
+    
     # AI 辅助修改规则
     with st.expander("AI 辅助修改规则", expanded=False):
         # 初始化图片列表
