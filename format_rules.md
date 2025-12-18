@@ -47,7 +47,9 @@
     - ✅ 正确：`Concept is ***the Core Definition***.` (冠词在内)
 - **双星号使用限制**：正文中非一级/二级标题的双星号（`**text**`）需根据情况删除或改为引号。粗体仅用于列表小标题（如 `- **Title**:`），不可滥用于正文强调。
 - **单星号禁止**：正文中的单星号斜体（`*text*`）须全部改为双引号（`"text"`），如 `*Financial Times*` → `"Financial Times"`。
-- **反引号禁止**：正文中的反引号（``text``）须全部改为双引号（"text"），如 ``example`` → "example"。
+- **反引号禁止**：正文中禁止使用反引号（即键盘左上角 ` 符号）包裹文字，必须改为双引号。
+  - ❌ 错误：The `.frm` file stores table definitions.
+  - ✅ 正确：The ".frm" file stores table definitions.
 - **首段主语引号规则**：首段的主语（用户查询的核心词）通常不加引号，但作品名（歌名、书名、电影名、专辑名等）或需要强调原文拼写的特殊名称必须加引号。
 - **内容一致性与纯度 (Crucial)**：
   - **核心锁定**：全文必须紧紧围绕首段确定的核心定义（Core Answer）展开。
