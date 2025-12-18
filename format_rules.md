@@ -36,7 +36,12 @@
 #### 首段（Core Answer）
 - **长度限制**：首段应精简，优先用一句话概括核心定义。
   - **单义词格式**：首段 = 主语 + is/are + `***核心定义***` + 句号，第二句及之后下沉到正文。
-  - **多义词格式**：当词条存在多个常用义项时，首段采用概括式写法，格式为：`主语 is/refers to ***an abbreviation/term with multiple meanings, including, and***.`。
+  - **高亮完整性**：`***` 必须包住首段句号前的全部定义内容，不能只高亮一部分。
+    - ❌ 错误：`Weapons are ***tools designed for combat***, broadly categorized into...`（高亮不完整）
+    - ✅ 正确：`Weapons are ***tools designed for combat, broadly categorized into bladed weapons, firearms, and artillery***.`
+  - **多义词格式**：当词条存在多个常用义项时，首段直接列举所有主要含义，`***` 必须包住所有含义。禁止使用"a term with multiple meanings, including"等废话开头。
+    - ❌ 错误：`Raku refers to ***a term with multiple meanings, including a pottery style and a restaurant brand***`
+    - ✅ 正确：`Raku refers to ***a traditional style of Japanese pottery and a well-known Japanese restaurant brand***`.
 - **内容要求**：仅给出最直接的结论。任何背景铺垫、解释说明、举例、费用细节、名单列表、目标用户描述等扩展信息，**必须全部下沉**到正文，严禁滞留在首段。
 - **首段与正文对应**：首段是结论，正文是论据。首段提到的核心点，正文需展开细节，但不要简单重复首段的原话。
 - **格式关键（视觉包裹）**：
@@ -75,11 +80,20 @@
     - **Exceptions**: Not recommended for...
     ```
 - **逻辑分组**：相关性强的内容必须归入同一标题下，禁止按产品参数或属性机械拆分成多个标题。
+- **四级标题内聚性**：四级标题下的列表项必须属于同一类别或主题，禁止将差异过大的内容强行归入同一标题。
+  - ❌ 错误：`#### Medical, Cosmetic, and Audio Applications`（医疗、美妆、音频三者差异太大）
+  - ✅ 正确：拆分为 `#### Medical Applications`、`#### Audio Technology` 等独立标题，或将内容合并到更合适的现有标题下
 - **内容归属准确**：每个列表项必须与其所属四级标题的主题直接相关，不相关的内容必须移至合适的标题下或删除。
 - **标题层级对应**：列表项的加粗小标题必须是四级标题的具体实例或子类。例如四级标题是 `Notable Village Examples`，列表小标题应为 `Historic Villages`、`Alpine Villages` 等（村庄类型），而非 `Historic Preservation`、`Alpine Landscape`（抽象特征）。
 - **四级标题精简原则**：四级标题应按用户决策逻辑组织，围绕用户核心关注点划分，而非罗列产品规格。相关性强的信息必须合并，四级标题一般不超过4个。
 - **层级限制**：分点层级不宜过多，逻辑需前后对应。
-- **禁止重复内容**：同一回答中禁止出现重
+- **禁止重复与冗余**：
+  - 同一回答中禁止出现重复信息
+  - 禁止"概括+展开"重复：如果要逐项展开，不需要先概括罗列所有项目名称
+  - 可自然合并的信息应合并为一项（如"人数统计"和"成员名单"合并为"Members"）
+  - ❌ 错误：先写 `Core Offerings: includes A, B, C`，再分别展开 `A: ...`、`B: ...`
+  - ❌ 错误：分开写 `Demographics: 9 members` 和 `Member List: K, FUMA...`
+  - ✅ 正确：直接逐项展开，或合并为一项
 
 #### 双星号（粗体）使用铁律
 - **小标题必须加粗**：列表开头的 **Title/Key** 必须加粗。
@@ -119,7 +133,11 @@
         - 二级无序（前面4个空格）
     ```
 - **分点上限**：一般分点/分步骤不超过6个（特殊情况除外）。
-- **单点禁止独立成标题**：如果某个四级标题下只有1个列表项，必须将该内容合并到其他相关标题下，禁止单独设立四级标题。
+- **单项内容处理**：如果某个四级标题下只有1项内容，有两种处理方式：
+  - 优先合并到其他相关标题下
+  - 若无法合并，则直接写成段落形式，不使用列表符号和加粗小标题
+  - ❌ 错误：`#### Other Entities` + `- **Suzuki Optical Co.**: ...`
+  - ✅ 正确：`#### Other Entities` + `Suzuki Optical Co. is a Japanese company that...`
 
 ### 2.3 引用规范 (Crucial)
 - **格式**：必须使用 `[Note 数字](#)` 的格式（例如 `[Note 1](#)`）。
@@ -196,7 +214,11 @@
 
 ### 3.3 医疗、法律与金融 (YMYL)
 - **强制免责声明**：涉及健康、法律、投资等专业领域，文本句末**必须**添加免责提示。
-  - **模板**：`The above content is for reference only. If you have any health/legal/investment questions, please consult a professional.`
+- **免责声明精准匹配**：只写实际涉及的领域，不要套用完整模板。
+  - 仅涉及健康：`The above content is for reference only. If you have any health questions, please consult a professional.`
+  - 仅涉及法律：`The above content is for reference only. If you have any legal questions, please consult a professional.`
+  - 仅涉及投资：`The above content is for reference only. If you have any investment questions, please consult a professional.`
+  - 涉及多个领域时才组合使用
 - **内容限制**：不给额外建议，不灌输无关鸡汤（例如：不要安慰生病孩子的家长，只提供医疗事实）。
 
 ### 3.4 玄学与星座命理
