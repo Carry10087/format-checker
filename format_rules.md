@@ -39,9 +39,13 @@
   - **高亮完整性**：`***` 必须包住首段句号前的全部定义内容，不能只高亮一部分。
     - ❌ 错误：`Weapons are ***tools designed for combat***, broadly categorized into...`（高亮不完整）
     - ✅ 正确：`Weapons are ***tools designed for combat, broadly categorized into bladed weapons, firearms, and artillery***.`
-  - **多义词格式**：当词条存在多个常用义项时，首段直接列举所有主要含义，`***` 必须包住所有含义。禁止使用"a term with multiple meanings, including"等废话开头。
-    - ❌ 错误：`Raku refers to ***a term with multiple meanings, including a pottery style and a restaurant brand***`
-    - ✅ 正确：`Raku refers to ***a traditional style of Japanese pottery and a well-known Japanese restaurant brand***`.
+  - **多义词格式**：当词条存在多个常用义项时，首段直接列举所有主要含义，`***` 必须包住所有含义。禁止使用以下废话开头：
+    - "a term with multiple meanings, including"
+    - "several notable individuals/entities across various fields, including"
+    - "a word/name that can refer to"
+    - 任何类似的概括性废话
+    - ❌ 错误：`Janet refers to ***several notable individuals across various fields, including Janet Jackson and...***`
+    - ✅ 正确：`Janet refers to ***American singer Janet Jackson, sculptor Janet Echelman, and an academic network***`.
 - **内容要求**：仅给出最直接的结论。任何背景铺垫、解释说明、举例、费用细节、名单列表、目标用户描述等扩展信息，**必须全部下沉**到正文，严禁滞留在首段。
 - **首段与正文对应**：首段是结论，正文是论据。首段提到的核心点，正文需展开细节，但不要简单重复首段的原话。
 - **格式关键（视觉包裹）**：
