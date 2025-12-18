@@ -335,6 +335,9 @@ STEP_PROMPTS = [
 - 列表层级与引用完整性
 - 内容质量（过度关联、信息来源）
 
+### 修改原则
+- 保守修改：仅修正明确违反规则的内容，已符合规则的部分保持原样，禁止"优化"或"补充"
+
 ### 输出要求
 1. 直接输出修改后的完整 Markdown
 2. 禁止任何解释、注释、说明
@@ -356,6 +359,9 @@ STEP_PROMPTS = [
 
 ### 任务
 按【完整规则文件】进行最终校验，确保符合所有规则要求。如发现任何遗漏，直接修正。
+
+### 修改原则
+- 保守修改：仅修正明确违反规则的内容，已符合规则的部分保持原样，禁止"优化"或"补充"
 
 ### 输出要求
 1. 直接输出最终 Markdown 内容
@@ -387,8 +393,8 @@ STEP_NAMES = [
     "Step 4: 最终输出 (V3)"
 ]
 
-def call_single_step(prompt, api_url, api_key, model, image_base64=None):
-    """单次 API 调用，支持图片"""
+def call_single_step(prompt, api_url, api_key, model, image_base64=None, max_retries=3):
+    """单次 API 调用，支持图片，带重连机制"""
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
@@ -409,14 +415,23 @@ def call_single_step(prompt, api_url, api_key, model, image_base64=None):
         "messages": [{"role": "user", "content": content}],
         "temperature": 0.3
     }
-    try:
-        # 禁用代理直连
-        response = requests.post(api_url, headers=headers, json=data, timeout=120, proxies={"http": None, "https": None})
-        response.raise_for_status()
-        result = response.json()
-        return result["choices"][0]["message"]["content"], True
-    except Exception as e:
-        return f"API 调用失败: {str(e)}", False
+    
+    last_error = None
+    for attempt in range(max_retries):
+        try:
+            # 禁用代理直连
+            response = requests.post(api_url, headers=headers, json=data, timeout=120, proxies={"http": None, "https": None})
+            response.raise_for_status()
+            result = response.json()
+            return result["choices"][0]["message"]["content"], True
+        except Exception as e:
+            last_error = e
+            if attempt < max_retries - 1:
+                # 等待后重试，每次等待时间递增
+                import time
+                time.sleep(2 * (attempt + 1))
+    
+    return f"API 调用失败 (重试{max_retries}次后): {str(last_error)}", False
 
 st.set_page_config(page_title="回答格式修改器", layout="wide")
 
