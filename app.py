@@ -232,7 +232,7 @@ def rebuild_rules(title, sections, section_order):
 
 # 实际使用的 4 步 prompts
 STEP_PROMPTS = [
-    # Step 1: 前置检查与场景识别（不变）
+    # Step 1: 前置检查与场景识别
     """## Step 1: 前置检查与场景识别
 
 ## 待检查的回答
@@ -283,8 +283,8 @@ STEP_PROMPTS = [
 **【结论】**
 ✅ 通过，继续处理 / ❌ 终止：[原因]""",
 
-    # Step 2: 第一轮修改 → 输出 V1
-    """## Step 2: 按规则文件修改（结构与格式）
+    # Step 2: 一次性修改并输出终稿
+    """## Step 2: 按规则文件修改并输出终稿
 
 ## 待修改的回答
 {text}
@@ -301,70 +301,29 @@ STEP_PROMPTS = [
 ---
 
 ### 任务
-按【完整规则文件】检查并修改，本轮重点关注：
-- 首段格式（长度、`***`包裹、引号）
-- 引用位置
-- 四级标题结构
-- 列表格式
-- 内容筛选（匹配优先级、无关内容、跨平台引流）
+按【完整规则文件】全面检查并修改，需关注以下所有方面：
 
-### 输出要求
-1. 直接输出修改后的完整 Markdown
-2. 禁止任何解释、注释、说明
-3. 禁止用代码块包裹""",
+**结构与格式：**
+- 首段格式（长度、`***`包裹完整性、引号规则）
+- 引用位置（移至段末）
+- 四级标题结构与内聚性
+- 列表格式与层级
 
-    # Step 3: 第二轮修改 → 输出 V2
-    """## Step 3: 按规则文件修改（细节与一致性）
-
-## 上一轮修改结果（V1）
-{prev_version}
-
-## 参考笔记
-{ref_notes}
-
-## 完整规则文件
-{rules}
-
----
-
-### 任务
-按【完整规则文件】检查并修改，本轮重点关注：
-- 粗体使用规范
+**细节与一致性：**
+- 粗体使用规范（仅用于列表小标题）
 - 短信息合并
 - 术语一致性
-- 列表层级与引用完整性
-- 内容质量（过度关联、信息来源）
+- 标点符号（引号内标点）
+- 反引号改双引号
 
-### 修改原则
-- 保守修改：仅修正明确违反规则的内容，已符合规则的部分保持原样，禁止"优化"或"补充"
-
-### 输出要求
-1. 直接输出修改后的完整 Markdown
-2. 禁止任何解释、注释、说明
-3. 禁止用代码块包裹""",
-
-    # Step 4: 最终修改 → 输出 V3（终稿）
-    """## Step 4: 最终校验与输出
-
-## 上一轮修改结果（V2）
-{prev_version}
-
-## 参考笔记
-{ref_notes}
-
-## 完整规则文件
-{rules}
-
----
-
-### 任务
-按【完整规则文件】进行最终校验，确保符合所有规则要求。如发现任何遗漏，直接修正。
-
-### 修改原则
-- 保守修改：仅修正明确违反规则的内容，已符合规则的部分保持原样，禁止"优化"或"补充"
+**内容质量：**
+- 禁止重复与冗余
+- 标题层级对应
+- 内容筛选（匹配优先级、无关内容、跨平台引流）
+- 免责声明精准匹配
 
 ### 输出要求
-1. 直接输出最终 Markdown 内容
+1. 直接输出修改后的完整 Markdown 终稿
 2. 禁止任何解释、注释、说明
 3. 禁止用代码块包裹"""
 ]
@@ -385,12 +344,10 @@ TRANSLATE_PROMPT = """你是一个专业翻译。请将以下英文内容翻译�
 
 ## 请输出中文翻译"""
 
-# 4 步名称
+# 2 步名称
 STEP_NAMES = [
     "Step 1: 前置检查",
-    "Step 2: 第一轮修改 (V1)",
-    "Step 3: 第二轮修改 (V2)",
-    "Step 4: 最终输出 (V3)"
+    "Step 2: 修改输出"
 ]
 
 def call_single_step(prompt, api_url, api_key, model, image_base64=None, max_retries=3):
@@ -1789,9 +1746,9 @@ with tab1:
                     
                     def render_progress_card(current_step, step_text, progress_pct, is_done=False, is_warning=False):
                         """渲染进度卡片"""
-                        # 生成步骤圆点的class（4步）
+                        # 生成步骤圆点的class（2步）
                         dot_classes = []
-                        for j in range(4):
+                        for j in range(2):
                             if j < current_step:
                                 dot_classes.append('done')
                             elif j == current_step and not is_done:
@@ -1835,14 +1792,10 @@ with tab1:
                                 <div class="step-dots">
                                     <div class="step-dot {dot_classes[0]}"><span>1</span></div>
                                     <div class="step-dot {dot_classes[1]}"><span>2</span></div>
-                                    <div class="step-dot {dot_classes[2]}"><span>3</span></div>
-                                    <div class="step-dot {dot_classes[3]}"><span>4</span></div>
                                 </div>
                                 <div class="step-labels">
                                     <span>前置检查</span>
-                                    <span>V1修改</span>
-                                    <span>V2修改</span>
-                                    <span>V3终稿</span>
+                                    <span>修改输出</span>
                                 </div>
                             </div>
                         </div>
@@ -1970,8 +1923,6 @@ with tab1:
                     }
                     
                     scene_result = ""
-                    prev_version = ""  # 用于存储上一轮的修改结果
-                    
                     for i, step_name in enumerate(STEP_NAMES):
                         # 更新进度卡片
                         progress_pct = int((i + 1) / len(STEP_NAMES) * 100)
@@ -1981,15 +1932,9 @@ with tab1:
                         if i == 0:
                             combined_rules = rules_sections.get("precheck", "") + "\n\n" + rules_sections.get("scene", "")
                             prompt = STEP_PROMPTS[i].format(text=ai_input, rules_section=combined_rules, ref_notes=ref_notes if ref_notes.strip() else "无")
-                        # Step 2: 第一轮修改 → 输出 V1
+                        # Step 2: 一次性修改并输出终稿
                         elif i == 1:
                             prompt = STEP_PROMPTS[i].format(text=ai_input, scene_result=scene_result, rules=rules, ref_notes=ref_notes if ref_notes.strip() else "无")
-                        # Step 3: 第二轮修改 → 输出 V2
-                        elif i == 2:
-                            prompt = STEP_PROMPTS[i].format(prev_version=prev_version, rules=rules, ref_notes=ref_notes if ref_notes.strip() else "无")
-                        # Step 4: 最终修改 → 输出 V3
-                        elif i == 3:
-                            prompt = STEP_PROMPTS[i].format(prev_version=prev_version, rules=rules, ref_notes=ref_notes if ref_notes.strip() else "无")
                         
                         result, success = call_single_step(prompt, api_url, api_key, model)
                         st.session_state.ai_results.append({"step": step_name, "result": result, "success": success})
@@ -1997,9 +1942,6 @@ with tab1:
                         # 保存场景识别结果（Step 1）
                         if i == 0 and success:
                             scene_result = result
-                        # 保存每轮修改结果，供下一轮使用（Step 2, 3, 4）
-                        if i >= 1 and success:
-                            prev_version = result
                         # 前置检查不通过则终止（Step 1）
                         if i == 0 and success and result and "❌" in result and ("终止" in result or "拒绝" in result or "丢弃" in result):
                             render_progress_card(i, f'在 {step_name} 提前终止', progress_pct, is_warning=True)
@@ -2008,11 +1950,11 @@ with tab1:
                         if not success:
                             render_progress_card(i, f'{step_name} 失败，已终止', progress_pct, is_warning=True)
                             break
-                        # 保存最终结果（Step 4）
-                        if i == 3:
+                        # 保存最终结果（Step 2）
+                        if i == 1 and success:
                             st.session_state.final_result = result
                     
-                    render_progress_card(4, '处理完成！', 100, is_done=True)
+                    render_progress_card(2, '处理完成！', 100, is_done=True)
                     
                     # 保存到历史记录
                     st.session_state.detail_edits = []  # 新修改时清空细节修改历史
