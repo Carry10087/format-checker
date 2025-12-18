@@ -423,7 +423,10 @@ def call_single_step(prompt, api_url, api_key, model, image_base64=None, max_ret
             response = requests.post(api_url, headers=headers, json=data, timeout=120, proxies={"http": None, "https": None})
             response.raise_for_status()
             result = response.json()
-            return result["choices"][0]["message"]["content"], True
+            content = result["choices"][0]["message"]["content"]
+            if content is None:
+                raise ValueError("API 返回内容为空")
+            return content, True
         except Exception as e:
             last_error = e
             if attempt < max_retries - 1:
@@ -1998,7 +2001,7 @@ with tab1:
                         if i >= 1 and success:
                             prev_version = result
                         # 前置检查不通过则终止（Step 1）
-                        if i == 0 and success and "❌" in result and ("终止" in result or "拒绝" in result or "丢弃" in result):
+                        if i == 0 and success and result and "❌" in result and ("终止" in result or "拒绝" in result or "丢弃" in result):
                             render_progress_card(i, f'在 {step_name} 提前终止', progress_pct, is_warning=True)
                             break
                         # API调用失败则终止后续步骤
