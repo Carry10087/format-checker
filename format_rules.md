@@ -103,6 +103,9 @@
 
 #### 双星号（粗体）使用铁律
 - **小标题必须加粗**：列表开头的 **Title/Key** 必须加粗。
+- **小标题大小写规则**：列表小标题遵循 Title Case，每个单词首字母大写（介词、冠词除外）。
+  - ❌ 错误：`- **vs. OLED**: ...`、`- **how to use**: ...`
+  - ✅ 正确：`- **Vs. OLED**: ...`、`- **How to Use**: ...`
 - **正文内容禁止加粗**：除列表小标题外，正文内容一律不能使用双星号加粗，包括人名、地名、作品名等关键实体。
   - ❌ 错误：`- **Artist**: **Jean Dunand** was a master of **lacquerware**.`
   - ✅ 正确：`- **Artist**: Jean Dunand was a master of lacquerware.`
