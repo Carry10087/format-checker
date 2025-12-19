@@ -36,9 +36,10 @@
 #### 首段（Core Answer）
 - **长度限制**：首段应精简，优先用一句话概括核心定义。
   - **单义词格式**：首段 = 主语 + is/are + `***核心定义***` + 句号，第二句及之后下沉到正文。
-  - **高亮完整性**：`***` 必须包住首段句号前的全部定义内容，不能只高亮一部分。
-    - ❌ 错误：`Weapons are ***tools designed for combat***, broadly categorized into...`（高亮不完整）
-    - ✅ 正确：`Weapons are ***tools designed for combat, broadly categorized into bladed weapons, firearms, and artillery***.`
+  - **核心定义精简**：单义词的核心定义只写"是什么"，不写"怎么做/有什么特点"。配料、做法、特征等细节必须下沉到正文。
+    - ❌ 错误：`Guacamole is ***a Mexican dip made from avocados, typically seasoned with lime juice, salt, and mixed with onions, cilantro, and tomatoes***.`（细节太多）
+    - ✅ 正确：`Guacamole is ***a Mexican dip made primarily from mashed ripe avocados***.`
+  - **高亮完整性**：`***` 必须包住首段句号前的全部定义内容，不能只高亮一部分然后在高亮外继续写。
   - **多义词格式**：当词条存在多个常用义项时，首段直接列举所有主要含义，`***` 必须包住所有含义。禁止使用以下废话开头：
     - "a term with multiple meanings, including"
     - "several notable individuals/entities across various fields, including"
