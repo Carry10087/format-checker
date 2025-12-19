@@ -36,9 +36,10 @@
 #### 首段（Core Answer）
 - **长度限制**：首段应精简，优先用一句话概括核心定义。
   - **单义词格式**：首段 = 主语 + is/are + `***核心定义***` + 句号，第二句及之后下沉到正文。
-  - **核心定义精简**：单义词的核心定义只写"是什么"，不写"怎么做/有什么特点/目标是什么"。配料、做法、特征、目标、数量等细节必须下沉到正文。首段严格一句话，禁止出现第二句。
-    - ❌ 错误：`SDG refers to ***the Sustainable Development Goals, a set of 17 global objectives adopted by the United Nations in 2015 to end poverty, protect the planet, and ensure prosperity for all by 2030***. Also known as...`（定义太长+有第二句）
-    - ✅ 正确：`SDG refers to ***the Sustainable Development Goals, a set of 17 global objectives adopted by the United Nations***.`
+  - **核心定义精简**：单义词的核心定义只写"是什么"，不写"怎么做/有什么特点/目标是什么"。配料、做法、特征、目标、数量、出生地、知名原因等细节必须下沉到正文。首段严格一句话，禁止出现第二句。
+    - ❌ 错误：`Juanmi refers to ***Juan Miguel Jiménez López, a Spanish footballer***. Born in Coín, Spain, he is known for his agility.`（有第二句）
+    - ❌ 错误：`SDG refers to ***the Sustainable Development Goals...to ensure prosperity for all by 2030***. Also known as...`（定义太长+有第二句）
+    - ✅ 正确：`Juanmi refers to ***Juan Miguel Jiménez López, a Spanish professional footballer who plays as a forward***.`
   - **高亮完整性**：`***` 必须包住首段句号前的全部定义内容，不能只高亮一部分然后在高亮外继续写。
   - **多义词格式**：当词条存在多个常用义项时，首段直接列举所有主要含义，`***` 必须包住所有含义。禁止使用以下废话开头：
     - "a term with multiple meanings, including"
