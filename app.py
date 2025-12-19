@@ -351,7 +351,7 @@ STEP_NAMES = [
 ]
 
 def call_single_step(prompt, api_url, api_key, model, image_base64=None, max_retries=3):
-    """单次 API 调用，支持图片，带重连机制"""
+    """单次 API 调用，支持图片，带重连机制，返回 (content, success, token_usage)"""
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
@@ -383,7 +383,14 @@ def call_single_step(prompt, api_url, api_key, model, image_base64=None, max_ret
             content = result["choices"][0]["message"]["content"]
             if content is None:
                 raise ValueError("API 返回内容为空")
-            return content, True
+            # 提取 token 用量
+            usage = result.get("usage", {})
+            token_info = {
+                "prompt_tokens": usage.get("prompt_tokens", 0),
+                "completion_tokens": usage.get("completion_tokens", 0),
+                "total_tokens": usage.get("total_tokens", 0)
+            }
+            return content, True, token_info
         except Exception as e:
             last_error = e
             if attempt < max_retries - 1:
@@ -391,7 +398,7 @@ def call_single_step(prompt, api_url, api_key, model, image_base64=None, max_ret
                 import time
                 time.sleep(2 * (attempt + 1))
     
-    return f"API 调用失败 (重试{max_retries}次后): {str(last_error)}", False
+    return f"API 调用失败 (重试{max_retries}次后): {str(last_error)}", False, {}
 
 st.set_page_config(page_title="回答格式修改器", layout="wide")
 
@@ -1740,6 +1747,7 @@ with tab1:
                 else:
                     st.session_state.ai_results = []
                     st.session_state.final_result = ""
+                    st.session_state.total_tokens = {"prompt": 0, "completion": 0, "total": 0}
                     
                     # 显示处理中警告 - 美化版（使用 st.empty 动态更新）
                     progress_card = st.empty()
@@ -1936,8 +1944,14 @@ with tab1:
                         elif i == 1:
                             prompt = STEP_PROMPTS[i].format(text=ai_input, scene_result=scene_result, rules=rules, ref_notes=ref_notes if ref_notes.strip() else "无")
                         
-                        result, success = call_single_step(prompt, api_url, api_key, model)
-                        st.session_state.ai_results.append({"step": step_name, "result": result, "success": success})
+                        result, success, token_info = call_single_step(prompt, api_url, api_key, model)
+                        st.session_state.ai_results.append({"step": step_name, "result": result, "success": success, "tokens": token_info})
+                        # 累计 token 用量
+                        if "total_tokens" not in st.session_state:
+                            st.session_state.total_tokens = {"prompt": 0, "completion": 0, "total": 0}
+                        st.session_state.total_tokens["prompt"] += token_info.get("prompt_tokens", 0)
+                        st.session_state.total_tokens["completion"] += token_info.get("completion_tokens", 0)
+                        st.session_state.total_tokens["total"] += token_info.get("total_tokens", 0)
                         
                         # 保存场景识别结果（Step 1）
                         if i == 0 and success:
@@ -1978,6 +1992,17 @@ with tab1:
     # 显示各步骤结果
     if st.session_state.ai_results:
         st.divider()
+        # 显示 Token 用量
+        if "total_tokens" in st.session_state and st.session_state.total_tokens["total"] > 0:
+            tokens = st.session_state.total_tokens
+            st.markdown(f"""
+            <div style="background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.3); border-radius: 8px; padding: 10px 15px; margin-bottom: 15px;">
+                <span style="color: #00d4ff; font-weight: 500;">📊 Token 用量：</span>
+                <span style="color: #fff; margin-left: 10px;">输入: {tokens['prompt']:,}</span>
+                <span style="color: #fff; margin-left: 15px;">输出: {tokens['completion']:,}</span>
+                <span style="color: #00ff88; margin-left: 15px; font-weight: 600;">总计: {tokens['total']:,}</span>
+            </div>
+            """, unsafe_allow_html=True)
         for i, item in enumerate(st.session_state.ai_results):
             with st.expander(f"{'✅' if item['success'] else '❌'} {item['step']}", expanded=False):
                 st.markdown(item["result"])
@@ -2068,7 +2093,7 @@ with tab1:
                 
                 with st.spinner("翻译中，请勿切换页面..."):
                     prompt = TRANSLATE_PROMPT.format(text=st.session_state.final_result)
-                    result, success = call_single_step(prompt, api_url_t, api_key_t, model_t)
+                    result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
                     if success:
                         st.session_state.translated_result = result
                         if st.session_state.history and st.session_state.current_history_idx >= 0:
@@ -2130,7 +2155,7 @@ with tab1:
 注意：
 1. 完整文档部分不要有任何标记，保持纯净的Markdown
 2. 不要任何解释"""
-                        result, success = call_single_step(detail_prompt, api_url_d, api_key_d, model_d)
+                        result, success, _ = call_single_step(detail_prompt, api_url_d, api_key_d, model_d)
                         if success:
                             st.success("修改完成！")
                             # 解析返回结果
@@ -2358,7 +2383,7 @@ with tab2:
                     
                     # 只传第一张图片（API 限制）
                     first_img = image_base64_list[0] if image_base64_list else None
-                    result, success = call_single_step(ai_prompt, api_url, api_key, model, image_base64=first_img)
+                    result, success, _ = call_single_step(ai_prompt, api_url, api_key, model, image_base64=first_img)
                     if success:
                         # 解析修改说明和规则内容
                         changes = ""
