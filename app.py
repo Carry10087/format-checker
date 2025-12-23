@@ -2256,7 +2256,7 @@ with tab2:
                     with st.spinner("正在质检，请勿切换页面..."):
                         qc_prompt = f"""## 任务：格式质检并修改
 
-你是一个格式规范质检员。请按照规则检查格式问题并直接修改，不检查内容准确性。
+你是一个格式规范质检员。请按照规则检查格式问题，列出问题清单，并给出修改后的完整内容。
 
 ## 待检查的回答
 {qc_input}
@@ -2266,15 +2266,41 @@ with tab2:
 
 ---
 
-## 输出要求
-1. 直接输出修改后的完整 Markdown
-2. 禁止任何解释、注释、说明
-3. 禁止用代码块包裹
-4. 如果没有格式问题，原样输出
+## 输出格式（严格按此格式）
+
+---ISSUES_START---
+（如果有问题，用表格列出；如果没有问题，写"✅ 未发现格式问题"）
+
+| 序号 | 问题描述 | 对应规则 |
+|------|----------|----------|
+| 1 | ... | ... |
+
+---ISSUES_END---
+
+---FIXED_START---
+（修改后的完整 Markdown，不要任何解释，不要用代码块包裹）
+---FIXED_END---
 """
                         result, success, token_info = call_single_step(qc_prompt, api_url, api_key, model)
                         if success:
-                            st.session_state.qc_result = result
+                            # 解析问题清单和修改后的内容
+                            issues = ""
+                            fixed = result
+                            
+                            if "---ISSUES_START---" in result and "---ISSUES_END---" in result:
+                                try:
+                                    issues = result.split("---ISSUES_START---")[1].split("---ISSUES_END---")[0].strip()
+                                except:
+                                    issues = ""
+                            
+                            if "---FIXED_START---" in result and "---FIXED_END---" in result:
+                                try:
+                                    fixed = result.split("---FIXED_START---")[1].split("---FIXED_END---")[0].strip()
+                                except:
+                                    fixed = result
+                            
+                            st.session_state.qc_issues = issues
+                            st.session_state.qc_result = fixed
                             st.session_state.qc_tokens = token_info
                             st.rerun()
                         else:
@@ -2297,6 +2323,11 @@ with tab2:
                 <span style="color: #00ff88; margin-left: 15px; font-weight: 600;">总计: {tokens.get('total_tokens', 0):,}</span>
             </div>
             """, unsafe_allow_html=True)
+        
+        # 显示问题清单
+        if "qc_issues" in st.session_state and st.session_state.qc_issues:
+            with st.expander("📋 发现的问题", expanded=True):
+                st.markdown(st.session_state.qc_issues)
         
         st.subheader("修改结果")
         
@@ -2327,6 +2358,7 @@ with tab2:
         # 清空按钮
         if st.button("🗑️ 清空结果", key="qc_clear_btn", use_container_width=True):
             st.session_state.qc_result = ""
+            st.session_state.qc_issues = ""
             st.session_state.qc_tokens = {}
             st.rerun()
 
