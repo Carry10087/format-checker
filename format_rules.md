@@ -36,7 +36,8 @@
 #### 首段（Core Answer）
 - **长度限制**：首段应精简，优先用一句话概括核心定义。
   - **单义词格式**：首段 = 主语 + is/are + `***核心定义***` + 句号，第二句及之后下沉到正文。
-  - **核心定义精简**：单义词的核心定义只写"是什么"，不写"怎么做/有什么特点/目标是什么"。配料、做法、特征、目标、数量、出生地、知名原因等细节必须下沉到正文。首段严格一句话，禁止出现第二句。
+  - **核心定义精简**：单义词的核心定义只写"是什么"，不写"怎么做/有什么特点/目标是什么"。配料、做法、特征、目标、数量、出生地、知名原因等细节必须下沉到正文。
+- **首段禁止第二句（铁律）**：首段只能有一句话，`***` 闭合后的句号就是首段结尾，句号后不能再有任何内容。
     - ❌ 错误：`Juanmi refers to ***Juan Miguel Jiménez López, a Spanish footballer***. Born in Coín, Spain, he is known for his agility.`（有第二句）
     - ❌ 错误：`SDG refers to ***the Sustainable Development Goals...to ensure prosperity for all by 2030***. Also known as...`（定义太长+有第二句）
     - ✅ 正确：`Juanmi refers to ***Juan Miguel Jiménez López, a Spanish professional footballer who plays as a forward***.`
@@ -223,7 +224,7 @@
 - **内容细节**：菜谱需包含配料表；妆教需包含具体手法.
 
 ### 3.3 医疗、法律与金融 (YMYL)
-- **强制免责声明**：涉及健康、法律、投资等专业领域，文本句末**必须**添加免责提示。
+- **强制免责声明**：仅当内容涉及具体的健康建议、法律建议或投资建议时，才需要添加免责提示。单纯介绍流程、费用、概念等客观信息不需要免责声明。
 - **免责声明精准匹配**：只写实际涉及的领域，不要套用完整模板。
   - 仅涉及健康：`The above content is for reference only. If you have any health questions, please consult a professional.`
   - 仅涉及法律：`The above content is for reference only. If you have any legal questions, please consult a professional.`
@@ -251,6 +252,7 @@
 - **禁止平台关联称呼**：禁止使用与特定平台关联的称呼（如"薯宝"、"薯友"、"家人们"等）。
 
 ### 3.9 内容质量补充规则
+- **同名独立实体处理**：当参考笔记中出现多个同名但相互独立的实体（如多个同名店铺、多个同名人物）时，不能将它们合并描述为一个整体，应准确说明是"多个同名的XX"，并在正文中分别列举。
 - **避免歧义话术**：避免有歧义的观点表达，事实类需明确说出是事实或大部分人观点。
   - 错误：`"Mo Mo Mo Mo" was a flop` → 正确：`"Mo Mo Mo Mo" was considered a flop by many viewers`
 - **多版本答案需写全**：如果答案存在多种可能版本（如多平台操作方法、多种称呼），需要分别列出。
