@@ -1560,7 +1560,7 @@ with col_user:
         st.rerun()
 
 # 创建标签页（使用原生 st.tabs + CSS 美化）
-tab1, tab2, tab3 = st.tabs(['AI 修改', '规则管理', 'API 配置'])
+tab1, tab2, tab3, tab4 = st.tabs(['AI 修改', '独立质检', '规则管理', 'API 配置'])
 
 # 用 session_state 追踪当前 tab（st.tabs 不返回索引，需要在各 tab 内处理）
 
@@ -1569,7 +1569,7 @@ if "user_config" not in st.session_state or st.session_state.user_config is None
     st.session_state.user_config = load_user_config()
 
 # API 配置
-with tab3:
+with tab4:
     st.subheader("API 配置")
     st.caption("配置会自动保存到您的账户")
     
@@ -2221,8 +2221,110 @@ with tab1:
                         save_history(st.session_state.history)
                     st.rerun()
 
-# ==================== 规则管理功能 ====================
+# ==================== 独立质检功能 ====================
 with tab2:
+    st.subheader("独立质检")
+    st.caption("只做规则检查，给出修改建议，不自动修改原文")
+    
+    # 输入区域
+    col_qc_input, col_qc_ref = st.columns(2)
+    with col_qc_input:
+        qc_input = st.text_area("待检查的回答", height=250, 
+                                placeholder="粘贴需要质检的回答...", 
+                                key="qc_input_area")
+    with col_qc_ref:
+        qc_ref = st.text_area("参考笔记（可选）", height=250, 
+                              placeholder="粘贴参考笔记，AI 会检查回答是否与笔记一致...", 
+                              key="qc_ref_area")
+    
+    if st.button("🔍 开始质检", type="primary", use_container_width=True, key="qc_start_btn"):
+        if qc_input.strip():
+            # 从 session_state 获取 API 配置
+            user_cfg = st.session_state.user_config
+            api_url = user_cfg.get("api_url", DEFAULT_API_URL)
+            api_key = user_cfg.get("api_key", DEFAULT_API_KEY)
+            model = user_cfg.get("model", DEFAULT_MODEL)
+            
+            if not api_key:
+                st.error("请先在 API 配置中设置 API Key")
+            else:
+                rules = load_rules()
+                if not rules:
+                    st.error("无法读取规则文件")
+                else:
+                    with st.spinner("正在质检，请勿切换页面..."):
+                        qc_prompt = f"""## 任务：独立质检
+
+你是一个格式规范质检员。请按照【完整规则文件】检查【待检查的回答】，只给出修改建议清单，不要输出修改后的内容。
+
+## 待检查的回答
+{qc_input}
+
+## 参考笔记
+{qc_ref if qc_ref.strip() else "无"}
+
+## 完整规则文件
+{rules}
+
+---
+
+## 输出格式要求
+
+请按以下格式输出质检结果：
+
+### 📋 质检报告
+
+**总体评价**：（用1-2句话概括回答的整体质量）
+
+**问题清单**：（如果没有问题，写"✅ 未发现问题"）
+
+| 序号 | 问题类型 | 问题描述 | 对应规则 | 修改建议 |
+|------|----------|----------|----------|----------|
+| 1 | ... | ... | ... | ... |
+
+**注意事项**：
+1. 只列出真正违反规则的问题，不要过度挑剔
+2. 每个问题都要明确指出对应的规则条款
+3. 修改建议要具体、可操作
+4. 如果回答完全符合规范，明确说明"未发现问题"
+"""
+                        result, success, token_info = call_single_step(qc_prompt, api_url, api_key, model)
+                        if success:
+                            st.session_state.qc_result = result
+                            st.session_state.qc_tokens = token_info
+                            st.rerun()
+                        else:
+                            st.error(f"质检失败: {result}")
+        else:
+            st.warning("请输入待检查的回答")
+    
+    # 显示质检结果
+    if "qc_result" in st.session_state and st.session_state.qc_result:
+        st.divider()
+        
+        # 显示 Token 用量
+        if "qc_tokens" in st.session_state and st.session_state.qc_tokens.get("total_tokens", 0) > 0:
+            tokens = st.session_state.qc_tokens
+            st.markdown(f"""
+            <div style="background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.3); border-radius: 8px; padding: 10px 15px; margin-bottom: 15px;">
+                <span style="color: #00d4ff; font-weight: 500;">📊 Token 用量：</span>
+                <span style="color: #fff; margin-left: 10px;">输入: {tokens.get('prompt_tokens', 0):,}</span>
+                <span style="color: #fff; margin-left: 15px;">输出: {tokens.get('completion_tokens', 0):,}</span>
+                <span style="color: #00ff88; margin-left: 15px; font-weight: 600;">总计: {tokens.get('total_tokens', 0):,}</span>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.subheader("质检结果")
+        st.markdown(st.session_state.qc_result)
+        
+        # 清空按钮
+        if st.button("🗑️ 清空结果", key="qc_clear_btn"):
+            st.session_state.qc_result = ""
+            st.session_state.qc_tokens = {}
+            st.rerun()
+
+# ==================== 规则管理功能 ====================
+with tab3:
     st.subheader("规则管理")
     
     # 加载规则
