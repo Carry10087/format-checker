@@ -2221,23 +2221,17 @@ with tab1:
                         save_history(st.session_state.history)
                     st.rerun()
 
-# ==================== 独立质检功能 ====================
+# ==================== 格式质检功能 ====================
 with tab2:
-    st.subheader("独立质检")
-    st.caption("只做规则检查，给出修改建议，不自动修改原文")
+    st.subheader("格式质检")
+    st.caption("只检查格式规则，不检查内容准确性，速度更快")
     
     # 输入区域
-    col_qc_input, col_qc_ref = st.columns(2)
-    with col_qc_input:
-        qc_input = st.text_area("待检查的回答", height=250, 
-                                placeholder="粘贴需要质检的回答...", 
-                                key="qc_input_area")
-    with col_qc_ref:
-        qc_ref = st.text_area("参考笔记（可选）", height=250, 
-                              placeholder="粘贴参考笔记，AI 会检查回答是否与笔记一致...", 
-                              key="qc_ref_area")
+    qc_input = st.text_area("待检查的回答", height=300, 
+                            placeholder="粘贴需要质检的回答...", 
+                            key="qc_input_area")
     
-    if st.button("🔍 开始质检", type="primary", use_container_width=True, key="qc_start_btn"):
+    if st.button("🔍 开始格式质检", type="primary", use_container_width=True, key="qc_start_btn"):
         if qc_input.strip():
             # 从 session_state 获取 API 配置
             user_cfg = st.session_state.user_config
@@ -2248,45 +2242,35 @@ with tab2:
             if not api_key:
                 st.error("请先在 API 配置中设置 API Key")
             else:
-                rules = load_rules()
-                if not rules:
-                    st.error("无法读取规则文件")
+                # 读取根目录的通用格式规则（所有用户共享）
+                format_rules_path = "format_only_rules.md"
+                try:
+                    with open(format_rules_path, "r", encoding="utf-8") as f:
+                        format_rules = f.read()
+                except:
+                    format_rules = None
+                
+                if not format_rules:
+                    st.error("无法读取格式规则文件 (format_only_rules.md)")
                 else:
                     with st.spinner("正在质检，请勿切换页面..."):
-                        qc_prompt = f"""## 任务：独立质检
+                        qc_prompt = f"""## 任务：格式质检并修改
 
-你是一个格式规范质检员。请按照【完整规则文件】检查【待检查的回答】，只给出修改建议清单，不要输出修改后的内容。
+你是一个格式规范质检员。请按照规则检查格式问题并直接修改，不检查内容准确性。
 
 ## 待检查的回答
 {qc_input}
 
-## 参考笔记
-{qc_ref if qc_ref.strip() else "无"}
-
-## 完整规则文件
-{rules}
+## 格式规则
+{format_rules}
 
 ---
 
-## 输出格式要求
-
-请按以下格式输出质检结果：
-
-### 📋 质检报告
-
-**总体评价**：（用1-2句话概括回答的整体质量）
-
-**问题清单**：（如果没有问题，写"✅ 未发现问题"）
-
-| 序号 | 问题类型 | 问题描述 | 对应规则 | 修改建议 |
-|------|----------|----------|----------|----------|
-| 1 | ... | ... | ... | ... |
-
-**注意事项**：
-1. 只列出真正违反规则的问题，不要过度挑剔
-2. 每个问题都要明确指出对应的规则条款
-3. 修改建议要具体、可操作
-4. 如果回答完全符合规范，明确说明"未发现问题"
+## 输出要求
+1. 直接输出修改后的完整 Markdown
+2. 禁止任何解释、注释、说明
+3. 禁止用代码块包裹
+4. 如果没有格式问题，原样输出
 """
                         result, success, token_info = call_single_step(qc_prompt, api_url, api_key, model)
                         if success:
@@ -2314,11 +2298,34 @@ with tab2:
             </div>
             """, unsafe_allow_html=True)
         
-        st.subheader("质检结果")
-        st.markdown(st.session_state.qc_result)
+        st.subheader("修改结果")
+        
+        # 预览/编辑模式切换
+        h_qc1, h_qc2 = st.columns([3, 1])
+        with h_qc1:
+            pass
+        with h_qc2:
+            qc_view_mode = st.radio("", ["预览", "编辑"], horizontal=True, key="qc_view_mode", label_visibility="collapsed")
+        
+        if qc_view_mode == "预览":
+            with st.container(height=400):
+                st.markdown(st.session_state.qc_result)
+            copy_content = st.session_state.qc_result
+        else:
+            edited_qc = st.text_area("编辑结果", value=st.session_state.qc_result, height=400, key="qc_edit_area", label_visibility="collapsed")
+            if edited_qc != st.session_state.qc_result:
+                st.session_state.qc_result = edited_qc
+            copy_content = edited_qc
+        
+        # 复制按钮 - 使用当前显示的内容
+        import streamlit.components.v1 as components
+        encoded_qc = base64.b64encode(copy_content.encode('utf-8')).decode('utf-8')
+        html_style = "<style>body{margin:0;padding:0;overflow:hidden;}button{width:100%;height:40px;padding:0;margin:0;display:block;font-size:14px;color:white;border:none;border-radius:5px;cursor:pointer;line-height:40px;font-family:'Source Sans Pro',sans-serif;transition:0.3s;}button:hover{opacity:0.9;}button:active{transform:scale(0.98);}</style>"
+        copy_js_qc = f'''{html_style}<script>function copyQc(){{const b='{encoded_qc}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnQc').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnQc').innerText='📋 复制修改后的Markdown',1500);}});}}</script><button id="btnQc" onclick="copyQc()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">📋 复制修改后的Markdown</button>'''
+        components.html(copy_js_qc, height=60)
         
         # 清空按钮
-        if st.button("🗑️ 清空结果", key="qc_clear_btn"):
+        if st.button("🗑️ 清空结果", key="qc_clear_btn", use_container_width=True):
             st.session_state.qc_result = ""
             st.session_state.qc_tokens = {}
             st.rerun()
