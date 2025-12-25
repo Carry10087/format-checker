@@ -1594,6 +1594,9 @@ with tab4:
         "gemini-3-flash-preview-maxthinking",
         "gemini-3-flash-preview",
         "gemini-3-pro-preview",
+        "gemini-3-pro-preview-maxthinking",
+        "gemini-3-pro-preview-nothinking",
+        "gemini-3-pro-preview-search",
     ]
     
     api_url = st.text_input("API URL", value=st.session_state.user_config.get("api_url", DEFAULT_API_URL), key="api_url_input")
