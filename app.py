@@ -28,9 +28,9 @@ from io import BytesIO
 HAS_PASTE_BUTTON = False
 
 # 默认 API 配置
-DEFAULT_API_URL = "https://apic1.ohmycdn.com/api/v1/ai/openai/cc-omg/v1/chat/completions"
-DEFAULT_API_KEY = "sk-qL3MXCaP4e59D683eD3dT3BLbkFJ2Ad098474090476490b1"
-DEFAULT_MODEL = "claude-opus-4-5"
+DEFAULT_API_URL = "https://nvewvip.preview.tencent-zeabur.cn/v1/chat/completions"
+DEFAULT_API_KEY = "sk-mw0pY9ILORPwuDBab3CYIzgnJLZO4zgj0kYn7wJ8NVOZjpi"
+DEFAULT_MODEL = "gemini-3-flash-preview-maxthinking-search"
 
 # 用户数据目录
 USERS_DIR = "users"
@@ -144,6 +144,18 @@ def save_user_config(api_url, api_key, model):
         config_file = get_user_config_file(st.session_state.current_user)
         with open(config_file, "w", encoding="utf-8") as f:
             json.dump({"api_url": api_url, "api_key": api_key, "model": model}, f, ensure_ascii=False, indent=2)
+        return True
+    except:
+        return False
+
+def save_user_config_full(config):
+    """保存当前用户的完整 API 配置（包含多个模型）"""
+    if "current_user" not in st.session_state or not st.session_state.current_user:
+        return False
+    try:
+        config_file = get_user_config_file(st.session_state.current_user)
+        with open(config_file, "w", encoding="utf-8") as f:
+            json.dump(config, f, ensure_ascii=False, indent=2)
         return True
     except:
         return False
@@ -1573,16 +1585,56 @@ with tab4:
     st.subheader("API 配置")
     st.caption("配置会自动保存到您的账户")
     
-    col1, col2 = st.columns(2)
-    with col1:
-        api_url = st.text_input("API URL", value=st.session_state.user_config.get("api_url", DEFAULT_API_URL), key="api_url_input")
-        api_key = st.text_input("API Key", value=st.session_state.user_config.get("api_key", DEFAULT_API_KEY), type="password", key="api_key_input")
-    with col2:
-        model = st.text_input("模型名称", value=st.session_state.user_config.get("model", DEFAULT_MODEL), key="model_input")
+    # 模型选项列表
+    MODEL_OPTIONS = [
+        "gemini-3-flash-preview-nothinking-search",
+        "gemini-3-flash-preview-maxthinking-search",
+        "gemini-3-flash-preview-search",
+        "gemini-3-flash-preview-nothinking",
+        "gemini-3-flash-preview-maxthinking",
+        "gemini-3-flash-preview",
+        "gemini-3-pro-preview",
+    ]
+    
+    api_url = st.text_input("API URL", value=st.session_state.user_config.get("api_url", DEFAULT_API_URL), key="api_url_input")
+    api_key = st.text_input("API Key", value=st.session_state.user_config.get("api_key", DEFAULT_API_KEY), type="password", key="api_key_input")
+    
+    st.markdown("---")
+    st.markdown("**模型配置**")
+    
+    # 深度修改模型
+    def get_model_index(key, default_model):
+        current = st.session_state.user_config.get(key, default_model)
+        return MODEL_OPTIONS.index(current) if current in MODEL_OPTIONS else 0
+    
+    col_m1, col_m2 = st.columns(2)
+    with col_m1:
+        model_edit = st.selectbox("深度修改", options=MODEL_OPTIONS, 
+                                   index=get_model_index("model_edit", "gemini-3-flash-preview-maxthinking-search"),
+                                   key="model_edit_select", help="AI修改功能使用")
+        model_translate = st.selectbox("翻译", options=MODEL_OPTIONS,
+                                        index=get_model_index("model_translate", "gemini-3-flash-preview-nothinking"),
+                                        key="model_translate_select", help="翻译功能使用")
+    with col_m2:
+        model_qc_fast = st.selectbox("快速质检", options=MODEL_OPTIONS,
+                                      index=get_model_index("model_qc_fast", "gemini-3-flash-preview-search"),
+                                      key="model_qc_fast_select", help="快速模式质检使用")
+        model_qc_full = st.selectbox("召回笔记质检", options=MODEL_OPTIONS,
+                                      index=get_model_index("model_qc_full", "gemini-3-flash-preview-search"),
+                                      key="model_qc_full_select", help="有召回笔记的质检使用")
     
     if st.button("保存配置", type="primary"):
-        if save_user_config(api_url, api_key, model):
-            st.session_state.user_config = {"api_url": api_url, "api_key": api_key, "model": model}
+        config = {
+            "api_url": api_url,
+            "api_key": api_key,
+            "model_edit": model_edit,
+            "model_translate": model_translate,
+            "model_qc_fast": model_qc_fast,
+            "model_qc_full": model_qc_full,
+            "model": model_edit  # 兼容旧代码
+        }
+        if save_user_config_full(config):
+            st.session_state.user_config = config
             st.success("✅ 配置已保存")
         else:
             st.error("❌ 保存失败")
@@ -1736,7 +1788,7 @@ with tab1:
             user_cfg = st.session_state.user_config
             api_url = user_cfg.get("api_url", DEFAULT_API_URL)
             api_key = user_cfg.get("api_key", DEFAULT_API_KEY)
-            model = user_cfg.get("model", DEFAULT_MODEL)
+            model = user_cfg.get("model_edit", user_cfg.get("model", DEFAULT_MODEL))
             
             if not api_key:
                 st.error("请先在 API 配置中设置 API Key")
@@ -2089,7 +2141,7 @@ with tab1:
                 user_cfg = st.session_state.user_config
                 api_url_t = user_cfg.get("api_url", DEFAULT_API_URL)
                 api_key_t = user_cfg.get("api_key", DEFAULT_API_KEY)
-                model_t = user_cfg.get("model", DEFAULT_MODEL)
+                model_t = user_cfg.get("model_translate", user_cfg.get("model", DEFAULT_MODEL))
                 
                 with st.spinner("翻译中，请勿切换页面..."):
                     prompt = TRANSLATE_PROMPT.format(text=st.session_state.final_result)
@@ -2224,37 +2276,81 @@ with tab1:
 # ==================== 格式质检功能 ====================
 with tab2:
     st.subheader("格式质检")
-    st.caption("只检查格式规则，不检查内容准确性，速度更快")
+    
+    # 模式选择
+    qc_mode = st.radio(
+        "质检模式",
+        ["快速模式（纯格式）", "召回笔记质检（格式+内容）"],
+        horizontal=True,
+        key="qc_mode_radio",
+        help="快速模式只检查格式规则；召回笔记质检需要提供参考笔记，可检查内容准确性"
+    )
+    
+    if qc_mode == "快速模式（纯格式）":
+        st.caption("只检查格式规则，不检查内容准确性，速度更快")
+    else:
+        st.caption("检查格式规则 + 内容准确性，需要提供参考笔记")
     
     # 输入区域
     qc_input = st.text_area("待检查的回答", height=300, 
                             placeholder="粘贴需要质检的回答...", 
                             key="qc_input_area")
     
+    # 召回笔记质检需要参考笔记
+    qc_notes = ""
+    if qc_mode == "召回笔记质检（格式+内容）":
+        qc_notes = st.text_area("参考笔记", height=200,
+                                placeholder="粘贴参考笔记（用于检查内容准确性）...",
+                                key="qc_notes_area")
+    
     if st.button("🔍 开始格式质检", type="primary", use_container_width=True, key="qc_start_btn"):
         if qc_input.strip():
-            # 从 session_state 获取 API 配置
-            user_cfg = st.session_state.user_config
-            api_url = user_cfg.get("api_url", DEFAULT_API_URL)
-            api_key = user_cfg.get("api_key", DEFAULT_API_KEY)
-            model = user_cfg.get("model", DEFAULT_MODEL)
-            
-            if not api_key:
-                st.error("请先在 API 配置中设置 API Key")
+            # 召回笔记质检需要参考笔记
+            if qc_mode == "召回笔记质检（格式+内容）" and not qc_notes.strip():
+                st.warning("召回笔记质检需要提供参考笔记")
             else:
-                # 读取根目录的通用格式规则（所有用户共享）
-                format_rules_path = "format_only_rules.md"
-                try:
-                    with open(format_rules_path, "r", encoding="utf-8") as f:
-                        format_rules = f.read()
-                except:
-                    format_rules = None
-                
-                if not format_rules:
-                    st.error("无法读取格式规则文件 (format_only_rules.md)")
+                # 从 session_state 获取 API 配置
+                user_cfg = st.session_state.user_config
+                api_url = user_cfg.get("api_url", DEFAULT_API_URL)
+                api_key = user_cfg.get("api_key", DEFAULT_API_KEY)
+                # 根据模式选择不同的模型
+                if qc_mode == "快速模式（纯格式）":
+                    model = user_cfg.get("model_qc_fast", user_cfg.get("model", DEFAULT_MODEL))
                 else:
-                    with st.spinner("正在质检，请勿切换页面..."):
-                        qc_prompt = f"""## 任务：格式质检
+                    model = user_cfg.get("model_qc_full", user_cfg.get("model", DEFAULT_MODEL))
+                
+                if not api_key:
+                    st.error("请先在 API 配置中设置 API Key")
+                else:
+                    # 读取规则文件
+                    format_rules = ""
+                    content_rules = ""
+                    
+                    # 快速模式需要格式规则
+                    if qc_mode == "快速模式（纯格式）":
+                        try:
+                            with open("format_only_rules.md", "r", encoding="utf-8") as f:
+                                format_rules = f.read()
+                        except:
+                            format_rules = None
+                    
+                    # 召回笔记质检需要内容规则
+                    if qc_mode == "召回笔记质检（格式+内容）":
+                        try:
+                            with open("format_with_notes_rules.md", "r", encoding="utf-8") as f:
+                                content_rules = f.read()
+                        except:
+                            content_rules = None
+                    
+                    if qc_mode == "快速模式（纯格式）" and not format_rules:
+                        st.error("无法读取格式规则文件 (format_only_rules.md)")
+                    elif qc_mode == "召回笔记质检（格式+内容）" and not content_rules:
+                        st.error("无法读取内容规则文件 (format_with_notes_rules.md)")
+                    else:
+                        with st.spinner("正在质检，请勿切换页面..."):
+                            # 根据模式构建不同的 prompt
+                            if qc_mode == "快速模式（纯格式）":
+                                qc_prompt = f"""## 任务：格式质检
 
 你是一个格式规范质检员。请**严格**按照规则检查格式问题。
 
@@ -2288,7 +2384,47 @@ with tab2:
 （不要任何解释，不要用代码块包裹）
 ---FIXED_END---
 """
-                        result, success, token_info = call_single_step(qc_prompt, api_url, api_key, model)
+                            else:
+                                # 召回笔记质检（只检查内容，不检查格式）
+                                qc_prompt = f"""## 任务：召回笔记质检（仅内容准确性）
+
+你是一个内容质检员。请**严格**对照参考笔记检查回答的内容准确性问题。
+
+**重要提醒**：
+1. **不检查格式**，只检查内容是否准确、是否与参考笔记一致
+2. 只检查**真正有问题**的内容，不要过度挑剔
+3. 如果内容完全准确，问题清单写"✅ 未发现内容问题"，修改后内容**原样输出原文**
+4. 不要为了找问题而找问题，没问题就是没问题
+
+## 待检查的回答
+{qc_input}
+
+## 参考笔记
+{qc_notes}
+
+## 内容规则（需对照参考笔记检查）
+{content_rules}
+
+---
+
+## 输出格式（严格按此格式）
+
+---ISSUES_START---
+（如果有问题，用表格列出；如果**没有问题**，只写一行：✅ 未发现内容问题）
+
+| 序号 | 问题描述 | 参考笔记依据 |
+|------|----------|--------------|
+| 1 | ... | ... |
+
+---ISSUES_END---
+
+---FIXED_START---
+（如果有问题：输出修改后的完整内容）
+（如果没有问题：**原样输出原文**，一字不改）
+（不要任何解释，不要用代码块包裹）
+---FIXED_END---
+"""
+                            result, success, token_info = call_single_step(qc_prompt, api_url, api_key, model)
                         if success:
                             # 解析问题清单和修改后的内容
                             issues = ""
