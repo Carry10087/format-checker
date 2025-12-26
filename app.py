@@ -2039,8 +2039,7 @@ with tab1:
                             break
                         # 保存最终结果（Step 2）
                         if i == 1 and success:
-                            # AI 处理完后，程序兜底修复格式
-                            st.session_state.final_result = fix_all_format(result)
+                            st.session_state.final_result = result
                     
                     render_progress_card(2, '处理完成！', 100, is_done=True)
                     
@@ -2389,13 +2388,22 @@ with tab2:
                 except:
                     format_rules = None
                 
+                # 如果有参考笔记，额外读取 format_with_notes_rules.md
+                notes_rules = ""
+                if qc_notes.strip():
+                    try:
+                        with open("format_with_notes_rules.md", "r", encoding="utf-8") as f:
+                            notes_rules = f.read()
+                    except:
+                        notes_rules = ""
+                
                 if not format_rules:
                     st.error("无法读取格式规则文件 (format_only_rules.md)")
                 else:
                     with st.spinner("正在质检，请勿切换页面..."):
                         # 根据是否有参考笔记构建不同的 prompt（使用程序修复后的文本）
                         if qc_notes.strip():
-                            # 有参考笔记：同时检查格式和内容
+                            # 有参考笔记：同时检查格式和内容，使用两套规则
                             qc_prompt = f"""## 任务：格式+内容质检
 
 你是一个质检员。请**严格**按照规则检查格式问题，并对照参考笔记检查内容准确性。
@@ -2412,8 +2420,11 @@ with tab2:
 ## 参考笔记
 {qc_notes}
 
-## 格式规则
+## 格式规则（无需参考笔记）
 {format_rules}
+
+## 内容规则（需对照参考笔记检查）
+{notes_rules}
 
 ---
 
@@ -2488,9 +2499,6 @@ with tab2:
                                     fixed = result.split("---FIXED_START---")[1].split("---FIXED_END---")[0].strip()
                                 except:
                                     fixed = result
-                            
-                            # AI 处理完后，程序再执行格式修复（兜底）
-                            fixed = fix_all_format(fixed)
                             
                             st.session_state.qc_issues = issues
                             st.session_state.qc_result = fixed
