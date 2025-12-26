@@ -515,6 +515,25 @@ hr, .stDivider {
     margin: 1.5rem 0 !important;
 }
 
+/* 结果容器内的文字 - 更清晰的显示 */
+[data-testid="stVerticalBlockBorderWrapper"] .stMarkdown p,
+[data-testid="stVerticalBlockBorderWrapper"] .stMarkdown li,
+[data-testid="stVerticalBlockBorderWrapper"] .stMarkdown h4,
+.stMarkdownContainer p,
+.stMarkdownContainer li {
+    color: #ffffff !important;
+    font-size: inherit !important;
+    line-height: 1.6 !important;
+    font-weight: 400 !important;
+}
+
+/* 翻译/结果区域的滚动容器 - 更好的对比度 */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    background: rgba(10, 12, 20, 0.85) !important;
+    border: 1px solid rgba(0, 212, 255, 0.25) !important;
+    border-radius: 10px !important;
+}
+
 
 
 /* 按钮 - 霓虹效果 + 微交互 */
@@ -2114,7 +2133,7 @@ with tab1:
             
             # 复制英文按钮
             st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
-            copy_js_en = f'''{html_style}<script>function copyEn(){{const b='{encoded_en}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnEn').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnEn').innerText='📋 复制英文',1500);}});}}</script><button id="btnEn" onclick="copyEn()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">📋 复制英文</button>'''
+            copy_js_en = f'''{html_style}<script>function copyEn(){{const b='{encoded_en}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnEn').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnEn').innerText='复制英文',1500);}});}}</script><button id="btnEn" onclick="copyEn()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
             components.html(copy_js_en, height=60)
         
         with col_translate:
@@ -2125,15 +2144,18 @@ with tab1:
             with h_c2:
                 translate_clicked = st.button("翻译", use_container_width=True, type="primary", key="trans_btn_header")
             
-            cn_key = f"result_cn_{hash(st.session_state.translated_result)}"
-            st.text_area("中文结果", value=st.session_state.translated_result, height=300, 
-                        key=cn_key, disabled=True, label_visibility="collapsed")
+            # 使用 container + markdown 显示翻译结果，更清晰
+            with st.container(height=300):
+                if st.session_state.translated_result:
+                    st.markdown(st.session_state.translated_result)
+                else:
+                    st.caption("点击「翻译」按钮生成中文翻译...")
             
             # 复制中文按钮
             st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
             if st.session_state.translated_result:
                 encoded_cn = base64.b64encode(st.session_state.translated_result.encode('utf-8')).decode('utf-8')
-                copy_js_cn = f'''{html_style}<script>function copyCn(){{const b='{encoded_cn}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnCn').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnCn').innerText='📋 复制中文',1500);}});}}</script><button id="btnCn" onclick="copyCn()" style="background:linear-gradient(135deg,#8b5cf6 0%,#00d4ff 100%);box-shadow:0 0 15px rgba(139,92,246,0.3);">📋 复制中文</button>'''
+                copy_js_cn = f'''{html_style}<script>function copyCn(){{const b='{encoded_cn}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnCn').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnCn').innerText='复制中文',1500);}});}}</script><button id="btnCn" onclick="copyCn()" style="background:linear-gradient(135deg,#8b5cf6 0%,#00d4ff 100%);box-shadow:0 0 15px rgba(139,92,246,0.3);">复制中文</button>'''
                 components.html(copy_js_cn, height=60)
             else:
                 st.empty()
@@ -2293,9 +2315,9 @@ with tab2:
     )
     
     if qc_mode == "程序自动修复":
-        st.caption("⚡ 秒级自动修复：引用格式、空格、句号位置、列表缩进等")
+        st.caption(" 秒级自动修复：引用格式、空格、句号位置、列表缩进等")
     else:
-        st.caption("🤖 AI 检查格式逻辑，有参考笔记时同时检查内容准确性")
+        st.caption(" AI 检查格式逻辑，有参考笔记时同时检查内容准确性")
     
     # 输入区域
     qc_input = st.text_area("待检查的回答", height=300, 
@@ -2313,9 +2335,9 @@ with tab2:
     if qc_mode == "程序自动修复":
         col_fix, col_analyze = st.columns(2)
         with col_fix:
-            fix_clicked = st.button("⚡ 一键修复格式", type="primary", use_container_width=True, key="auto_fix_btn")
+            fix_clicked = st.button("一键修复格式", type="primary", use_container_width=True, key="auto_fix_btn")
         with col_analyze:
-            analyze_clicked = st.button("🔍 分析问题（不修复）", use_container_width=True, key="analyze_btn")
+            analyze_clicked = st.button("分析问题（不修复）", use_container_width=True, key="analyze_btn")
         
         if fix_clicked:
             if qc_input.strip():
@@ -2325,7 +2347,7 @@ with tab2:
                 
                 # 保存结果
                 st.session_state.qc_result = fixed_text
-                st.session_state.qc_issues = "\n".join([f"- {issue}" for issue in issues]) if issues else "✅ 未发现可自动修复的格式问题"
+                st.session_state.qc_issues = "\n".join([f"- {issue}" for issue in issues]) if issues else "未发现可自动修复的格式问题"
                 st.session_state.qc_tokens = {}
                 st.session_state.qc_auto_fixed = True
                 st.rerun()
@@ -2336,19 +2358,19 @@ with tab2:
             if qc_input.strip():
                 issues = analyze_format_issues(qc_input)
                 if issues:
-                    st.markdown("### 📋 发现的问题")
+                    st.markdown("### 发现的问题")
                     for issue in issues:
                         if "需AI判断" in issue:
-                            st.warning(f"⚠️ {issue}")
+                            st.warning(issue)
                         else:
-                            st.info(f"🔧 {issue}")
+                            st.info(issue)
                 else:
-                    st.success("✅ 未发现格式问题")
+                    st.success("未发现格式问题")
             else:
                 st.warning("请输入待检查的回答")
     
     # AI 质检模式
-    elif st.button("🔍 开始AI质检", type="primary", use_container_width=True, key="qc_start_btn"):
+    elif st.button("开始AI质检", type="primary", use_container_width=True, key="qc_start_btn"):
         if qc_input.strip():
             # 从 session_state 获取 API 配置
             user_cfg = st.session_state.user_config
@@ -2485,7 +2507,7 @@ with tab2:
         
         # 显示修复来源标识
         if st.session_state.get("qc_auto_fixed", False):
-            st.success("⚡ 程序自动修复完成")
+            st.success("程序自动修复完成")
         
         # 显示 Token 用量（仅AI质检）
         if "qc_tokens" in st.session_state and st.session_state.qc_tokens.get("total_tokens", 0) > 0:
@@ -2501,7 +2523,7 @@ with tab2:
         
         # 显示问题清单
         if "qc_issues" in st.session_state and st.session_state.qc_issues:
-            with st.expander("📋 发现的问题", expanded=True):
+            with st.expander("发现的问题", expanded=True):
                 st.markdown(st.session_state.qc_issues)
         
         # 英文结果和中文翻译并排显示
@@ -2526,7 +2548,7 @@ with tab2:
             import streamlit.components.v1 as components
             encoded_qc = base64.b64encode(copy_content.encode('utf-8')).decode('utf-8')
             html_style = "<style>body{margin:0;padding:0;overflow:hidden;}button{width:100%;height:40px;padding:0;margin:0;display:block;font-size:14px;color:white;border:none;border-radius:5px;cursor:pointer;line-height:40px;font-family:'Source Sans Pro',sans-serif;transition:0.3s;}button:hover{opacity:0.9;}button:active{transform:scale(0.98);}</style>"
-            copy_js_qc = f'''{html_style}<script>function copyQc(){{const b='{encoded_qc}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnQc').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnQc').innerText='📋 复制英文',1500);}});}}</script><button id="btnQc" onclick="copyQc()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">📋 复制英文</button>'''
+            copy_js_qc = f'''{html_style}<script>function copyQc(){{const b='{encoded_qc}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnQc').innerText='已复制';setTimeout(()=>document.getElementById('btnQc').innerText='复制英文',1500);}});}}</script><button id="btnQc" onclick="copyQc()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
             components.html(copy_js_qc, height=60)
         
         with col_cn:
@@ -2537,7 +2559,7 @@ with tab2:
                 st.session_state.qc_translated = ""
             
             # 翻译按钮
-            if st.button("🌐 翻译成中文", key="qc_translate_btn", use_container_width=True):
+            if st.button("翻译成中文", key="qc_translate_btn", use_container_width=True):
                 user_cfg = st.session_state.user_config
                 api_url_t = user_cfg.get("api_url", DEFAULT_API_URL)
                 api_key_t = user_cfg.get("api_key", DEFAULT_API_KEY)
@@ -2562,13 +2584,13 @@ with tab2:
                 
                 # 复制中文按钮
                 encoded_cn = base64.b64encode(st.session_state.qc_translated.encode('utf-8')).decode('utf-8')
-                copy_js_cn = f'''{html_style}<script>function copyCn(){{const b='{encoded_cn}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnCn').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnCn').innerText='📋 复制中文',1500);}});}}</script><button id="btnCn" onclick="copyCn()" style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);box-shadow:0 0 15px rgba(16,185,129,0.3);">📋 复制中文</button>'''
+                copy_js_cn = f'''{html_style}<script>function copyCn(){{const b='{encoded_cn}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnCn').innerText='已复制';setTimeout(()=>document.getElementById('btnCn').innerText='复制中文',1500);}});}}</script><button id="btnCn" onclick="copyCn()" style="background:linear-gradient(135deg,#8b5cf6 0%,#00d4ff 100%);box-shadow:0 0 15px rgba(139,92,246,0.3);">复制中文</button>'''
                 components.html(copy_js_cn, height=60)
             else:
                 st.info("点击上方按钮翻译成中文")
         
         # 清空按钮
-        if st.button("🗑️ 清空结果", key="qc_clear_btn", use_container_width=True):
+        if st.button("清空结果", key="qc_clear_btn", use_container_width=True):
             st.session_state.qc_result = ""
             st.session_state.qc_issues = ""
             st.session_state.qc_tokens = {}
@@ -2685,7 +2707,7 @@ with tab3:
         
         # 粘贴图片区域
         if HAS_PASTE_BUTTON:
-            paste_result = paste_image_button("📋 粘贴图片", key="paste_rule_img")
+            paste_result = paste_image_button("粘贴图片", key="paste_rule_img")
             if paste_result.image_data is not None:
                 buf = BytesIO()
                 paste_result.image_data.save(buf, format='PNG')
@@ -2857,7 +2879,7 @@ with tab3:
             st.warning("⚠️ 删除后可通过顶部“撤销上次修改”恢复")
             delete_section = st.selectbox("选择要删除的章节", section_order, key="delete_select")
             
-            if st.button("🗑️ 删除章节", type="primary"):
+            if st.button("删除章节", type="primary"):
                 if delete_section in sections:
                     # 保存当前规则到历史（用于撤销）
                     st.session_state.rules_history.append(rules_content)

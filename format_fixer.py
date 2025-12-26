@@ -48,9 +48,11 @@ def fix_list_item_period(text: str) -> str:
                 if match:
                     before_notes = stripped[:match.start()]
                     notes = stripped[match.start():]
-                    if before_notes and not before_notes.rstrip().endswith(('.', '。', '!', '?', '！', '？')):
+                    # 检查是否以句号结尾，包括 ." 和 .) 这种引号/括号内句号的情况
+                    if before_notes and not re.search(r'[.。!?！？]["\')]?$', before_notes.rstrip()):
                         line = before_notes.rstrip() + '.' + notes
-            elif stripped and not stripped.endswith(('.', '。', '!', '?', '！', '？', ':', '：')):
+            # 检查是否以句号结尾，包括 ." 和 .) 这种引号/括号内句号的情况
+            elif stripped and not re.search(r'[.。!?！？:：]["\')]?$', stripped):
                 line = stripped + '.'
         result.append(line)
     
@@ -522,11 +524,16 @@ def analyze_format_issues(text: str) -> list:
             note_match = re.search(r'(\[Note\s*\d+\](\(#\))?)+$', stripped)
             if note_match:
                 before_note = stripped[:note_match.start()].rstrip()
-                if before_note and not before_note.endswith(('.', '!', '?')):
-                    issues.append(f"第{i}行：列表项引用前缺少句号")
+                # 检查是否以句号结尾，包括 ." 和 .) 这种引号/括号内句号的情况
+                if before_note and not re.search(r'[.!?]["\')]?$', before_note):
+                    # 显示引用前的内容片段
+                    context = before_note[-30:] if len(before_note) > 30 else before_note
+                    issues.append(f"第{i}行：列表项引用前缺少句号，上下文：...{context}[Note...]")
                     break
-            elif stripped and not stripped.endswith(('.', '!', '?', ':')):
-                issues.append(f"第{i}行：列表项末尾缺少句号")
+            elif stripped and not re.search(r'[.!?:]["\')]?$', stripped):
+                # 显示行末内容
+                context = stripped[-40:] if len(stripped) > 40 else stripped
+                issues.append(f"第{i}行：列表项末尾缺少句号，上下文：...{context}")
                 break
     
     # 检查平台特定称呼
