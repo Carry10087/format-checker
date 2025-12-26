@@ -24,10 +24,11 @@ def fix_highlight_spaces(text: str) -> str:
 
 
 def fix_period_position(text: str) -> str:
-    """修复首段句号位置：句号应在***外面"""
+    """修复首段句号位置：句号应在***外面（但引号内的句号保留）"""
     # 修复：内容。*** → 内容***。 的情况（中文句号）
     text = re.sub(r'。\*\*\*', '***。', text)
     # 修复：内容.*** → 内容***. 的情况（英文句号，非引号结尾）
+    # 注意：不处理 "text."*** 这种情况，因为引号内句号是正确的
     text = re.sub(r'([^""])\.(\*\*\*)', r'\1\2.', text)
     return text
 
@@ -485,6 +486,216 @@ def analyze_format_issues(text: str) -> list:
         if match:
             issues.append(f"⚠️ 第{i}行：可能存在跨平台引流「{match.group(0)}」")
             break
+    
+    # ===== 新增可程序化检测 =====
+    
+    # 检查首段句号位置（句号应在 *** 外面，但引号结尾除外）
+    first_line = lines[0] if lines else ""
+    if '***' in first_line:
+        # 错误：.*** 且前面不是引号
+        if re.search(r'[^"]\.\*\*\*', first_line):
+            issues.append(f"第1行：首段句号在 *** 内，应移到 *** 外面")
+    
+    # 检查列表项缺少小标题加粗
+    for i, line in enumerate(lines, 1):
+        if re.match(r'^\s*-\s+[^*\[]', line) and not re.match(r'^\s*-\s+\*\*', line):
+            # 是列表项但没有加粗小标题
+            if not re.match(r'^\s+-\s*$', line):  # 排除空列表项
+                content = line.strip()[:40]
+                issues.append(f"第{i}行：列表项缺少加粗小标题「{content}...」")
+                break
+    
+    # 检查列表项缺少引用
+    for i, line in enumerate(lines, 1):
+        if re.match(r'^\s*-\s+\*\*[^*]+\*\*:', line):
+            if not re.search(r'\[Note\s*\d+\]', line):
+                title_match = re.search(r'\*\*([^*]+)\*\*', line)
+                title = title_match.group(1) if title_match else "未知"
+                issues.append(f"第{i}行：列表项「{title}」缺少 Note 引用")
+                break
+    
+    # 检查列表项末尾缺少句号
+    for i, line in enumerate(lines, 1):
+        if re.match(r'^\s*-\s+\*\*[^*]+\*\*:', line):
+            stripped = line.rstrip()
+            # 如果末尾是引用，检查引用前
+            note_match = re.search(r'(\[Note\s*\d+\](\(#\))?)+$', stripped)
+            if note_match:
+                before_note = stripped[:note_match.start()].rstrip()
+                if before_note and not before_note.endswith(('.', '!', '?')):
+                    issues.append(f"第{i}行：列表项引用前缺少句号")
+                    break
+            elif stripped and not stripped.endswith(('.', '!', '?', ':')):
+                issues.append(f"第{i}行：列表项末尾缺少句号")
+                break
+    
+    # 检查平台特定称呼
+    platform_terms = ['薯宝', '薯友', '家人们', '宝子', '姐妹们']
+    for i, line in enumerate(lines, 1):
+        for term in platform_terms:
+            if term in line:
+                issues.append(f"第{i}行：存在平台特定称呼「{term}」")
+                break
+        else:
+            continue
+        break
+    
+    # 检查多义词首段废话格式
+    bad_multi_patterns = [
+        r'a term with multiple meanings',
+        r'several notable individuals',
+        r'a word.*that can refer to',
+        r'a name.*that can refer to',
+    ]
+    for pattern in bad_multi_patterns:
+        if re.search(pattern, first_line, re.IGNORECASE):
+            issues.append(f"第1行：多义词首段使用了废话格式")
+            break
+    
+    # 检查首段是否有 *** 高亮
+    if lines and not re.search(r'\*\*\*', lines[0]):
+        if re.match(r'^[A-Za-z""]', lines[0]):  # 看起来像首段
+            issues.append(f"第1行：首段缺少 *** 高亮")
+    
+    # 检查首段冠词是否在 *** 外
+    if '***' in first_line:
+        # 检查 is/are *** a/an/the 的情况（冠词应在 *** 内）
+        if re.search(r'(is|are|refers to)\s+\*\*\*\s*(a|an|the)\b', first_line, re.IGNORECASE):
+            pass  # 正确
+        elif re.search(r'(is|are|refers to)\s+(a|an|the)\s+\*\*\*', first_line, re.IGNORECASE):
+            issues.append(f"第1行：冠词应在 *** 内部")
+    
+    # ===== 更多可程序化检测 =====
+    
+    # 检查系动词是否在 *** 内（应在外）
+    if '***' in first_line:
+        if re.search(r'\*\*\*\s*(is|are|was|were|refers? to)', first_line, re.IGNORECASE):
+            issues.append(f"第1行：系动词应在 *** 外部")
+    
+    # 检查四级标题后有冒号（标题后跟列表时不应有冒号）
+    for i, line in enumerate(lines, 1):
+        if re.match(r'^####\s+.+:\s*$', line):
+            # 检查下一行是否是列表
+            if i < len(lines) and re.match(r'^\s*[-\d]', lines[i]):
+                issues.append(f"第{i}行：四级标题后跟列表时不应有冒号")
+                break
+    
+    # 检查二级列表缩进（应为4空格）
+    for i, line in enumerate(lines, 1):
+        match = re.match(r'^(\s+)-\s', line)
+        if match:
+            indent = len(match.group(1))
+            if indent > 0 and indent != 4:
+                issues.append(f"第{i}行：二级列表缩进应为4空格，当前为{indent}空格")
+                break
+    
+    # 检查 emoji 作为列表符号
+    for i, line in enumerate(lines, 1):
+        if re.match(r'^\s*[\U0001F300-\U0001F9FF]', line):
+            issues.append(f"第{i}行：禁止使用 emoji 作为列表符号")
+            break
+    
+    # 检查1级数字+2级数字（禁止）
+    in_numbered_list = False
+    for i, line in enumerate(lines, 1):
+        if re.match(r'^\d+\.\s', line):
+            in_numbered_list = True
+        elif re.match(r'^\s+\d+\.\s', line) and in_numbered_list:
+            issues.append(f"第{i}行：禁止1级数字列表下使用2级数字列表")
+            break
+        elif re.match(r'^[^0-9\s]', line):
+            in_numbered_list = False
+    
+    # 检查中文字符（英文回答中不应有中文）
+    for i, line in enumerate(lines, 1):
+        # 排除平台称呼检测（已单独检测）
+        if re.search(r'[\u4e00-\u9fff]', line):
+            # 找到具体的中文字符
+            match = re.search(r'[\u4e00-\u9fff]+', line)
+            if match:
+                chinese_text = match.group(0)
+                # 排除已检测的平台称呼
+                if chinese_text not in ['薯宝', '薯友', '家人们', '宝子', '姐妹们']:
+                    issues.append(f"第{i}行：英文回答中存在中文「{chinese_text}」")
+                    break
+    
+    # 检查引用堆砌在末尾（多个连续引用在最后一行）
+    if lines:
+        last_line = lines[-1].strip()
+        note_count = len(re.findall(r'\[Note\s*\d+\]', last_line))
+        if note_count >= 5:
+            issues.append(f"第{len(lines)}行：可能存在引用堆砌（{note_count}个引用）")
+    
+    # 检查列表小标题 Title Case
+    for i, line in enumerate(lines, 1):
+        match = re.match(r'^\s*-\s+\*\*([^*:]+)\*\*:', line)
+        if match:
+            title = match.group(1)
+            words = title.split()
+            lowercase_exceptions = {'a', 'an', 'the', 'and', 'or', 'of', 'in', 'on', 'at', 'to', 'for', 'with', 'by'}
+            for w in words:
+                if w and w[0].islower() and w.lower() not in lowercase_exceptions:
+                    issues.append(f"第{i}行：列表小标题未使用 Title Case「{title}」")
+                    break
+            else:
+                continue
+            break
+    
+    # ===== 最后一批可程序化检测 =====
+    
+    # 检查括号空格（左括号前、右括号后）
+    for i, line in enumerate(lines, 1):
+        # 左括号前缺空格：word(
+        if re.search(r'[A-Za-z]\(', line):
+            issues.append(f"第{i}行：左括号前缺少空格")
+            break
+        # 右括号后缺空格：)word
+        if re.search(r'\)[A-Za-z]', line):
+            issues.append(f"第{i}行：右括号后缺少空格")
+            break
+    
+    # 检查引用在句号前（应在句号后）
+    for i, line in enumerate(lines, 1):
+        if re.search(r'\[Note\s*\d+\]\s*\.', line):
+            issues.append(f"第{i}行：引用应在句号后，不是句号前")
+            break
+    
+    # 检查一级列表有二级列表时，一级标题后有非冒号内容
+    for i, line in enumerate(lines, 1):
+        # 检查是否是一级列表项
+        if re.match(r'^-\s+\*\*[^*]+\*\*:', line):
+            # 检查冒号后是否有内容（除了空格）
+            after_colon = re.search(r'\*\*:\s*(.+)$', line)
+            if after_colon and after_colon.group(1).strip():
+                # 检查下一行是否是二级列表
+                if i < len(lines) and re.match(r'^\s+-', lines[i]):
+                    content = after_colon.group(1).strip()[:20]
+                    issues.append(f"第{i}行：有二级列表时，一级标题后只能有冒号，不能有「{content}...」")
+                    break
+    
+    # 检查无后续内容时有冒号（列表项末尾只有冒号）
+    for i, line in enumerate(lines, 1):
+        if re.match(r'^\s*-\s+\*\*[^*]+\*\*:\s*$', line):
+            # 检查下一行是否是二级列表
+            if i >= len(lines) or not re.match(r'^\s+-', lines[i]):
+                title_match = re.search(r'\*\*([^*]+)\*\*', line)
+                title = title_match.group(1) if title_match else "未知"
+                issues.append(f"第{i}行：列表项「{title}」无后续内容时不应有冒号")
+                break
+    
+    # 检查术语一致性（U.S. vs US）
+    us_dot = len(re.findall(r'\bU\.S\.', text))
+    us_no_dot = len(re.findall(r'\bUS\b', text))
+    if us_dot > 0 and us_no_dot > 0:
+        issues.append(f"术语不一致：同时使用了 U.S.（{us_dot}次）和 US（{us_no_dot}次）")
+    
+    # 检查首段后直接接四级标题（应有解释文字）
+    if len(lines) >= 2:
+        first_line = lines[0]
+        second_line = lines[1] if len(lines) > 1 else ""
+        # 首段有 *** 且第二行是四级标题
+        if '***' in first_line and second_line.startswith('####'):
+            issues.append(f"第2行：首段后直接接四级标题，应有解释文字")
     
     return issues
 
