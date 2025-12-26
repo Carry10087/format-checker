@@ -2504,37 +2504,75 @@ with tab2:
             with st.expander("📋 发现的问题", expanded=True):
                 st.markdown(st.session_state.qc_issues)
         
-        st.subheader("修改结果")
+        # 英文结果和中文翻译并排显示
+        col_en, col_cn = st.columns(2)
         
-        # 预览/编辑模式切换
-        h_qc1, h_qc2 = st.columns([3, 1])
-        with h_qc1:
-            pass
-        with h_qc2:
+        with col_en:
+            st.subheader("英文结果")
+            # 预览/编辑模式切换
             qc_view_mode = st.radio("", ["预览", "编辑"], horizontal=True, key="qc_view_mode", label_visibility="collapsed")
+            
+            if qc_view_mode == "预览":
+                with st.container(height=400):
+                    st.markdown(st.session_state.qc_result)
+                copy_content = st.session_state.qc_result
+            else:
+                edited_qc = st.text_area("编辑结果", value=st.session_state.qc_result, height=400, key="qc_edit_area", label_visibility="collapsed")
+                if edited_qc != st.session_state.qc_result:
+                    st.session_state.qc_result = edited_qc
+                copy_content = edited_qc
+            
+            # 复制按钮 - 使用当前显示的内容
+            import streamlit.components.v1 as components
+            encoded_qc = base64.b64encode(copy_content.encode('utf-8')).decode('utf-8')
+            html_style = "<style>body{margin:0;padding:0;overflow:hidden;}button{width:100%;height:40px;padding:0;margin:0;display:block;font-size:14px;color:white;border:none;border-radius:5px;cursor:pointer;line-height:40px;font-family:'Source Sans Pro',sans-serif;transition:0.3s;}button:hover{opacity:0.9;}button:active{transform:scale(0.98);}</style>"
+            copy_js_qc = f'''{html_style}<script>function copyQc(){{const b='{encoded_qc}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnQc').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnQc').innerText='📋 复制英文',1500);}});}}</script><button id="btnQc" onclick="copyQc()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">📋 复制英文</button>'''
+            components.html(copy_js_qc, height=60)
         
-        if qc_view_mode == "预览":
-            with st.container(height=400):
-                st.markdown(st.session_state.qc_result)
-            copy_content = st.session_state.qc_result
-        else:
-            edited_qc = st.text_area("编辑结果", value=st.session_state.qc_result, height=400, key="qc_edit_area", label_visibility="collapsed")
-            if edited_qc != st.session_state.qc_result:
-                st.session_state.qc_result = edited_qc
-            copy_content = edited_qc
-        
-        # 复制按钮 - 使用当前显示的内容
-        import streamlit.components.v1 as components
-        encoded_qc = base64.b64encode(copy_content.encode('utf-8')).decode('utf-8')
-        html_style = "<style>body{margin:0;padding:0;overflow:hidden;}button{width:100%;height:40px;padding:0;margin:0;display:block;font-size:14px;color:white;border:none;border-radius:5px;cursor:pointer;line-height:40px;font-family:'Source Sans Pro',sans-serif;transition:0.3s;}button:hover{opacity:0.9;}button:active{transform:scale(0.98);}</style>"
-        copy_js_qc = f'''{html_style}<script>function copyQc(){{const b='{encoded_qc}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnQc').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnQc').innerText='📋 复制修改后的Markdown',1500);}});}}</script><button id="btnQc" onclick="copyQc()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">📋 复制修改后的Markdown</button>'''
-        components.html(copy_js_qc, height=60)
+        with col_cn:
+            st.subheader("中文翻译")
+            
+            # 初始化翻译结果
+            if "qc_translated" not in st.session_state:
+                st.session_state.qc_translated = ""
+            
+            # 翻译按钮
+            if st.button("🌐 翻译成中文", key="qc_translate_btn", use_container_width=True):
+                user_cfg = st.session_state.user_config
+                api_url_t = user_cfg.get("api_url", DEFAULT_API_URL)
+                api_key_t = user_cfg.get("api_key", DEFAULT_API_KEY)
+                model_t = user_cfg.get("model_translate", "gemini-3-flash-preview-nothinking")
+                
+                if api_key_t:
+                    with st.spinner("正在翻译..."):
+                        prompt = f"请将以下英文内容翻译成中文，保持原有格式（Markdown），直接输出翻译结果，不要任何解释：\n\n{st.session_state.qc_result}"
+                        result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
+                        if success:
+                            st.session_state.qc_translated = result
+                            st.rerun()
+                        else:
+                            st.error(f"翻译失败: {result}")
+                else:
+                    st.error("请先配置 API Key")
+            
+            # 显示翻译结果
+            if st.session_state.qc_translated:
+                with st.container(height=400):
+                    st.markdown(st.session_state.qc_translated)
+                
+                # 复制中文按钮
+                encoded_cn = base64.b64encode(st.session_state.qc_translated.encode('utf-8')).decode('utf-8')
+                copy_js_cn = f'''{html_style}<script>function copyCn(){{const b='{encoded_cn}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnCn').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnCn').innerText='📋 复制中文',1500);}});}}</script><button id="btnCn" onclick="copyCn()" style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);box-shadow:0 0 15px rgba(16,185,129,0.3);">📋 复制中文</button>'''
+                components.html(copy_js_cn, height=60)
+            else:
+                st.info("点击上方按钮翻译成中文")
         
         # 清空按钮
         if st.button("🗑️ 清空结果", key="qc_clear_btn", use_container_width=True):
             st.session_state.qc_result = ""
             st.session_state.qc_issues = ""
             st.session_state.qc_tokens = {}
+            st.session_state.qc_translated = ""
             st.rerun()
 
 # ==================== 规则管理功能 ====================
