@@ -2279,47 +2279,91 @@ with tab1:
                     st.rerun()
 
 # ==================== 格式质检功能 ====================
+# 导入格式修复工具
+from format_fixer import fix_all_format, analyze_format_issues
+
 with tab2:
-    st.subheader("格式质检")
+    st.subheader("独立质检")
     
     # 模式选择
     qc_mode = st.radio(
         "质检模式",
-        ["快速模式（纯格式）", "召回笔记质检（格式+内容）"],
+        ["程序自动修复", "AI 格式质检", "AI 内容质检（需笔记）"],
         horizontal=True,
         key="qc_mode_radio",
-        help="快速模式只检查格式规则；召回笔记质检需要提供参考笔记，可检查内容准确性"
+        help="程序自动修复：秒级修复格式问题；AI格式质检：检查复杂格式；AI内容质检：需要参考笔记"
     )
     
-    if qc_mode == "快速模式（纯格式）":
-        st.caption("只检查格式规则，不检查内容准确性，速度更快")
+    if qc_mode == "程序自动修复":
+        st.caption("⚡ 秒级自动修复：引用格式、空格、句号位置、列表缩进等")
+    elif qc_mode == "AI 格式质检":
+        st.caption("🤖 AI 检查复杂格式问题：首段结构、单项标题处理等")
     else:
-        st.caption("检查格式规则 + 内容准确性，需要提供参考笔记")
+        st.caption("📝 AI 检查内容准确性，需要提供参考笔记")
     
     # 输入区域
     qc_input = st.text_area("待检查的回答", height=300, 
                             placeholder="粘贴需要质检的回答...", 
                             key="qc_input_area")
     
-    # 召回笔记质检需要参考笔记
+    # AI内容质检需要参考笔记
     qc_notes = ""
-    if qc_mode == "召回笔记质检（格式+内容）":
+    if qc_mode == "AI 内容质检（需笔记）":
         qc_notes = st.text_area("参考笔记", height=200,
                                 placeholder="粘贴参考笔记（用于检查内容准确性）...",
                                 key="qc_notes_area")
     
-    if st.button("🔍 开始格式质检", type="primary", use_container_width=True, key="qc_start_btn"):
+    # 程序自动修复模式
+    if qc_mode == "程序自动修复":
+        col_fix, col_analyze = st.columns(2)
+        with col_fix:
+            fix_clicked = st.button("⚡ 一键修复格式", type="primary", use_container_width=True, key="auto_fix_btn")
+        with col_analyze:
+            analyze_clicked = st.button("🔍 分析问题（不修复）", use_container_width=True, key="analyze_btn")
+        
+        if fix_clicked:
+            if qc_input.strip():
+                # 自动修复
+                fixed_text = fix_all_format(qc_input)
+                issues = analyze_format_issues(qc_input)
+                
+                # 保存结果
+                st.session_state.qc_result = fixed_text
+                st.session_state.qc_issues = "\n".join([f"- {issue}" for issue in issues]) if issues else "✅ 未发现可自动修复的格式问题"
+                st.session_state.qc_tokens = {}
+                st.session_state.qc_auto_fixed = True
+                st.rerun()
+            else:
+                st.warning("请输入待检查的回答")
+        
+        if analyze_clicked:
+            if qc_input.strip():
+                issues = analyze_format_issues(qc_input)
+                if issues:
+                    st.markdown("### 📋 发现的问题")
+                    for issue in issues:
+                        if "需AI判断" in issue:
+                            st.warning(f"⚠️ {issue}")
+                        else:
+                            st.info(f"🔧 {issue}")
+                else:
+                    st.success("✅ 未发现格式问题")
+            else:
+                st.warning("请输入待检查的回答")
+    
+    # AI 质检模式
+    elif st.button("🔍 开始AI质检", type="primary", use_container_width=True, key="qc_start_btn"):
         if qc_input.strip():
-            # 召回笔记质检需要参考笔记
-            if qc_mode == "召回笔记质检（格式+内容）" and not qc_notes.strip():
-                st.warning("召回笔记质检需要提供参考笔记")
+            # AI内容质检需要参考笔记
+            if qc_mode == "AI 内容质检（需笔记）" and not qc_notes.strip():
+                st.warning("AI内容质检需要提供参考笔记")
             else:
                 # 从 session_state 获取 API 配置
                 user_cfg = st.session_state.user_config
                 api_url = user_cfg.get("api_url", DEFAULT_API_URL)
                 api_key = user_cfg.get("api_key", DEFAULT_API_KEY)
                 # 根据模式选择不同的模型
-                if qc_mode == "快速模式（纯格式）":
+                if qc_mode == "AI 格式质检":
                     model = user_cfg.get("model_qc_fast", user_cfg.get("model", DEFAULT_MODEL))
                 else:
                     model = user_cfg.get("model_qc_full", user_cfg.get("model", DEFAULT_MODEL))
@@ -2331,30 +2375,30 @@ with tab2:
                     format_rules = ""
                     content_rules = ""
                     
-                    # 快速模式需要格式规则
-                    if qc_mode == "快速模式（纯格式）":
+                    # AI格式质检需要格式规则
+                    if qc_mode == "AI 格式质检":
                         try:
                             with open("format_only_rules.md", "r", encoding="utf-8") as f:
                                 format_rules = f.read()
                         except:
                             format_rules = None
                     
-                    # 召回笔记质检需要内容规则
-                    if qc_mode == "召回笔记质检（格式+内容）":
+                    # AI内容质检需要内容规则
+                    if qc_mode == "AI 内容质检（需笔记）":
                         try:
-                            with open("format_with_notes_rules.md", "r", encoding="utf-8") as f:
+                            with open("format_only_rules.md", "r", encoding="utf-8") as f:
                                 content_rules = f.read()
                         except:
                             content_rules = None
                     
-                    if qc_mode == "快速模式（纯格式）" and not format_rules:
+                    if qc_mode == "AI 格式质检" and not format_rules:
                         st.error("无法读取格式规则文件 (format_only_rules.md)")
-                    elif qc_mode == "召回笔记质检（格式+内容）" and not content_rules:
-                        st.error("无法读取内容规则文件 (format_with_notes_rules.md)")
+                    elif qc_mode == "AI 内容质检（需笔记）" and not content_rules:
+                        st.error("无法读取内容规则文件 (format_only_rules.md)")
                     else:
                         with st.spinner("正在质检，请勿切换页面..."):
                             # 根据模式构建不同的 prompt
-                            if qc_mode == "快速模式（纯格式）":
+                            if qc_mode == "AI 格式质检":
                                 qc_prompt = f"""## 任务：格式质检
 
 你是一个格式规范质检员。请**严格**按照规则检查格式问题。
@@ -2363,6 +2407,7 @@ with tab2:
 1. 只检查**真正违反规则**的问题，不要过度挑剔
 2. 如果内容完全符合规范，问题清单写"✅ 未发现格式问题"，修改后内容**原样输出原文**
 3. 不要为了找问题而找问题，没问题就是没问题
+4. 以下问题已由程序自动修复，无需检查：引用格式[NoteX]、***内空格、列表缩进
 
 ## 待检查的回答
 {qc_input}
@@ -2390,8 +2435,8 @@ with tab2:
 ---FIXED_END---
 """
                             else:
-                                # 召回笔记质检（只检查内容，不检查格式）
-                                qc_prompt = f"""## 任务：召回笔记质检（仅内容准确性）
+                                # AI内容质检（只检查内容，不检查格式）
+                                qc_prompt = f"""## 任务：内容质检（仅内容准确性）
 
 你是一个内容质检员。请**严格**对照参考笔记检查回答的内容准确性问题。
 
@@ -2450,6 +2495,7 @@ with tab2:
                             st.session_state.qc_issues = issues
                             st.session_state.qc_result = fixed
                             st.session_state.qc_tokens = token_info
+                            st.session_state.qc_auto_fixed = False
                             st.rerun()
                         else:
                             st.error(f"质检失败: {result}")
@@ -2460,7 +2506,11 @@ with tab2:
     if "qc_result" in st.session_state and st.session_state.qc_result:
         st.divider()
         
-        # 显示 Token 用量
+        # 显示修复来源标识
+        if st.session_state.get("qc_auto_fixed", False):
+            st.success("⚡ 程序自动修复完成")
+        
+        # 显示 Token 用量（仅AI质检）
         if "qc_tokens" in st.session_state and st.session_state.qc_tokens.get("total_tokens", 0) > 0:
             tokens = st.session_state.qc_tokens
             st.markdown(f"""
