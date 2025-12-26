@@ -207,10 +207,19 @@ def fix_backticks_and_asterisks(text: str) -> str:
 
 
 def fix_semicolon_sentences(text: str) -> str:
-    """将分号连接的句子改为句号"""
-    # 匹配分号后跟空格和大写字母（表示新句子）
-    text = re.sub(r';\s+([A-Z])', r'. \1', text)
-    return text
+    """只在首段将分号改为句号，其他地方保留分号"""
+    lines = text.split('\n')
+    if not lines:
+        return text
+    
+    # 只处理首段（第一行，且不是标题或列表）
+    first_line = lines[0]
+    if not first_line.startswith('#') and not first_line.startswith('-'):
+        # 匹配分号后跟空格和字母（不限大小写）
+        first_line = re.sub(r';\s+([A-Za-z])', r'. \1', first_line)
+        lines[0] = first_line
+    
+    return '\n'.join(lines)
 
 
 def fix_quote_punctuation(text: str) -> str:
@@ -339,11 +348,10 @@ def analyze_format_issues(text: str) -> list:
             issues.append(f"第{i}行：单星号 *{match.group(1)}* 应改为双引号")
             break
     
-    # 检查分号连接句子
-    for i, line in enumerate(lines, 1):
-        if re.search(r';\s+[A-Z]', line):
-            issues.append(f"第{i}行：分号连接句子，应改为句号")
-            break
+    # 检查分号连接句子（只检查首段）
+    first_line = lines[0] if lines else ""
+    if re.search(r';\s+[A-Za-z]', first_line):
+        issues.append(f"第1行：首段不允许使用分号")
     
     # 检查中文标点（使用全局定义的中文标点字典，不包括英文直引号）
     for i, line in enumerate(lines, 1):
@@ -403,13 +411,15 @@ def analyze_format_issues(text: str) -> list:
     # 检查引号内标点位置
     for i, line in enumerate(lines, 1):
         # 检查句号在引号外：".
-        match = re.search(r'([^"]{0,20})"\.\s*', line)
+        # 但排除引号内以 ? 或 ! 结尾的情况（如 "You Could Be Normal?". 是正确的）
+        match = re.search(r'([^"]{0,20}[^?!])"\.', line)
         if match:
             context = match.group(0)
             issues.append(f"第{i}行：句号应在引号内，上下文：...{context}...")
             break
         # 检查逗号在引号外：",
-        match = re.search(r'([^"]{0,20})",\s*', line)
+        # 同样排除引号内以 ? 或 ! 结尾的情况
+        match = re.search(r'([^"]{0,20}[^?!])",', line)
         if match:
             context = match.group(0)
             issues.append(f"第{i}行：逗号应在引号内，上下文：...{context}...")
@@ -460,10 +470,16 @@ def analyze_format_issues(text: str) -> list:
     
     # 检查正文加粗（排除列表小标题）
     for i, line in enumerate(lines, 1):
+        # 排除列表小标题：- **Title**: 或 - **Title**（无冒号）
+        if re.match(r'^\s*-\s+\*\*[^*]+\*\*:?\s*$', line):
+            continue
         if re.match(r'^\s*-\s+\*\*[^*]+\*\*:', line):
             continue
+        # 排除列表项开头的加粗小标题
+        if re.match(r'^\s*-\s+\*\*', line):
+            continue
         match = re.search(r'(?<!\*)\*\*(?!\*)([^*]+)(?<!\*)\*\*(?!\*)', line)
-        if match and not re.search(r'\*\*[^*]+\*\*:', line):
+        if match:
             issues.append(f"⚠️ 第{i}行：正文中有加粗「**{match.group(1)}**」")
             break
     

@@ -2350,6 +2350,7 @@ with tab2:
                 st.session_state.qc_issues = "\n".join([f"- {issue}" for issue in issues]) if issues else "未发现可自动修复的格式问题"
                 st.session_state.qc_tokens = {}
                 st.session_state.qc_auto_fixed = True
+                st.session_state.qc_translated = ""  # 清空上一条的翻译
                 st.rerun()
             else:
                 st.warning("请输入待检查的回答")
@@ -2495,6 +2496,7 @@ with tab2:
                             st.session_state.qc_result = fixed
                             st.session_state.qc_tokens = token_info
                             st.session_state.qc_auto_fixed = False
+                            st.session_state.qc_translated = ""  # 清空上一条的翻译
                             st.rerun()
                         else:
                             st.error(f"质检失败: {result}")
