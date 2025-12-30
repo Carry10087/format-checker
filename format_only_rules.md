@@ -25,20 +25,10 @@
 - **四级标题内聚性**：四级标题下的列表项必须属于同一类别，禁止将差异过大的内容强行归入同一标题
 - **四级标题与首段对应（铁律）**：四级标题必须围绕首段核心答案展开，首段提到的要点正文必须有对应标题，首段未提及的主题不能出现新的四级标题
 - **多义词标题结构**：首段列出 N 个义项时，正文应有 N 个对应的四级标题。禁止穿插辅助标题导致指代混淆
-  - ❌ 错误：首段说"A 和 B 两个事物"，正文却有 `#### A`、`#### Market Info`、`#### B`（Market 归属不明）
-  - ✅ 正确：将辅助内容合并到对应义项标题下，或在首段明确说明主次关系
 - **标题层级对应**：列表小标题必须是四级标题的具体实例或子类
-  - ❌ 错误：`#### Notable Villages` 下为 `**Historic Preservation**`
-  - ✅ 正确：`#### Notable Villages` 下为 `**Historic Villages**`、`**Alpine Villages**`
 - **列表小标题平行原则**：同一四级标题下的所有列表小标题必须属于同一类别/维度
-  - ❌ 错误：`#### Features` 下混杂 `**Color**`、`**How to Use**`、`**Price**`
-  - ✅ 正确：`#### Features` 下为 `**Color**`、`**Size**`、`**Material**`
 - **小标题命名一致性**：同一四级标题下的小标题，命名的抽象程度和风格必须一致，避免混用不同层次的概念
-  - ❌ 错误：`**Beaches**`、`**Entertainment**`、`**Nature**`（具体分类和抽象概念混用）
-  - ✅ 正确：`**Beaches**`、`**Landmarks**`、`**Theme Parks**`（都是具体分类）
 - **禁止兜底型泛化命名（重要）**：当前面的小标题都是具体产品/地点/类型时，最后一项不能用泛化的"兜底"词汇打破一致性。常见兜底词：General、General Range、Other、Others、Misc、Miscellaneous、Additional、Various、More
-  - ❌ 错误：`**Toners**`、`**Serums**`、`**Pads**`、`**General Range**`（前三个是具体产品类型，General Range 是泛化兜底）
-  - ✅ 正确：改为 `**Product Line Extension**` 或 `**Cleansers & Creams**` 等具体描述
 
 ## 3. 特殊标点规范
 
