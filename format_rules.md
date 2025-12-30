@@ -85,9 +85,7 @@
     - **Exceptions**: Not recommended for...
     ```
 - **逻辑分组**：相关性强的内容必须归入同一标题下，禁止按产品参数或属性机械拆分成多个标题。
-- **四级标题内聚性**：四级标题下的列表项必须属于同一类别或主题，禁止将差异过大的内容强行归入同一标题。
-  - ❌ 错误：`#### Medical, Cosmetic, and Audio Applications`（医疗、美妆、音频三者差异太大）
-  - ✅ 正确：拆分为 `#### Medical Applications`、`#### Audio Technology` 等独立标题，或将内容合并到更合适的现有标题下
+- **四级标题内聚性（重要）**：每个列表项必须与所属四级标题的主题直接相关，不相关的内容必须移至合适的标题下
 - **内容归属准确**：每个列表项必须与其所属四级标题的主题直接相关，不相关的内容必须移至合适的标题下或删除。
 - **标题层级对应**：列表项的加粗小标题必须是四级标题的具体实例或子类。例如四级标题是 `Notable Village Examples`，列表小标题应为 `Historic Villages`、`Alpine Villages` 等（村庄类型），而非 `Historic Preservation`、`Alpine Landscape`（抽象特征）。
 - **四级标题与首段对应（铁律）**：

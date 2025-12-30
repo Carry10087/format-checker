@@ -2517,10 +2517,10 @@ with tab2:
         col_en, col_cn = st.columns(2)
         
         with col_en:
-            st.subheader("英文结果")
-            # 预览/编辑模式切换
-            # qc_view_mode = st.radio("", ["预览", "编辑"], horizontal=True, key="qc_view_mode", label_visibility="collapsed")
-            qc_view_mode = st.toggle("预览模式", value=True, key="qc_view_mode")
+            # 标题 + 预览开关
+            h1, h2 = st.columns([2, 1])
+            with h1: st.markdown("**英文结果**")
+            with h2: qc_view_mode = st.toggle("预览模式", value=True, key="qc_view_mode")
             
             if qc_view_mode:
                 with st.container(height=400):
@@ -2540,32 +2540,33 @@ with tab2:
             components.html(copy_js_qc, height=60)
         
         with col_cn:
-            st.subheader("中文翻译")
+            # 标题 + 翻译按钮
+            h3, h4 = st.columns([2, 1])
+            with h3: st.markdown("**中文翻译**")
+            with h4:
+                # 翻译按钮
+                if st.button("翻译", key="qc_translate_btn", use_container_width=True):
+                    user_cfg = st.session_state.user_config
+                    api_url_t = user_cfg.get("api_url", DEFAULT_API_URL)
+                    api_key_t = user_cfg.get("api_key", DEFAULT_API_KEY)
+                    model_t = user_cfg.get("model_translate", "gemini-3-flash-preview-nothinking")
+                    
+                    if api_key_t:
+                        with st.spinner("正在翻译..."):
+                            prompt = f"请将以下英文内容翻译成中文，保持原有格式（Markdown），直接输出翻译结果，不要任何解释：\n\n{st.session_state.qc_result}"
+                            result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
+                            if success:
+                                st.session_state.qc_translated = result
+                                st.rerun()
+                            else:
+                                st.error(f"翻译失败: {result}")
+                    else:
+                        st.error("请先配置 API Key")
             
-            # 初始化翻译结果
+            # 显示翻译结果
             if "qc_translated" not in st.session_state:
                 st.session_state.qc_translated = ""
             
-            # 翻译按钮
-            if st.button("翻译成中文", key="qc_translate_btn", use_container_width=True):
-                user_cfg = st.session_state.user_config
-                api_url_t = user_cfg.get("api_url", DEFAULT_API_URL)
-                api_key_t = user_cfg.get("api_key", DEFAULT_API_KEY)
-                model_t = user_cfg.get("model_translate", "gemini-3-flash-preview-nothinking")
-                
-                if api_key_t:
-                    with st.spinner("正在翻译..."):
-                        prompt = f"请将以下英文内容翻译成中文，保持原有格式（Markdown），直接输出翻译结果，不要任何解释：\n\n{st.session_state.qc_result}"
-                        result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
-                        if success:
-                            st.session_state.qc_translated = result
-                            st.rerun()
-                        else:
-                            st.error(f"翻译失败: {result}")
-                else:
-                    st.error("请先配置 API Key")
-            
-            # 显示翻译结果
             if st.session_state.qc_translated:
                 with st.container(height=400):
                     st.markdown(st.session_state.qc_translated)
@@ -2575,7 +2576,7 @@ with tab2:
                 copy_js_cn = f'''{html_style}<script>function copyCn(){{const b='{encoded_cn}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnCn').innerText='已复制';setTimeout(()=>document.getElementById('btnCn').innerText='复制中文',1500);}});}}</script><button id="btnCn" onclick="copyCn()" style="background:linear-gradient(135deg,#8b5cf6 0%,#00d4ff 100%);box-shadow:0 0 15px rgba(139,92,246,0.3);">复制中文</button>'''
                 components.html(copy_js_cn, height=60)
             else:
-                st.info("点击上方按钮翻译成中文")
+                st.info("点击右上角按钮进行翻译")
         
         # 清空按钮
         if st.button("清空结果", key="qc_clear_btn", use_container_width=True):
