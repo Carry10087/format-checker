@@ -9,7 +9,13 @@
 - **多义词格式**：首段必须列举所有主要含义，禁止使用废话开头如"a term with multiple meanings"
   - ❌ 错误：`Janet refers to ***several notable individuals across various fields, including Janet Jackson and...***`
   - ✅ 正确：`Janet refers to ***American singer Janet Jackson, sculptor Janet Echelman, and an academic network***`
+- **多义词内容平衡**：当首段列出多个义项时，正文中各义项的内容量应大致均衡。禁止某个义项占据大量篇幅，而其他义项只有寥寥几笔（并列不当）
+  - ❌ 错误：首段说 X 指代"A、B、C 三个事物"，正文 A 有 5 段，B 有 3 段，C 只有 2 段
+  - ✅ 正确：各义项内容量基本均衡，或在首段按重要性排序（如"X 主要指 A，也可指 B 和 C"）
 - **首段与正文对应**：首段是结论，正文是论据。首段提到的核心点，正文需展开细节，但不要简单重复首段的原话
+- **人物/品牌定义需具体化**：对于知名人物或品牌，首段不能只给泛化描述，必须体现其最具标志性的成就或关联
+  - ❌ 错误：`Karl Lagerfeld was ***a German fashion designer***.`（未体现核心成就）
+  - ✅ 正确：`Karl Lagerfeld was ***a German fashion designer best known as the creative director of Chanel and Fendi***.`
 - **首段主语引号规则**：只有作品名才加引号，人名、地名、品牌名不加引号
 
 ## 2. 列表逻辑规范
@@ -18,6 +24,9 @@
 - **逻辑分组**：相关性强的内容必须归入同一标题下，禁止按产品参数机械拆分成多个标题
 - **四级标题内聚性**：四级标题下的列表项必须属于同一类别，禁止将差异过大的内容强行归入同一标题
 - **四级标题与首段对应（铁律）**：四级标题必须围绕首段核心答案展开，首段提到的要点正文必须有对应标题，首段未提及的主题不能出现新的四级标题
+- **多义词标题结构**：首段列出 N 个义项时，正文应有 N 个对应的四级标题。禁止穿插辅助标题导致指代混淆
+  - ❌ 错误：首段说"A 和 B 两个事物"，正文却有 `#### A`、`#### Market Info`、`#### B`（Market 归属不明）
+  - ✅ 正确：将辅助内容合并到对应义项标题下，或在首段明确说明主次关系
 - **标题层级对应**：列表小标题必须是四级标题的具体实例或子类
   - ❌ 错误：`#### Notable Villages` 下为 `**Historic Preservation**`
   - ✅ 正确：`#### Notable Villages` 下为 `**Historic Villages**`、`**Alpine Villages**`

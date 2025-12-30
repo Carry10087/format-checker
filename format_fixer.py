@@ -119,7 +119,9 @@ CHINESE_PUNCTUATION = {
 
 
 def fix_spacing_rules(text: str) -> str:
-    """修复空格规则：句号/逗号后空格、括号空格、冒号后空格"""
+    """修复空格规则：句号/逗号后空格、括号空格、冒号前后空格"""
+    # 冒号前移除多余空格（如 "A : B" → "A: B"）
+    text = re.sub(r'\s+:', ':', text)
     # 句号后加空格（排除 [Note X] 和 *** 情况）
     text = re.sub(r'\.([A-Za-z])', r'. \1', text)
     # 逗号后加空格
@@ -237,23 +239,16 @@ def fix_quote_punctuation(text: str) -> str:
 
 
 def fix_colon_capitalization(text: str) -> str:
-    """修复冒号后独立句子的首字母大写"""
-    # 规则：冒号后若为独立完整句子，句子首字母需大写
-    # 匹配冒号后跟空格和小写字母的情况
+    """修复冒号后首字母大写（包括列表小标题后的内容）"""
+    # 规则：冒号后若有内容，首字母需大写
     def capitalize_after_colon(match):
         return match.group(1) + match.group(2).upper()
     
-    # 只处理冒号后看起来像完整句子的情况（后面有主语+动词的模式）
-    # 简化处理：冒号后如果是小写字母开头，且后面有句号，则大写
     lines = text.split('\n')
     result = []
     for line in lines:
-        # 跳过列表小标题行（- **Title**: content 格式）
-        if re.match(r'^\s*-\s+\*\*[^*]+\*\*:', line):
-            result.append(line)
-            continue
-        # 处理其他行中的冒号后大写
-        # 匹配 ": a" 这种模式，但要排除列表小标题
+        # 所有行都处理冒号后首字母大写
+        # 匹配 ": a" 这种模式（冒号后跟空格和小写字母）
         line = re.sub(r'(:\s+)([a-z])', capitalize_after_colon, line)
         result.append(line)
     return '\n'.join(result)
@@ -425,13 +420,20 @@ def analyze_format_issues(text: str) -> list:
             issues.append(f"第{i}行：逗号应在引号内，上下文：...{context}...")
             break
     
-    # 检查冒号后小写
+    # 检查冒号前多余空格（如 "A : B"）
     for i, line in enumerate(lines, 1):
-        if not re.match(r'^\s*-\s+\*\*[^*]+\*\*:', line):
-            match = re.search(r':\s+([a-z])', line)
-            if match:
-                issues.append(f"第{i}行：冒号后「{match.group(1)}」应大写")
-                break
+        match = re.search(r'(\w)\s+:', line)
+        if match:
+            context = line[max(0, match.start()-10):match.end()+10]
+            issues.append(f"第{i}行：冒号前有多余空格，上下文：...{context}...")
+            break
+    
+    # 检查冒号后小写（包括列表小标题后的内容）
+    for i, line in enumerate(lines, 1):
+        match = re.search(r':\s+([a-z])', line)
+        if match:
+            issues.append(f"第{i}行：冒号后「{match.group(1)}」应大写")
+            break
     
     # ===== 需要AI判断的问题 =====
     
