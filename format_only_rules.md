@@ -36,9 +36,9 @@
 - **小标题命名一致性**：同一四级标题下的小标题，命名的抽象程度和风格必须一致，避免混用不同层次的概念
   - ❌ 错误：`**Beaches**`、`**Entertainment**`、`**Nature**`（具体分类和抽象概念混用）
   - ✅ 正确：`**Beaches**`、`**Landmarks**`、`**Theme Parks**`（都是具体分类）
-- **禁止兜底型泛化命名**：当前面的小标题都是具体分类时，最后一项不能用泛化概念（如 General、Other、Range）打破一致性
-  - ❌ 错误：`**Toners**`、`**Serums**`、`**General Range**`（前两个具体，最后一个泛化）
-  - ✅ 正确：使用具体描述如 `**Additional Products**`，或拆分为具体类型
+- **禁止兜底型泛化命名（重要）**：当前面的小标题都是具体产品/地点/类型时，最后一项不能用泛化的"兜底"词汇打破一致性。常见兜底词：General、General Range、Other、Others、Misc、Miscellaneous、Additional、Various、More
+  - ❌ 错误：`**Toners**`、`**Serums**`、`**Pads**`、`**General Range**`（前三个是具体产品类型，General Range 是泛化兜底）
+  - ✅ 正确：改为 `**Product Line Extension**` 或 `**Cleansers & Creams**` 等具体描述
 
 ## 3. 特殊标点规范
 
