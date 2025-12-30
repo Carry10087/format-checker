@@ -24,13 +24,15 @@ import shutil
 import base64
 from io import BytesIO
 
+# 从 api.py 导入 API 配置和函数
+from api import (
+    DEFAULT_API_URL, DEFAULT_API_KEY, DEFAULT_MODEL,
+    DEFAULT_MODEL_EDIT, DEFAULT_MODEL_TRANSLATE, DEFAULT_MODEL_QC,
+    call_single_step
+)
+
 # 粘贴按钮组件已移除（会导致弹窗问题）
 HAS_PASTE_BUTTON = False
-
-# 默认 API 配置
-DEFAULT_API_URL = "https://nvewvip.preview.tencent-zeabur.cn/v1/chat/completions"
-DEFAULT_API_KEY = "sk-mw0pY9ILORPwuDBab3CYIzgnJLZO4zgj0kYn7wJ8NVOZjpi"
-DEFAULT_MODEL = "gemini-3-flash-preview-maxthinking-search"
 
 # 用户数据目录
 USERS_DIR = "users"
@@ -361,56 +363,6 @@ STEP_NAMES = [
     "Step 1: 前置检查",
     "Step 2: 修改输出"
 ]
-
-def call_single_step(prompt, api_url, api_key, model, image_base64=None, max_retries=3):
-    """单次 API 调用，支持图片，带重连机制，返回 (content, success, token_usage)"""
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-    
-    # 构建消息内容
-    if image_base64:
-        # 带图片的消息
-        content = [
-            {"type": "text", "text": prompt},
-            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_base64}"}}
-        ]
-    else:
-        content = prompt
-    
-    data = {
-        "model": model,
-        "messages": [{"role": "user", "content": content}],
-        "temperature": 0.3
-    }
-    
-    last_error = None
-    for attempt in range(max_retries):
-        try:
-            # 禁用代理直连
-            response = requests.post(api_url, headers=headers, json=data, timeout=120, proxies={"http": None, "https": None})
-            response.raise_for_status()
-            result = response.json()
-            content = result["choices"][0]["message"]["content"]
-            if content is None:
-                raise ValueError("API 返回内容为空")
-            # 提取 token 用量
-            usage = result.get("usage", {})
-            token_info = {
-                "prompt_tokens": usage.get("prompt_tokens", 0),
-                "completion_tokens": usage.get("completion_tokens", 0),
-                "total_tokens": usage.get("total_tokens", 0)
-            }
-            return content, True, token_info
-        except Exception as e:
-            last_error = e
-            if attempt < max_retries - 1:
-                # 等待后重试，每次等待时间递增
-                import time
-                time.sleep(2 * (attempt + 1))
-    
-    return f"API 调用失败 (重试{max_retries}次后): {str(last_error)}", False, {}
 
 st.set_page_config(page_title="回答格式修改器", layout="wide")
 
@@ -1634,14 +1586,14 @@ with tab4:
     col_m1, col_m2 = st.columns(2)
     with col_m1:
         model_edit = st.selectbox("深度修改", options=MODEL_OPTIONS, 
-                                   index=get_model_index("model_edit", "gemini-3-flash-preview-maxthinking-search"),
+                                   index=get_model_index("model_edit", DEFAULT_MODEL_EDIT),
                                    key="model_edit_select", help="AI修改功能使用")
         model_translate = st.selectbox("翻译", options=MODEL_OPTIONS,
-                                        index=get_model_index("model_translate", "gemini-3-flash-preview-nothinking"),
+                                        index=get_model_index("model_translate", DEFAULT_MODEL_TRANSLATE),
                                         key="model_translate_select", help="翻译功能使用")
     with col_m2:
         model_qc = st.selectbox("AI质检", options=MODEL_OPTIONS,
-                                 index=get_model_index("model_qc", "gemini-3-pro-preview-search"),
+                                 index=get_model_index("model_qc", DEFAULT_MODEL_QC),
                                  key="model_qc_select", help="AI质检功能使用")
     
     if st.button("保存配置", type="primary"):
