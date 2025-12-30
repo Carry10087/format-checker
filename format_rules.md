@@ -112,6 +112,9 @@
   - 同一回答中禁止出现重复信息
   - 禁止"概括+展开"重复：如果要逐项展开，不需要先概括罗列所有项目名称
   - 可自然合并的信息应合并为一项（如"人数统计"和"成员名单"合并为"Members"）
+  - **小标题合并原则**：概念相近或属于同一维度的小标题必须合并，避免拆分过细
+    - ❌ 错误：分开写 `**Texture Types**`、`**Visuals and Feel**`、`**Issues**`、`**Service**`
+    - ✅ 正确：合并为 `**Texture & Appearance**`、`**Quality & Service**`
   - ❌ 错误：先写 `Core Offerings: includes A, B, C`，再分别展开 `A: ...`、`B: ...`
   - ❌ 错误：分开写 `Demographics: 9 members` 和 `Member List: K, FUMA...`
   - ✅ 正确：直接逐项展开，或合并为一项
