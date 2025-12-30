@@ -1427,6 +1427,13 @@ div[data-testid="stToggle"][aria-checked="true"] label[data-testid="stWidgetLabe
 div[data-testid="stToggle"] p {
     color: #e0e0e0 !important;
 }
+
+/* 让 columns 中的按钮高度与 Toggle 对齐 */
+[data-testid="stHorizontalBlock"] [data-testid="stButton"] button {
+    padding-top: 0.15rem !important;
+    padding-bottom: 0.15rem !important;
+    min-height: 32px !important;
+}
 </style>
 """
 st.markdown(custom_style, unsafe_allow_html=True)
@@ -2590,19 +2597,20 @@ with tab5:
         st.session_state.chat_result = ""
     if "chat_translated" not in st.session_state:
         st.session_state.chat_translated = ""
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = []  # 对话历史
     
     # 输入区域
     col_input, col_prompt = st.columns([1, 1])
     
     with col_input:
         st.markdown("**待修改的 Markdown**")
+        # 使用动态 key 来允许更新值
+        if "chat_input_version" not in st.session_state:
+            st.session_state.chat_input_version = 0
         chat_markdown = st.text_area(
             "输入 Markdown",
             value=st.session_state.chat_input,
             height=200,
-            key="chat_markdown_input",
+            key=f"chat_markdown_input_{st.session_state.chat_input_version}",
             placeholder="粘贴需要修改的 Markdown 内容...",
             label_visibility="collapsed"
         )
@@ -2656,12 +2664,6 @@ with tab5:
                     if success:
                         st.session_state.chat_result = result
                         st.session_state.chat_translated = ""  # 清空翻译
-                        # 记录到对话历史
-                        st.session_state.chat_history.append({
-                            "prompt": chat_prompt,
-                            "input": chat_markdown[:50] + "..." if len(chat_markdown) > 50 else chat_markdown,
-                            "tokens": token_info.get("total_tokens", 0)
-                        })
                         st.rerun()
                     else:
                         st.error(f"AI 处理失败: {result}")
@@ -2736,6 +2738,7 @@ with tab5:
         with col_action1:
             if st.button("将结果作为新输入", use_container_width=True, key="chat_reuse_btn"):
                 st.session_state.chat_input = st.session_state.chat_result
+                st.session_state.chat_input_version += 1  # 增加 version 来刷新 widget
                 st.session_state.chat_result = ""
                 st.session_state.chat_translated = ""
                 st.rerun()
@@ -2744,12 +2747,6 @@ with tab5:
                 st.session_state.chat_result = ""
                 st.session_state.chat_translated = ""
                 st.rerun()
-    
-    # 显示对话历史
-    if st.session_state.chat_history:
-        with st.expander("对话历史"):
-            for i, h in enumerate(reversed(st.session_state.chat_history[-10:]), 1):
-                st.markdown(f"**{i}.** {h['prompt'][:50]}... (Tokens: {h['tokens']})")
 
 # ==================== 规则管理功能 ====================
 with tab3:
