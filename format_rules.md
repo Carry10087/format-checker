@@ -101,12 +101,11 @@
 - **列表小标题平行原则**：同一四级标题下的所有列表小标题必须属于同一类别/维度，保持逻辑平行。
   - ❌ 错误：`#### Features` 下混杂 `**Color**`、`**How to Use**`、`**Price**`（属性、操作、价格不平行）
   - ✅ 正确：`#### Features` 下为 `**Color**`、`**Size**`、`**Material**`（都是产品属性）
-- **小标题命名一致性**：同一四级标题下的所有列表小标题，命名的抽象程度和风格必须保持一致，避免混用不同层次的概念。
-  - ❌ 错误：同一组内混用具体分类和抽象概念，如 `**Beaches**`、`**Entertainment**`、`**Nature**`
-  - ✅ 正确：保持同一层次，如 `**Beaches**`、`**Landmarks**`、`**Theme Parks**`（都是具体分类）
-- **禁止兜底型泛化命名**：当前面的小标题都是具体分类时，最后一项不能用泛化的"兜底"概念（如 General、Other、Range、Misc 等）来打破一致性。如果内容是补充项，应使用具体的功能描述。
-  - ❌ 错误：`**Toners**`、`**Serums**`、`**Pads**`、`**General Range**`（前三个是具体类型，最后一个是泛化概念）
-  - ✅ 正确：`**Toners**`、`**Serums**`、`**Pads**`、`**Additional Products**` 或将内容拆分为具体类型（如 `**Cleansers**`、`**Creams**`）
+- **列表小标题必须具体（重要）**：列表小标题必须使用具体的分类名称，禁止使用抽象概念。
+  - 抽象概念（禁止）：Nature、Entertainment、Culture、General、Other、Range、Misc 等
+  - 具体分类（正确）：Natural Sites、Theme Parks、Museums、Beaches、Landmarks、Cleansers 等
+  - ❌ 错误：`**Beaches**`、`**Entertainment**`、`**Nature**`（混用具体和抽象）
+  - ✅ 正确：`**Beaches**`、`**Landmarks**`、`**Theme Parks**`（都是具体分类）
 - **四级标题精简原则**：四级标题应按用户决策逻辑组织，围绕用户核心关注点划分，而非罗列产品规格。相关性强的信息必须合并。
 - **层级限制**：分点层级不宜过多，逻辑需前后对应。
 - **禁止重复与冗余**：

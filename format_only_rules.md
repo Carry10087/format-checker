@@ -27,8 +27,7 @@
 - **多义词标题结构**：首段列出 N 个义项时，正文应有 N 个对应的四级标题。禁止穿插辅助标题导致指代混淆
 - **标题层级对应**：列表小标题必须是四级标题的具体实例或子类
 - **列表小标题平行原则**：同一四级标题下的所有列表小标题必须属于同一类别/维度
-- **小标题命名一致性**：同一四级标题下的小标题，命名的抽象程度和风格必须一致，避免混用不同层次的概念
-- **禁止兜底型泛化命名（重要）**：当前面的小标题都是具体产品/地点/类型时，最后一项不能用泛化的"兜底"词汇打破一致性。常见兜底词：General、General Range、Other、Others、Misc、Miscellaneous、Additional、Various、More
+- **列表小标题必须具体（重要）**：列表小标题必须使用具体的分类名称，禁止使用抽象概念。抽象概念包括：Nature、Entertainment、Culture、General、Other、Range、Misc 等。应改为具体分类如：Natural Sites、Theme Parks、Museums、Cleansers 等
 
 ## 3. 特殊标点规范
 

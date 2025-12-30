@@ -27,7 +27,7 @@ from io import BytesIO
 # 从 api.py 导入 API 配置和函数
 from api import (
     DEFAULT_API_URL, DEFAULT_API_KEY, DEFAULT_MODEL,
-    DEFAULT_MODEL_EDIT, DEFAULT_MODEL_TRANSLATE, DEFAULT_MODEL_QC,
+    DEFAULT_MODEL_EDIT, DEFAULT_MODEL_TRANSLATE, DEFAULT_MODEL_QC, DEFAULT_MODEL_CHAT,
     call_single_step
 )
 
@@ -1414,6 +1414,19 @@ div[data-testid="stNotification"] {
 .stCaption, small {
     color: #666 !important;
 }
+
+/* Toggle 开关颜色 - 覆盖默认橙色 */
+div[data-testid="stToggle"] label[data-testid="stWidgetLabel"] + div {
+    background-color: #333 !important; /* 轨道颜色 */
+}
+/* 选中状态的轨道颜色 */
+div[data-testid="stToggle"][aria-checked="true"] label[data-testid="stWidgetLabel"] + div {
+    background-color: #8b5cf6 !important;
+}
+/* 选中状态的圆点/滑块颜色 */
+div[data-testid="stToggle"] p {
+    color: #e0e0e0 !important;
+}
 </style>
 """
 st.markdown(custom_style, unsafe_allow_html=True)
@@ -1543,7 +1556,7 @@ with col_user:
         st.rerun()
 
 # 创建标签页（使用原生 st.tabs + CSS 美化）
-tab1, tab2, tab3, tab4 = st.tabs(['AI 修改', '独立质检', '规则管理', 'API 配置'])
+tab1, tab2, tab5, tab3, tab4 = st.tabs(['AI 修改', '独立质检', 'AI 对话', '规则管理', 'API 配置'])
 
 # 用 session_state 追踪当前 tab（st.tabs 不返回索引，需要在各 tab 内处理）
 
@@ -1595,6 +1608,9 @@ with tab4:
         model_qc = st.selectbox("AI质检", options=MODEL_OPTIONS,
                                  index=get_model_index("model_qc", DEFAULT_MODEL_QC),
                                  key="model_qc_select", help="AI质检功能使用")
+        model_chat = st.selectbox("AI对话", options=MODEL_OPTIONS,
+                                   index=get_model_index("model_chat", DEFAULT_MODEL_CHAT),
+                                   key="model_chat_select", help="AI对话修改功能使用")
     
     if st.button("保存配置", type="primary"):
         config = {
@@ -1603,6 +1619,7 @@ with tab4:
             "model_edit": model_edit,
             "model_translate": model_translate,
             "model_qc": model_qc,
+            "model_chat": model_chat,
             "model_qc_fast": model_qc,  # 兼容旧代码
             "model": model_edit  # 兼容旧代码
         }
@@ -2049,7 +2066,8 @@ with tab1:
             with h_en1:
                 st.subheader("修改结果（英文）")
             with h_en2:
-                view_mode = st.radio("", ["预览", "编辑"], horizontal=True, key="en_view_mode", label_visibility="collapsed")
+                # view_mode = st.radio("", ["预览", "编辑"], horizontal=True, key="en_view_mode", label_visibility="collapsed")
+                view_mode = st.toggle("预览模式", value=True, key="en_view_mode")
             
             # 检查是否有细节修改高亮
             display_content = st.session_state.final_result
@@ -2065,7 +2083,7 @@ with tab1:
                         )
                         has_highlights = True
             
-            if view_mode == "预览":
+            if view_mode: # 预览模式
                 with st.container(height=300):
                     if has_highlights:
                         st.caption("💡 黄色高亮为最近修改")
@@ -2494,9 +2512,10 @@ with tab2:
         with col_en:
             st.subheader("英文结果")
             # 预览/编辑模式切换
-            qc_view_mode = st.radio("", ["预览", "编辑"], horizontal=True, key="qc_view_mode", label_visibility="collapsed")
+            # qc_view_mode = st.radio("", ["预览", "编辑"], horizontal=True, key="qc_view_mode", label_visibility="collapsed")
+            qc_view_mode = st.toggle("预览模式", value=True, key="qc_view_mode")
             
-            if qc_view_mode == "预览":
+            if qc_view_mode:
                 with st.container(height=400):
                     st.markdown(st.session_state.qc_result)
                 copy_content = st.session_state.qc_result
@@ -2558,6 +2577,179 @@ with tab2:
             st.session_state.qc_tokens = {}
             st.session_state.qc_translated = ""
             st.rerun()
+
+# ==================== AI 对话功能 ====================
+with tab5:
+    st.subheader("AI 对话修改")
+    st.caption("💬 输入自定义提示词，让 AI 按你的要求修改 Markdown")
+    
+    # 初始化 session state
+    if "chat_input" not in st.session_state:
+        st.session_state.chat_input = ""
+    if "chat_result" not in st.session_state:
+        st.session_state.chat_result = ""
+    if "chat_translated" not in st.session_state:
+        st.session_state.chat_translated = ""
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []  # 对话历史
+    
+    # 输入区域
+    col_input, col_prompt = st.columns([1, 1])
+    
+    with col_input:
+        st.markdown("**待修改的 Markdown**")
+        chat_markdown = st.text_area(
+            "输入 Markdown",
+            value=st.session_state.chat_input,
+            height=200,
+            key="chat_markdown_input",
+            placeholder="粘贴需要修改的 Markdown 内容...",
+            label_visibility="collapsed"
+        )
+        if chat_markdown != st.session_state.chat_input:
+            st.session_state.chat_input = chat_markdown
+    
+    with col_prompt:
+        st.markdown("**修改指令**")
+        chat_prompt = st.text_area(
+            "输入提示词",
+            height=200,
+            key="chat_prompt_input",
+            placeholder="例如：\n- 把所有小标题改成具体的分类名称\n- 合并 Nature 和 Entertainment 相关的内容\n- 检查首段是否过于泛化",
+            label_visibility="collapsed"
+        )
+    
+    # 发送按钮
+    if st.button("🚀 发送给 AI", type="primary", use_container_width=True, key="chat_send_btn"):
+        if not chat_markdown.strip():
+            st.warning("请输入待修改的 Markdown")
+        elif not chat_prompt.strip():
+            st.warning("请输入修改指令")
+        else:
+            user_cfg = st.session_state.user_config
+            api_url = user_cfg.get("api_url", DEFAULT_API_URL)
+            api_key = user_cfg.get("api_key", DEFAULT_API_KEY)
+            model = user_cfg.get("model_chat", DEFAULT_MODEL_CHAT)
+            
+            if not api_key:
+                st.error("请先在 API 配置中设置 API Key")
+            else:
+                with st.spinner("AI 正在处理..."):
+                    # 构建 prompt
+                    full_prompt = f"""## 任务：按用户指令修改 Markdown
+
+## 用户指令
+{chat_prompt}
+
+## 待修改的 Markdown
+{chat_markdown}
+
+---
+
+## 要求
+1. 严格按照用户指令进行修改
+2. 直接输出修改后的完整 Markdown
+3. 不要任何解释、注释、说明
+4. 不要用代码块包裹"""
+                    
+                    result, success, token_info = call_single_step(full_prompt, api_url, api_key, model)
+                    if success:
+                        st.session_state.chat_result = result
+                        st.session_state.chat_translated = ""  # 清空翻译
+                        # 记录到对话历史
+                        st.session_state.chat_history.append({
+                            "prompt": chat_prompt,
+                            "input": chat_markdown[:50] + "..." if len(chat_markdown) > 50 else chat_markdown,
+                            "tokens": token_info.get("total_tokens", 0)
+                        })
+                        st.rerun()
+                    else:
+                        st.error(f"AI 处理失败: {result}")
+    
+    st.divider()
+    
+    # 结果显示区域
+    if st.session_state.chat_result:
+        col_en, col_cn = st.columns(2)
+        
+        with col_en:
+            # 标题 + 预览开关
+            h1, h2 = st.columns([2, 1])
+            with h1: st.markdown("**修改结果**")
+            with h2: chat_view_mode = st.toggle("预览模式", value=True, key="chat_view_toggle")
+            
+            if chat_view_mode:
+                with st.container(height=400):
+                    st.markdown(st.session_state.chat_result)
+                copy_content = st.session_state.chat_result
+            else:
+                edited_chat = st.text_area("编辑结果", value=st.session_state.chat_result, height=400, key="chat_edit_area", label_visibility="collapsed")
+                if edited_chat != st.session_state.chat_result:
+                    st.session_state.chat_result = edited_chat
+                copy_content = edited_chat
+            
+            # 复制按钮
+            import streamlit.components.v1 as components
+            encoded_chat = base64.b64encode(copy_content.encode('utf-8')).decode('utf-8')
+            html_style = "<style>body{margin:0;padding:0;overflow:hidden;}button{width:100%;height:40px;padding:0;margin:0;display:block;font-size:14px;color:white;border:none;border-radius:5px;cursor:pointer;line-height:40px;font-family:'Source Sans Pro',sans-serif;transition:0.3s;}button:hover{opacity:0.9;}button:active{transform:scale(0.98);}</style>"
+            copy_js_chat = f'''{html_style}<script>function copyChat(){{const b='{encoded_chat}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnChat').innerText='已复制';setTimeout(()=>document.getElementById('btnChat').innerText='复制英文',1500);}});}}</script><button id="btnChat" onclick="copyChat()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
+            components.html(copy_js_chat, height=60)
+        
+        with col_cn:
+            # 标题 + 翻译按钮
+            h3, h4 = st.columns([2, 1])
+            with h3: st.markdown("**中文翻译**")
+            with h4:
+                # 翻译按钮逻辑移到这里
+                if st.button("翻译", key="chat_translate_btn", use_container_width=True):
+                    user_cfg = st.session_state.user_config
+                    api_url_t = user_cfg.get("api_url", DEFAULT_API_URL)
+                    api_key_t = user_cfg.get("api_key", DEFAULT_API_KEY)
+                    model_t = user_cfg.get("model_translate", "gemini-3-flash-preview-nothinking")
+                    
+                    if api_key_t:
+                        with st.spinner("正在翻译..."):
+                            prompt = f"请将以下英文内容翻译成中文，保持原有格式（Markdown），直接输出翻译结果，不要任何解释：\n\n{st.session_state.chat_result}"
+                            result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
+                            if success:
+                                st.session_state.chat_translated = result
+                                st.rerun()
+                            else:
+                                st.error(f"翻译失败: {result}")
+                    else:
+                        st.error("请先配置 API Key")
+
+            # 显示翻译结果
+            if st.session_state.chat_translated:
+                with st.container(height=400):
+                    st.markdown(st.session_state.chat_translated)
+                
+                # 复制中文按钮
+                encoded_cn = base64.b64encode(st.session_state.chat_translated.encode('utf-8')).decode('utf-8')
+                copy_js_cn = f'''{html_style}<script>function copyChatCn(){{const b='{encoded_cn}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnChatCn').innerText='已复制';setTimeout(()=>document.getElementById('btnChatCn').innerText='复制中文',1500);}});}}</script><button id="btnChatCn" onclick="copyChatCn()" style="background:linear-gradient(135deg,#8b5cf6 0%,#00d4ff 100%);box-shadow:0 0 15px rgba(139,92,246,0.3);">复制中文</button>'''
+                components.html(copy_js_cn, height=60)
+            else:
+                st.info("点击右上角按钮进行翻译")
+        
+        # 使用修改结果作为新输入
+        col_action1, col_action2 = st.columns(2)
+        with col_action1:
+            if st.button("将结果作为新输入", use_container_width=True, key="chat_reuse_btn"):
+                st.session_state.chat_input = st.session_state.chat_result
+                st.session_state.chat_result = ""
+                st.session_state.chat_translated = ""
+                st.rerun()
+        with col_action2:
+            if st.button("清空结果", use_container_width=True, key="chat_clear_btn"):
+                st.session_state.chat_result = ""
+                st.session_state.chat_translated = ""
+                st.rerun()
+    
+    # 显示对话历史
+    if st.session_state.chat_history:
+        with st.expander("对话历史"):
+            for i, h in enumerate(reversed(st.session_state.chat_history[-10:]), 1):
+                st.markdown(f"**{i}.** {h['prompt'][:50]}... (Tokens: {h['tokens']})")
 
 # ==================== 规则管理功能 ====================
 with tab3:
