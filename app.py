@@ -2669,13 +2669,13 @@ with tab5:
                         st.session_state.chat_result = result
                         st.session_state.chat_translated = ""  # 清空翻译
                         st.session_state.play_sound = True  # 播放提示音
-                        log_operation("AI对话", f"指令: {chat_instruction[:50]}", extra={
-                            "input_preview": chat_input[:100] if chat_input else "",
-                            "input_length": len(chat_input) if chat_input else 0,
+                        log_operation("AI对话", f"指令: {chat_prompt[:50]}", extra={
+                            "input_preview": chat_markdown[:100] if chat_markdown else "",
+                            "input_length": len(chat_markdown) if chat_markdown else 0,
                             "output_length": len(result),
                             "model": model,
                             "tokens": {"input": token_info.get("prompt_tokens", 0), "output": token_info.get("completion_tokens", 0)},
-                            "instruction": chat_instruction[:100]
+                            "instruction": chat_prompt[:100]
                         })
                         st.rerun()
                     else:
