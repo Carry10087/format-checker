@@ -2544,28 +2544,31 @@ with tab2:
             h3, h4 = st.columns([2, 1])
             with h3: st.markdown("**中文翻译**")
             with h4:
-                # 翻译按钮
-                if st.button("翻译", key="qc_translate_btn", use_container_width=True):
-                    user_cfg = st.session_state.user_config
-                    api_url_t = user_cfg.get("api_url", DEFAULT_API_URL)
-                    api_key_t = user_cfg.get("api_key", DEFAULT_API_KEY)
-                    model_t = user_cfg.get("model_translate", "gemini-3-flash-preview-nothinking")
-                    
-                    if api_key_t:
-                        with st.spinner("正在翻译..."):
-                            prompt = f"请将以下英文内容翻译成中文，保持原有格式（Markdown），直接输出翻译结果，不要任何解释：\n\n{st.session_state.qc_result}"
-                            result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
-                            if success:
-                                st.session_state.qc_translated = result
-                                st.rerun()
-                            else:
-                                st.error(f"翻译失败: {result}")
-                    else:
-                        st.error("请先配置 API Key")
+                # 翻译按钮 - 设置标记，实际翻译在下方执行
+                translate_clicked = st.button("翻译", key="qc_translate_btn", use_container_width=True)
             
             # 显示翻译结果
             if "qc_translated" not in st.session_state:
                 st.session_state.qc_translated = ""
+            
+            # 翻译逻辑移到这里，spinner 显示在下方
+            if translate_clicked:
+                user_cfg = st.session_state.user_config
+                api_url_t = user_cfg.get("api_url", DEFAULT_API_URL)
+                api_key_t = user_cfg.get("api_key", DEFAULT_API_KEY)
+                model_t = user_cfg.get("model_translate", "gemini-3-flash-preview-nothinking")
+                
+                if api_key_t:
+                    with st.spinner("正在翻译..."):
+                        prompt = f"请将以下英文内容翻译成中文，保持原有格式（Markdown），直接输出翻译结果，不要任何解释：\n\n{st.session_state.qc_result}"
+                        result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
+                        if success:
+                            st.session_state.qc_translated = result
+                            st.rerun()
+                        else:
+                            st.error(f"翻译失败: {result}")
+                else:
+                    st.error("请先配置 API Key")
             
             if st.session_state.qc_translated:
                 with st.container(height=400):
@@ -2703,24 +2706,27 @@ with tab5:
             h3, h4 = st.columns([2, 1])
             with h3: st.markdown("**中文翻译**")
             with h4:
-                # 翻译按钮逻辑移到这里
-                if st.button("翻译", key="chat_translate_btn", use_container_width=True):
-                    user_cfg = st.session_state.user_config
-                    api_url_t = user_cfg.get("api_url", DEFAULT_API_URL)
-                    api_key_t = user_cfg.get("api_key", DEFAULT_API_KEY)
-                    model_t = user_cfg.get("model_translate", "gemini-3-flash-preview-nothinking")
-                    
-                    if api_key_t:
-                        with st.spinner("正在翻译..."):
-                            prompt = f"请将以下英文内容翻译成中文，保持原有格式（Markdown），直接输出翻译结果，不要任何解释：\n\n{st.session_state.chat_result}"
-                            result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
-                            if success:
-                                st.session_state.chat_translated = result
-                                st.rerun()
-                            else:
-                                st.error(f"翻译失败: {result}")
-                    else:
-                        st.error("请先配置 API Key")
+                # 翻译按钮 - 设置标记，实际翻译在下方执行
+                chat_translate_clicked = st.button("翻译", key="chat_translate_btn", use_container_width=True)
+
+            # 翻译逻辑移到这里，spinner 显示在下方
+            if chat_translate_clicked:
+                user_cfg = st.session_state.user_config
+                api_url_t = user_cfg.get("api_url", DEFAULT_API_URL)
+                api_key_t = user_cfg.get("api_key", DEFAULT_API_KEY)
+                model_t = user_cfg.get("model_translate", "gemini-3-flash-preview-nothinking")
+                
+                if api_key_t:
+                    with st.spinner("正在翻译..."):
+                        prompt = f"请将以下英文内容翻译成中文，保持原有格式（Markdown），直接输出翻译结果，不要任何解释：\n\n{st.session_state.chat_result}"
+                        result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
+                        if success:
+                            st.session_state.chat_translated = result
+                            st.rerun()
+                        else:
+                            st.error(f"翻译失败: {result}")
+                else:
+                    st.error("请先配置 API Key")
 
             # 显示翻译结果
             if st.session_state.chat_translated:
