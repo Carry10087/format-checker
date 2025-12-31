@@ -122,8 +122,12 @@ def fix_spacing_rules(text: str) -> str:
     """修复空格规则：句号/逗号后空格、括号空格、冒号前后空格"""
     # 冒号前移除多余空格（如 "A : B" → "A: B"）
     text = re.sub(r'\s+:', ':', text)
-    # 句号后加空格（排除 [Note X] 和 *** 情况）
+    # 句号后加空格（排除 [Note X] 和 *** 和域名情况）
+    # 先保护域名
+    text = re.sub(r'\.(com|org|net|edu|gov|io|co|uk|cn)\b', r'.__DOMAIN_\1__', text)
     text = re.sub(r'\.([A-Za-z])', r'. \1', text)
+    # 恢复域名
+    text = re.sub(r'\.__DOMAIN_(\w+)__', r'.\1', text)
     # 逗号后加空格
     text = re.sub(r',([A-Za-z])', r', \1', text)
     # 冒号后加空格
@@ -398,6 +402,9 @@ def analyze_format_issues(text: str) -> list:
         # 先排除常见缩写
         temp_line = re.sub(r'\b[A-Z]\.[A-Z]\.', '', line)  # U.S. U.K. 等
         temp_line = re.sub(r'\b(e\.g\.|i\.e\.|etc\.|vs\.|Dr\.|Mr\.|Mrs\.|Ms\.|Jr\.|Sr\.)', '', temp_line)
+        # 排除 .com .org .net 等域名
+        temp_line = re.sub(r'\.(com|org|net|edu|gov|io|co|uk|cn)\b', '', temp_line)
+        # 检查标点后是否缺少空格，但排除标点后跟 [ 的情况（Markdown 链接）
         match = re.search(r'([.,:])[A-Za-z]', temp_line)
         if match:
             issues.append(f"第{i}行：标点「{match.group(1)}」后缺少空格")
