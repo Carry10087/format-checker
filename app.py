@@ -203,9 +203,14 @@ def log_operation(action, details="", extra=None):
         # 获取当前用户
         username = st.session_state.get("current_user", "未登录")
         
+        # 使用北京时间 (UTC+8)
+        from datetime import timezone, timedelta
+        beijing_tz = timezone(timedelta(hours=8))
+        now = datetime.datetime.now(beijing_tz)
+        
         # 构建日志条目
         log_entry = {
-            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "timestamp": now.strftime("%Y-%m-%d %H:%M:%S"),
             "user": username,
             "action": action,
             "details": details[:200] if details else ""
@@ -1724,17 +1729,14 @@ with tab4:
                 
                 detail_str = " | ".join([p for p in detail_parts if p])
                 
-                # 使用 expander 显示每条日志的详细信息
-                with st.container():
-                    col_main, col_expand = st.columns([9, 1])
-                    with col_main:
-                        st.markdown(f"**{log['timestamp']}** | {icon} **{log['action']}** | {log['user']} | {detail_str[:80]}")
-                    
-                    # 如果有输入预览，显示展开按钮
-                    if "input_preview" in log and log["input_preview"]:
-                        with col_expand:
-                            if st.button("详情", key=f"log_detail_{log['timestamp']}_{log['action']}", use_container_width=True):
-                                st.info(f"**输入摘要:** {log['input_preview']}...")
+                # 使用 expander 显示日志（可展开/收起）
+                if "input_preview" in log and log["input_preview"]:
+                    with st.expander(f"**{log['timestamp']}** | {icon} **{log['action']}** | {log['user']} | {detail_str[:60]}", expanded=False):
+                        st.markdown(f"**输入摘要:** {log['input_preview']}...")
+                        if "instruction" in log:
+                            st.markdown(f"**指令:** {log['instruction']}")
+                else:
+                    st.markdown(f"**{log['timestamp']}** | {icon} **{log['action']}** | {log['user']} | {detail_str[:80]}")
         else:
             st.info("暂无操作日志")
 
