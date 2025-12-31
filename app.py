@@ -108,10 +108,6 @@ def login_user(username, password):
         return False, "密码错误"
     return True, "登录成功"
 
-def get_user_rules_file(username):
-    """获取用户的规则文件路径"""
-    return os.path.join(USERS_DIR, username, "rules.md")
-
 def get_user_history_file(username):
     """获取用户的历史记录文件路径"""
     return os.path.join(USERS_DIR, username, "history.json")
@@ -184,65 +180,77 @@ def save_history(history):
     except:
         pass
 
-def load_rules():
-    """读取当前用户的格式规范"""
-    if "current_user" not in st.session_state or not st.session_state.current_user:
-        # 未登录时读取默认规则
-        try:
-            with open(DEFAULT_RULES_FILE, "r", encoding="utf-8") as f:
-                return f.read()
-        except:
-            return ""
+# ==================== 操作日志系统 ====================
+LOGS_FILE = "operation_logs.json"
+
+def log_operation(action, details="", extra=None):
+    """记录用户操作日志
+    
+    Args:
+        action: 操作类型（登录、AI修改、自动修复、AI质检、AI对话等）
+        details: 操作详情描述
+        extra: 额外信息字典，可包含 input_preview, output_length, model, tokens 等
+    """
+    import datetime
     try:
-        rules_file = get_user_rules_file(st.session_state.current_user)
-        with open(rules_file, "r", encoding="utf-8") as f:
+        # 加载现有日志
+        try:
+            with open(LOGS_FILE, "r", encoding="utf-8") as f:
+                logs = json.load(f)
+        except:
+            logs = []
+        
+        # 获取当前用户
+        username = st.session_state.get("current_user", "未登录")
+        
+        # 构建日志条目
+        log_entry = {
+            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "user": username,
+            "action": action,
+            "details": details[:200] if details else ""
+        }
+        
+        # 添加额外信息
+        if extra:
+            if "input_preview" in extra:
+                log_entry["input_preview"] = extra["input_preview"][:100]  # 输入内容摘要
+            if "output_length" in extra:
+                log_entry["output_length"] = extra["output_length"]  # 输出长度
+            if "model" in extra:
+                log_entry["model"] = extra["model"]  # 使用的模型
+            if "tokens" in extra:
+                log_entry["tokens"] = extra["tokens"]  # Token 用量
+            if "input_length" in extra:
+                log_entry["input_length"] = extra["input_length"]  # 输入长度
+        
+        logs.append(log_entry)
+        
+        # 只保留最近 500 条日志
+        logs = logs[-500:]
+        
+        # 保存日志
+        with open(LOGS_FILE, "w", encoding="utf-8") as f:
+            json.dump(logs, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        pass  # 日志失败不影响主流程
+
+def load_logs(limit=100):
+    """加载操作日志"""
+    try:
+        with open(LOGS_FILE, "r", encoding="utf-8") as f:
+            logs = json.load(f)
+        return logs[-limit:][::-1]  # 返回最近的，倒序显示（最新在前）
+    except:
+        return []
+
+def load_rules():
+    """读取格式规范（所有用户使用统一规则）"""
+    try:
+        with open(DEFAULT_RULES_FILE, "r", encoding="utf-8") as f:
             return f.read()
     except:
         return ""
-
-def save_rules(content):
-    """保存当前用户的格式规范"""
-    if "current_user" not in st.session_state or not st.session_state.current_user:
-        return False
-    try:
-        rules_file = get_user_rules_file(st.session_state.current_user)
-        with open(rules_file, "w", encoding="utf-8") as f:
-            f.write(content)
-        return True
-    except:
-        return False
-
-# 解析规则文件为章节
-def parse_rules_sections(content):
-    sections = {}
-    if not content:
-        return sections
-    
-    lines = content.split('\n')
-    current_section = None
-    current_content = []
-    
-    for line in lines:
-        if line.startswith('## ') and not line.startswith('### '):
-            if current_section:
-                sections[current_section] = '\n'.join(current_content).strip()
-            current_section = line[3:].strip()
-            current_content = []
-        elif current_section:
-            current_content.append(line)
-    
-    if current_section:
-        sections[current_section] = '\n'.join(current_content).strip()
-    
-    return sections
-
-# 将章节重新组合为完整内容
-def rebuild_rules(title, sections, section_order):
-    content = f"# {title}\n\n"
-    for section_name in section_order:
-        if section_name in sections:
-            content += f"## {section_name}\n\n{sections[section_name]}\n\n---\n\n"
-    return content.rstrip('\n---\n\n').rstrip('\n')
 
 # 实际使用的 4 步 prompts
 STEP_PROMPTS = [
@@ -1415,19 +1423,6 @@ div[data-testid="stNotification"] {
     color: #666 !important;
 }
 
-/* Toggle 开关颜色 - 覆盖默认橙色 */
-div[data-testid="stToggle"] label[data-testid="stWidgetLabel"] + div {
-    background-color: #333 !important; /* 轨道颜色 */
-}
-/* 选中状态的轨道颜色 */
-div[data-testid="stToggle"][aria-checked="true"] label[data-testid="stWidgetLabel"] + div {
-    background-color: #8b5cf6 !important;
-}
-/* 选中状态的圆点/滑块颜色 */
-div[data-testid="stToggle"] p {
-    color: #e0e0e0 !important;
-}
-
 /* 让 columns 中的按钮高度与 Toggle 对齐 */
 [data-testid="stHorizontalBlock"] [data-testid="stButton"] button {
     padding-top: 0.15rem !important;
@@ -1466,6 +1461,51 @@ video_html = '''
 </div>
 '''
 st.markdown(video_html, unsafe_allow_html=True)
+
+# 播放提示音的函数（使用 Web Audio API 生成简单提示音）
+def play_notification_sound():
+    """播放处理完成的提示音"""
+    sound_js = """
+    <script>
+    (function() {
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;  // 音调
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.3);
+            
+            // 第二个音（更高）
+            setTimeout(() => {
+                const osc2 = audioContext.createOscillator();
+                const gain2 = audioContext.createGain();
+                osc2.connect(gain2);
+                gain2.connect(audioContext.destination);
+                osc2.frequency.value = 1000;
+                osc2.type = 'sine';
+                gain2.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                osc2.start(audioContext.currentTime);
+                osc2.stop(audioContext.currentTime + 0.3);
+            }, 150);
+        } catch(e) {
+            console.log('Audio not supported');
+        }
+    })();
+    </script>
+    """
+    st.components.v1.html(sound_js, height=0)
+
 
 # 确保用户目录存在
 os.makedirs(USERS_DIR, exist_ok=True)
@@ -1509,7 +1549,7 @@ if not st.session_state.current_user:
                             st.session_state.current_ref = ""
                             st.session_state.is_locked = False
                             st.session_state.current_history_idx = -1
-                            st.session_state.detail_edits = []
+                            log_operation("登录", f"用户 {username} 登录成功")
                             st.success(msg)
                             st.rerun()
                         else:
@@ -1563,7 +1603,7 @@ with col_user:
         st.rerun()
 
 # 创建标签页（使用原生 st.tabs + CSS 美化）
-tab1, tab2, tab5, tab3, tab4 = st.tabs(['AI 修改', '独立质检', 'AI 对话', '规则管理', 'API 配置'])
+tab1, tab2, tab5, tab4 = st.tabs(['AI 修改', '独立质检', 'AI 对话', 'API 配置'])
 
 # 用 session_state 追踪当前 tab（st.tabs 不返回索引，需要在各 tab 内处理）
 
@@ -1632,9 +1672,72 @@ with tab4:
         }
         if save_user_config_full(config):
             st.session_state.user_config = config
+            log_operation("保存配置", "更新了 API 配置")
             st.success("✅ 配置已保存")
         else:
             st.error("❌ 保存失败")
+    
+    # 操作日志查看
+    st.divider()
+    with st.expander("操作日志", expanded=False):
+        logs = load_logs(limit=50)
+        if logs:
+            # 日志筛选
+            col_filter1, col_filter2 = st.columns(2)
+            with col_filter1:
+                filter_user = st.selectbox("筛选用户", ["全部"] + list(set(log["user"] for log in logs)), key="log_filter_user")
+            with col_filter2:
+                filter_action = st.selectbox("筛选操作", ["全部", "登录", "AI修改", "自动修复", "AI质检", "AI对话", "保存配置"], key="log_filter_action")
+            
+            # 应用筛选
+            filtered_logs = logs
+            if filter_user != "全部":
+                filtered_logs = [log for log in filtered_logs if log["user"] == filter_user]
+            if filter_action != "全部":
+                filtered_logs = [log for log in filtered_logs if log["action"] == filter_action]
+            
+            # 显示日志
+            st.caption(f"共 {len(filtered_logs)} 条记录")
+            
+            for log in filtered_logs[:30]:  # 只显示最多 30 条
+                # 操作图标
+                action_icons = {
+                    "登录": "🟢", "AI修改": "🔵", "自动修复": "🟡", 
+                    "AI质检": "🟣", "AI对话": "🟠", "保存配置": "⚙️"
+                }
+                icon = action_icons.get(log['action'], '⚪')
+                
+                # 构建详情信息
+                detail_parts = [log.get("details", "")]
+                if "input_length" in log:
+                    detail_parts.append(f"输入: {log['input_length']}字符")
+                if "output_length" in log:
+                    detail_parts.append(f"输出: {log['output_length']}字符")
+                if "model" in log:
+                    # 只显示模型名的简短版本
+                    model_short = log['model'].replace("gemini-3-", "g3-").replace("-preview", "")
+                    detail_parts.append(f"模型: {model_short}")
+                if "tokens" in log:
+                    tokens = log['tokens']
+                    if isinstance(tokens, dict):
+                        detail_parts.append(f"Token: {tokens.get('input', 0)}→{tokens.get('output', 0)}")
+                
+                detail_str = " | ".join([p for p in detail_parts if p])
+                
+                # 使用 expander 显示每条日志的详细信息
+                with st.container():
+                    col_main, col_expand = st.columns([9, 1])
+                    with col_main:
+                        st.markdown(f"**{log['timestamp']}** | {icon} **{log['action']}** | {log['user']} | {detail_str[:80]}")
+                    
+                    # 如果有输入预览，显示展开按钮
+                    if "input_preview" in log and log["input_preview"]:
+                        with col_expand:
+                            if st.button("详情", key=f"log_detail_{log['timestamp']}_{log['action']}", use_container_width=True):
+                                st.info(f"**输入摘要:** {log['input_preview']}...")
+        else:
+            st.info("暂无操作日志")
+
 # 初始化 session state
 if "ai_results" not in st.session_state:
     st.session_state.ai_results = []
@@ -1652,8 +1755,13 @@ if "is_locked" not in st.session_state:
     st.session_state.is_locked = False
 if "current_history_idx" not in st.session_state:
     st.session_state.current_history_idx = -1  # -1 表示新对话
-if "detail_edits" not in st.session_state:
-    st.session_state.detail_edits = []  # 细节修改历史记录
+if "play_sound" not in st.session_state:
+    st.session_state.play_sound = False
+
+# 检查是否需要播放提示音
+if st.session_state.play_sound:
+    play_notification_sound()
+    st.session_state.play_sound = False
 
 # ==================== AI 修改功能 ====================
 with tab1:
@@ -1702,7 +1810,6 @@ with tab1:
             st.session_state.ai_results = []
             st.session_state.final_result = ""
             st.session_state.translated_result = ""
-            st.session_state.detail_edits = []
             st.session_state.is_locked = False
             st.rerun()
         
@@ -1715,7 +1822,6 @@ with tab1:
             st.session_state.ai_results = []
             st.session_state.final_result = ""
             st.session_state.translated_result = ""
-            st.session_state.detail_edits = []
             st.session_state.is_locked = False
             st.session_state.current_history_idx = -1
             st.rerun()
@@ -1727,7 +1833,6 @@ with tab1:
             st.session_state.ai_results = []
             st.session_state.final_result = ""
             st.session_state.translated_result = ""
-            st.session_state.detail_edits = []
             st.session_state.is_locked = False
             st.session_state.current_history_idx = -1
             st.rerun()
@@ -1743,7 +1848,6 @@ with tab1:
                 st.session_state.ai_results = h["results"]
                 st.session_state.final_result = h["final"]
                 st.session_state.translated_result = h.get("translated", "")
-                st.session_state.detail_edits = h.get("detail_edits", [])
                 st.session_state.is_locked = True
                 st.session_state.current_history_idx = real_idx
                 st.rerun()
@@ -1756,7 +1860,6 @@ with tab1:
                 st.session_state.ai_results = h["results"]
                 st.session_state.final_result = h["final"]
                 st.session_state.translated_result = h.get("translated", "")
-                st.session_state.detail_edits = h.get("detail_edits", [])
                 st.session_state.is_locked = True
                 st.session_state.current_history_idx = selected_idx
                 st.rerun()
@@ -2020,20 +2123,28 @@ with tab1:
                     render_progress_card(2, '处理完成！', 100, is_done=True)
                     
                     # 保存到历史记录
-                    st.session_state.detail_edits = []  # 新修改时清空细节修改历史
                     st.session_state.history.append({
                         "input": ai_input,
                         "ref": ref_notes,
                         "results": st.session_state.ai_results.copy(),
                         "final": st.session_state.final_result,
-                        "translated": "",
-                        "detail_edits": []
+                        "translated": ""
                     })
                     save_history(st.session_state.history)
                     st.session_state.current_input = ai_input
                     st.session_state.current_ref = ref_notes
                     st.session_state.is_locked = True
                     st.session_state.current_history_idx = len(st.session_state.history) - 1
+                    st.session_state.play_sound = True  # 标记播放提示音
+                    # 记录详细日志
+                    tokens = st.session_state.total_tokens
+                    log_operation("AI修改", f"输入: {len(ai_input)} 字符, 输出: {len(st.session_state.final_result)} 字符", extra={
+                        "input_preview": ai_input[:100],
+                        "input_length": len(ai_input),
+                        "output_length": len(st.session_state.final_result),
+                        "model": model,
+                        "tokens": {"input": tokens["prompt"], "output": tokens["completion"]}
+                    })
                     st.rerun()
         else:
             st.warning("请输入内容")
@@ -2044,12 +2155,14 @@ with tab1:
         # 显示 Token 用量
         if "total_tokens" in st.session_state and st.session_state.total_tokens["total"] > 0:
             tokens = st.session_state.total_tokens
+            # 总计 = 输入 + 输出（而不是 API 返回的 total，因为 API 的 total 可能包含 thinking tokens）
+            calculated_total = tokens['prompt'] + tokens['completion']
             st.markdown(f"""
             <div style="background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.3); border-radius: 8px; padding: 10px 15px; margin-bottom: 15px;">
                 <span style="color: #00d4ff; font-weight: 500;">📊 Token 用量：</span>
                 <span style="color: #fff; margin-left: 10px;">输入: {tokens['prompt']:,}</span>
                 <span style="color: #fff; margin-left: 15px;">输出: {tokens['completion']:,}</span>
-                <span style="color: #00ff88; margin-left: 15px; font-weight: 600;">总计: {tokens['total']:,}</span>
+                <span style="color: #00ff88; margin-left: 15px; font-weight: 600;">总计: {calculated_total:,}</span>
             </div>
             """, unsafe_allow_html=True)
         for i, item in enumerate(st.session_state.ai_results):
@@ -2076,29 +2189,12 @@ with tab1:
                 # view_mode = st.radio("", ["预览", "编辑"], horizontal=True, key="en_view_mode", label_visibility="collapsed")
                 view_mode = st.toggle("预览模式", value=True, key="en_view_mode")
             
-            # 检查是否有细节修改高亮
-            display_content = st.session_state.final_result
-            has_highlights = False
-            if st.session_state.detail_edits:
-                last_edit = st.session_state.detail_edits[-1]
-                if "new_content" in last_edit and last_edit["new_content"]:
-                    new_content = last_edit["new_content"]
-                    if new_content in display_content:
-                        display_content = display_content.replace(
-                            new_content, 
-                            f'<mark style="background-color: #fff3cd;">{new_content}</mark>'
-                        )
-                        has_highlights = True
-            
             if view_mode: # 预览模式
                 with st.container(height=300):
-                    if has_highlights:
-                        st.caption("💡 黄色高亮为最近修改")
-                    st.markdown(display_content, unsafe_allow_html=True)
+                    st.markdown(st.session_state.final_result)
             else:
-                edit_key = f"result_en_edit_{len(st.session_state.detail_edits)}"
                 edited_en = st.text_area("英文结果", value=st.session_state.final_result, height=300, 
-                                         key=edit_key, label_visibility="collapsed")
+                                         key="result_en_edit", label_visibility="collapsed")
                 if edited_en != st.session_state.final_result:
                     st.session_state.final_result = edited_en
                     if st.session_state.history and st.session_state.current_history_idx >= 0:
@@ -2155,124 +2251,6 @@ with tab1:
                         st.rerun()
                     else:
                         st.error(result)
-        
-        # 细节修改功能
-        st.divider()
-        with st.expander("细节修改（选中文本后粘贴到下方）", expanded=False):
-            col_sel, col_inst = st.columns([1, 1])
-            with col_sel:
-                selected_text = st.text_area("选中的文本", height=100, placeholder="粘贴你想修改的文本片段...", key="detail_selected")
-            with col_inst:
-                edit_instruction = st.text_area("修改指令", height=100, placeholder="描述你想如何修改，如：删除概括性段落、改为列表格式...", key="detail_instruction")
-            
-            if st.button("🔧 AI 细节修改", use_container_width=True, type="primary", key="detail_edit_btn"):
-                if selected_text.strip() and edit_instruction.strip():
-                    # 从 session_state 获取 API 配置
-                    user_cfg = st.session_state.user_config
-                    api_url_d = user_cfg.get("api_url", DEFAULT_API_URL)
-                    api_key_d = user_cfg.get("api_key", DEFAULT_API_KEY)
-                    model_d = user_cfg.get("model", DEFAULT_MODEL)
-                    
-                    with st.spinner("AI 正在修改，请勿切换页面..."):
-                        rules_for_detail = load_rules()
-                        detail_prompt = f"""你是一个格式修改助手。用户选中了一段文本，并给出了修改指令。
-
-## 完整文档（上下文）
-{st.session_state.final_result}
-
-## 用户选中的文本
-{selected_text}
-
-## 用户的修改指令
-{edit_instruction}
-
-## 规则文件
-{rules_for_detail}
-
-请理解用户的意图：
-- 如果用户说"不要这种话"或"删除"，则直接删除该文本，不留任何痕迹
-- 如果用户说"改为列表"，则将段落改为列表格式
-- 如果用户要求其他修改，按指令执行
-
-输出格式要求：
-请按以下格式输出，用分隔符分开两部分：
-
----NEW_CONTENT_START---
-（如果是修改操作，这里写修改后的新内容片段；如果是删除操作，这里留空）
----NEW_CONTENT_END---
-
----FULL_DOC_START---
-（这里输出修改后的完整文档）
----FULL_DOC_END---
-
-注意：
-1. 完整文档部分不要有任何标记，保持纯净的Markdown
-2. 不要任何解释"""
-                        result, success, _ = call_single_step(detail_prompt, api_url_d, api_key_d, model_d)
-                        if success:
-                            st.success("修改完成！")
-                            # 解析返回结果
-                            new_content = ""
-                            full_doc = result
-                            
-                            if "---NEW_CONTENT_START---" in result and "---NEW_CONTENT_END---" in result:
-                                try:
-                                    new_content = result.split("---NEW_CONTENT_START---")[1].split("---NEW_CONTENT_END---")[0].strip()
-                                except:
-                                    new_content = ""
-                            
-                            if "---FULL_DOC_START---" in result and "---FULL_DOC_END---" in result:
-                                try:
-                                    full_doc = result.split("---FULL_DOC_START---")[1].split("---FULL_DOC_END---")[0].strip()
-                                except:
-                                    full_doc = result
-                            
-                            # 记录细节修改历史
-                            edit_record = {
-                                "selected": selected_text,
-                                "instruction": edit_instruction,
-                                "before": st.session_state.final_result,
-                                "after": full_doc,
-                                "new_content": new_content  # 记录修改后的新内容用于高亮
-                            }
-                            st.session_state.detail_edits.append(edit_record)
-                            # 更新结果
-                            st.session_state.final_result = full_doc
-                            if st.session_state.history and st.session_state.current_history_idx >= 0:
-                                st.session_state.history[st.session_state.current_history_idx]["final"] = full_doc
-                                st.session_state.history[st.session_state.current_history_idx]["detail_edits"] = st.session_state.detail_edits.copy()
-                                save_history(st.session_state.history)
-                            st.rerun()
-                        else:
-                            st.error(result)
-                else:
-                    st.warning("请输入选中的文本和修改指令")
-            
-            # 显示细节修改历史和撤销按钮
-            if st.session_state.detail_edits:
-                st.markdown("---")
-                col_hist_title, col_undo = st.columns([3, 1])
-                with col_hist_title:
-                    st.markdown(f"**细节修改历史 ({len(st.session_state.detail_edits)}条)**")
-                with col_undo:
-                    undo_clicked = st.button("↩️ 撤销上一步", key="undo_detail_btn", use_container_width=True)
-                
-                for i, edit in enumerate(st.session_state.detail_edits):
-                    with st.expander(f"修改 #{i+1}: {edit['instruction'][:30]}...", expanded=False):
-                        st.markdown(f"**选中文本**: {edit['selected'][:100]}...")
-                        st.markdown(f"**修改指令**: {edit['instruction']}")
-                
-                # 处理撤销（放在最后执行）
-                if undo_clicked and st.session_state.detail_edits:
-                    # 获取上一步的修改前内容
-                    last_edit = st.session_state.detail_edits.pop()
-                    st.session_state.final_result = last_edit["before"]
-                    # 更新历史记录
-                    if st.session_state.history and st.session_state.current_history_idx >= 0:
-                        st.session_state.history[st.session_state.current_history_idx]["final"] = last_edit["before"]
-                        st.session_state.history[st.session_state.current_history_idx]["detail_edits"] = st.session_state.detail_edits.copy()
-                        save_history(st.session_state.history)
-                    st.rerun()
 
 # ==================== 格式质检功能 ====================
 # 导入格式修复工具
@@ -2327,6 +2305,13 @@ with tab2:
                 st.session_state.qc_tokens = {}
                 st.session_state.qc_auto_fixed = True
                 st.session_state.qc_translated = ""  # 清空上一条的翻译
+                st.session_state.play_sound = True  # 播放提示音
+                log_operation("自动修复", f"输入: {len(qc_input)} 字符, 发现 {len(issues)} 个问题", extra={
+                    "input_preview": qc_input[:100],
+                    "input_length": len(qc_input),
+                    "output_length": len(fixed_text),
+                    "issues_count": len(issues)
+                })
                 st.rerun()
             else:
                 st.warning("请输入待检查的回答")
@@ -2482,6 +2467,14 @@ with tab2:
                             st.session_state.qc_tokens = token_info
                             st.session_state.qc_auto_fixed = False
                             st.session_state.qc_translated = ""  # 清空上一条的翻译
+                            st.session_state.play_sound = True  # 播放提示音
+                            log_operation("AI质检", f"输入: {len(qc_input)} 字符, 输出: {len(fixed)} 字符", extra={
+                                "input_preview": qc_input[:100],
+                                "input_length": len(qc_input),
+                                "output_length": len(fixed),
+                                "model": model_qc,
+                                "tokens": {"input": token_info.get("prompt_tokens", 0), "output": token_info.get("completion_tokens", 0)}
+                            })
                             st.rerun()
                         else:
                             st.error(f"质检失败: {result}")
@@ -2544,33 +2537,39 @@ with tab2:
             h3, h4 = st.columns([2, 1])
             with h3: st.markdown("**中文翻译**")
             with h4:
-                # 翻译按钮 - 设置标记，实际翻译在下方执行
-                translate_clicked = st.button("翻译", key="qc_translate_btn", use_container_width=True)
+                # 翻译按钮 - 点击后设置加载状态
+                if st.button("翻译", key="qc_translate_btn", use_container_width=True):
+                    st.session_state.qc_translating = True
+                    st.rerun()
             
             # 显示翻译结果
             if "qc_translated" not in st.session_state:
                 st.session_state.qc_translated = ""
+            if "qc_translating" not in st.session_state:
+                st.session_state.qc_translating = False
             
-            # 翻译逻辑移到这里，spinner 显示在下方
-            if translate_clicked:
+            # 在内容区域显示加载状态或结果
+            if st.session_state.qc_translating:
+                with st.container(height=400):
+                    st.info("正在翻译...")
+                # 执行翻译
                 user_cfg = st.session_state.user_config
                 api_url_t = user_cfg.get("api_url", DEFAULT_API_URL)
                 api_key_t = user_cfg.get("api_key", DEFAULT_API_KEY)
                 model_t = user_cfg.get("model_translate", "gemini-3-flash-preview-nothinking")
                 
                 if api_key_t:
-                    with st.spinner("正在翻译..."):
-                        prompt = f"请将以下英文内容翻译成中文，保持原有格式（Markdown），直接输出翻译结果，不要任何解释：\n\n{st.session_state.qc_result}"
-                        result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
-                        if success:
-                            st.session_state.qc_translated = result
-                            st.rerun()
-                        else:
-                            st.error(f"翻译失败: {result}")
+                    prompt = f"请将以下英文内容翻译成中文，保持原有格式（Markdown），直接输出翻译结果，不要任何解释：\n\n{st.session_state.qc_result}"
+                    result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
+                    if success:
+                        st.session_state.qc_translated = result
+                    else:
+                        st.session_state.qc_translated = f"翻译失败: {result}"
                 else:
-                    st.error("请先配置 API Key")
-            
-            if st.session_state.qc_translated:
+                    st.session_state.qc_translated = "请先配置 API Key"
+                st.session_state.qc_translating = False
+                st.rerun()
+            elif st.session_state.qc_translated:
                 with st.container(height=400):
                     st.markdown(st.session_state.qc_translated)
                 
@@ -2579,7 +2578,8 @@ with tab2:
                 copy_js_cn = f'''{html_style}<script>function copyCn(){{const b='{encoded_cn}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnCn').innerText='已复制';setTimeout(()=>document.getElementById('btnCn').innerText='复制中文',1500);}});}}</script><button id="btnCn" onclick="copyCn()" style="background:linear-gradient(135deg,#8b5cf6 0%,#00d4ff 100%);box-shadow:0 0 15px rgba(139,92,246,0.3);">复制中文</button>'''
                 components.html(copy_js_cn, height=60)
             else:
-                st.info("点击右上角按钮进行翻译")
+                with st.container(height=400):
+                    st.info("点击右上角按钮进行翻译")
         
         # 清空按钮
         if st.button("清空结果", key="qc_clear_btn", use_container_width=True):
@@ -2668,6 +2668,15 @@ with tab5:
                     if success:
                         st.session_state.chat_result = result
                         st.session_state.chat_translated = ""  # 清空翻译
+                        st.session_state.play_sound = True  # 播放提示音
+                        log_operation("AI对话", f"指令: {chat_instruction[:50]}", extra={
+                            "input_preview": chat_input[:100] if chat_input else "",
+                            "input_length": len(chat_input) if chat_input else 0,
+                            "output_length": len(result),
+                            "model": model,
+                            "tokens": {"input": token_info.get("prompt_tokens", 0), "output": token_info.get("completion_tokens", 0)},
+                            "instruction": chat_instruction[:100]
+                        })
                         st.rerun()
                     else:
                         st.error(f"AI 处理失败: {result}")
@@ -2706,30 +2715,37 @@ with tab5:
             h3, h4 = st.columns([2, 1])
             with h3: st.markdown("**中文翻译**")
             with h4:
-                # 翻译按钮 - 设置标记，实际翻译在下方执行
-                chat_translate_clicked = st.button("翻译", key="chat_translate_btn", use_container_width=True)
+                # 翻译按钮 - 点击后设置加载状态
+                if st.button("翻译", key="chat_translate_btn", use_container_width=True):
+                    st.session_state.chat_translating = True
+                    st.rerun()
 
-            # 翻译逻辑移到这里，spinner 显示在下方
-            if chat_translate_clicked:
+            # 初始化翻译状态
+            if "chat_translating" not in st.session_state:
+                st.session_state.chat_translating = False
+            
+            # 在内容区域显示加载状态或结果
+            if st.session_state.chat_translating:
+                with st.container(height=400):
+                    st.info("正在翻译...")
+                # 执行翻译
                 user_cfg = st.session_state.user_config
                 api_url_t = user_cfg.get("api_url", DEFAULT_API_URL)
                 api_key_t = user_cfg.get("api_key", DEFAULT_API_KEY)
                 model_t = user_cfg.get("model_translate", "gemini-3-flash-preview-nothinking")
                 
                 if api_key_t:
-                    with st.spinner("正在翻译..."):
-                        prompt = f"请将以下英文内容翻译成中文，保持原有格式（Markdown），直接输出翻译结果，不要任何解释：\n\n{st.session_state.chat_result}"
-                        result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
-                        if success:
-                            st.session_state.chat_translated = result
-                            st.rerun()
-                        else:
-                            st.error(f"翻译失败: {result}")
+                    prompt = f"请将以下英文内容翻译成中文，保持原有格式（Markdown），直接输出翻译结果，不要任何解释：\n\n{st.session_state.chat_result}"
+                    result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
+                    if success:
+                        st.session_state.chat_translated = result
+                    else:
+                        st.session_state.chat_translated = f"翻译失败: {result}"
                 else:
-                    st.error("请先配置 API Key")
-
-            # 显示翻译结果
-            if st.session_state.chat_translated:
+                    st.session_state.chat_translated = "请先配置 API Key"
+                st.session_state.chat_translating = False
+                st.rerun()
+            elif st.session_state.chat_translated:
                 with st.container(height=400):
                     st.markdown(st.session_state.chat_translated)
                 
@@ -2738,7 +2754,8 @@ with tab5:
                 copy_js_cn = f'''{html_style}<script>function copyChatCn(){{const b='{encoded_cn}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnChatCn').innerText='已复制';setTimeout(()=>document.getElementById('btnChatCn').innerText='复制中文',1500);}});}}</script><button id="btnChatCn" onclick="copyChatCn()" style="background:linear-gradient(135deg,#8b5cf6 0%,#00d4ff 100%);box-shadow:0 0 15px rgba(139,92,246,0.3);">复制中文</button>'''
                 components.html(copy_js_cn, height=60)
             else:
-                st.info("点击右上角按钮进行翻译")
+                with st.container(height=400):
+                    st.info("点击右上角按钮进行翻译")
         
         # 使用修改结果作为新输入
         col_action1, col_action2 = st.columns(2)
@@ -2755,309 +2772,3 @@ with tab5:
                 st.session_state.chat_translated = ""
                 st.rerun()
 
-# ==================== 规则管理功能 ====================
-with tab3:
-    st.subheader("规则管理")
-    
-    # 加载规则
-    rules_content = load_rules()
-    sections = parse_rules_sections(rules_content)
-    
-    # 获取标题
-    title_match = re.match(r'^# (.+)$', rules_content, re.MULTILINE)
-    rules_title = title_match.group(1) if title_match else "智能助手回答格式规范"
-    
-    # 章节顺序
-    section_order = list(sections.keys())
-    
-    # 初始化规则历史（用于撤销）
-    if "rules_history" not in st.session_state:
-        st.session_state.rules_history = []
-    
-    # 撤销按钮（如果有历史）
-    if st.session_state.rules_history:
-        if st.button("↩️ 撤销上次修改", use_container_width=True):
-            last_rules = st.session_state.rules_history.pop()
-            save_rules(last_rules)
-            st.success("✅ 已撤销")
-            st.rerun()
-    
-    # 同步更新规则功能
-    with st.expander("同步更新规则", expanded=False):
-        st.markdown("从默认规则文件同步最新规则到您的个人规则中。")
-        
-        # 读取默认规则文件
-        try:
-            with open(DEFAULT_RULES_FILE, "r", encoding="utf-8") as f:
-                default_rules_content = f.read()
-            default_available = True
-        except Exception as e:
-            default_rules_content = ""
-            default_available = False
-            st.error(f"❌ 无法读取默认规则文件: {e}")
-        
-        if default_available:
-            # 比较当前规则和默认规则
-            if rules_content.strip() == default_rules_content.strip():
-                st.success("✅ 您的规则已经与默认规则同步，无需更新。")
-            else:
-                st.warning("⚠️ 您的规则与默认规则存在差异。")
-                
-                # 显示差异统计
-                user_lines = len(rules_content.strip().split('\n'))
-                default_lines = len(default_rules_content.strip().split('\n'))
-                st.info(f"📊 当前规则: {user_lines} 行 | 默认规则: {default_lines} 行")
-                
-                # 同步选项
-                sync_mode = st.radio(
-                    "选择同步方式",
-                    ["完全替换（用默认规则覆盖您的规则）", "仅预览（查看默认规则内容）"],
-                    key="sync_mode_radio"
-                )
-                
-                if sync_mode == "仅预览（查看默认规则内容）":
-                    st.markdown("**默认规则预览：**")
-                    with st.container(height=300):
-                        st.markdown(default_rules_content)
-                
-                elif sync_mode == "完全替换（用默认规则覆盖您的规则）":
-                    st.markdown("**即将应用的默认规则：**")
-                    with st.container(height=200):
-                        st.markdown(default_rules_content)
-                    
-                    # 二次确认
-                    st.warning("⚠️ **注意：** 此操作将用默认规则完全替换您当前的规则。您的自定义修改将会丢失（但可以通过撤销恢复）。")
-                    
-                    confirm_sync = st.checkbox("我理解并确认要同步更新规则", key="confirm_sync_checkbox")
-                    
-                    if confirm_sync:
-                        if st.button("🔄 确认同步", type="primary", use_container_width=True, key="confirm_sync_btn"):
-                            # 保存当前规则到历史（用于撤销）
-                            st.session_state.rules_history.append(rules_content)
-                            st.session_state.rules_history = st.session_state.rules_history[-10:]
-                            
-                            if save_rules(default_rules_content):
-                                st.success('✅ 规则已成功同步更新！可点击顶部"撤销上次修改"恢复。')
-                                st.rerun()
-                            else:
-                                st.error("❌ 同步失败，请稍后重试。")
-    
-    # AI 辅助修改规则
-    with st.expander("AI 辅助修改规则", expanded=False):
-        # 初始化图片列表
-        if "rule_imgs" not in st.session_state:
-            st.session_state.rule_imgs = []
-        
-        # 显示已有图片（紧凑排列）
-        if st.session_state.rule_imgs:
-            num = len(st.session_state.rule_imgs)
-            # 图片列比例1，空白列比例大，让图片紧凑靠左
-            cols = st.columns([1]*num + [12])
-            for i, img in enumerate(st.session_state.rule_imgs):
-                with cols[i]:
-                    st.image(f"data:image/png;base64,{img}", width=80)
-                    if st.button("✕", key=f"rm_img_{i}"):
-                        st.session_state.rule_imgs.pop(i)
-                        st.rerun()
-        
-        # 输入指令
-        ai_instruction = st.text_area("修改指令", height=80, placeholder="输入修改指令...", key="ai_rule_instruction")
-        
-        # 粘贴图片区域
-        if HAS_PASTE_BUTTON:
-            paste_result = paste_image_button("粘贴图片", key="paste_rule_img")
-            if paste_result.image_data is not None:
-                buf = BytesIO()
-                paste_result.image_data.save(buf, format='PNG')
-                new_img = base64.b64encode(buf.getvalue()).decode('utf-8')
-                # 避免重复添加同一张图片
-                if new_img not in st.session_state.rule_imgs:
-                    st.session_state.rule_imgs.append(new_img)
-                    st.rerun()
-        else:
-            uploaded = st.file_uploader("上传图片", type=["png", "jpg", "jpeg"], key="rule_img_upload")
-            if uploaded:
-                new_img = base64.b64encode(uploaded.read()).decode('utf-8')
-                if new_img not in st.session_state.rule_imgs:
-                    st.session_state.rule_imgs.append(new_img)
-                    st.rerun()
-        
-        image_base64_list = st.session_state.rule_imgs
-        
-        if st.button("🚀 AI 执行修改", type="primary", use_container_width=True):
-            if ai_instruction.strip():
-                # 从用户配置获取 API 参数
-                user_cfg = st.session_state.user_config
-                api_url = user_cfg.get("api_url", DEFAULT_API_URL)
-                api_key = user_cfg.get("api_key", DEFAULT_API_KEY)
-                model = user_cfg.get("model", DEFAULT_MODEL)
-                
-                with st.spinner("AI 正在分析并修改规则，请勿切换页面..."):
-                    full_rules = rules_content
-                    img_count = len(image_base64_list)
-                    image_hint = f"\n\n## 参考图片\n用户上传了{img_count}张参考图片，请结合图片内容理解用户的修改意图。" if img_count > 0 else ""
-                    ai_prompt = f"""你是一个规则编辑助手。用户想要修改格式规范文件。
-
-## 当前完整规则文件
-{full_rules}
-
-## 用户的修改指令
-{ai_instruction}{image_hint}
-
-## 输出格式要求
-请按以下格式输出：
-
----CHANGES_START---
-（简要说明你做了哪些修改，用列表形式）
----CHANGES_END---
-
----RULES_START---
-（修改后的完整规则文件）
----RULES_END---"""
-                    
-                    # 只传第一张图片（API 限制）
-                    first_img = image_base64_list[0] if image_base64_list else None
-                    result, success, _ = call_single_step(ai_prompt, api_url, api_key, model, image_base64=first_img)
-                    if success:
-                        # 解析修改说明和规则内容
-                        changes = ""
-                        new_rules = result
-                        if "---CHANGES_START---" in result and "---CHANGES_END---" in result:
-                            try:
-                                changes = result.split("---CHANGES_START---")[1].split("---CHANGES_END---")[0].strip()
-                            except:
-                                changes = ""
-                        if "---RULES_START---" in result and "---RULES_END---" in result:
-                            try:
-                                new_rules = result.split("---RULES_START---")[1].split("---RULES_END---")[0].strip()
-                            except:
-                                new_rules = result
-                        
-                        st.session_state.ai_full_rule_result = new_rules
-                        st.session_state.ai_rule_changes = changes
-                    else:
-                        st.error(result)
-            else:
-                st.warning("请输入修改指令")
-        
-        # 显示 AI 结果
-        if "ai_full_rule_result" in st.session_state and st.session_state.ai_full_rule_result:
-            st.markdown("---")
-            
-            # 显示修改说明
-            if "ai_rule_changes" in st.session_state and st.session_state.ai_rule_changes:
-                st.markdown("**修改内容：**")
-                st.info(st.session_state.ai_rule_changes)
-            
-            st.markdown("** 修改后规则预览：**")
-            with st.container(height=200):
-                st.markdown(st.session_state.ai_full_rule_result)
-            
-            col_apply, col_clear = st.columns(2)
-            with col_apply:
-                if st.button("✅ 应用修改", use_container_width=True, type="primary"):
-                    # 保存当前规则到历史（用于撤销，最多保留10条）
-                    st.session_state.rules_history.append(rules_content)
-                    st.session_state.rules_history = st.session_state.rules_history[-10:]
-                    if save_rules(st.session_state.ai_full_rule_result):
-                        st.session_state.ai_full_rule_result = ""
-                        st.session_state.ai_rule_changes = ""
-                        st.session_state.rule_imgs = []  # 清空已上传图片
-                        st.success("✅ 规则已更新（可点击撤销恢复）")
-                        st.rerun()
-                    else:
-                        st.error("❌ 保存失败")
-            with col_clear:
-                if st.button("❌ 放弃", use_container_width=True):
-                    st.session_state.ai_full_rule_result = ""
-                    st.session_state.ai_rule_changes = ""
-                    st.rerun()
-    
-    st.divider()
-    
-    operation = st.radio("选择操作", ["查看/编辑章节", "添加新章节", "删除章节"], horizontal=True)
-    
-    if operation == "查看/编辑章节":
-        if sections:
-            selected_section = st.selectbox("选择章节", section_order, key="select_section")
-            if selected_section:
-                st.markdown(f"**当前章节: {selected_section}**")
-                edited_content = st.text_area("编辑内容", value=sections[selected_section], height=300, key=f"edit_{selected_section}")
-                
-                if st.button("保存修改", type="primary"):
-                    # 保存当前规则到历史（用于撤销）
-                    st.session_state.rules_history.append(rules_content)
-                    st.session_state.rules_history = st.session_state.rules_history[-10:]
-                    
-                    sections[selected_section] = edited_content
-                    new_content = rebuild_rules(rules_title, sections, section_order)
-                    if save_rules(new_content):
-                        st.success(f"✅ 章节 '{selected_section}' 已保存")
-                        st.rerun()
-                    else:
-                        st.error("❌ 保存失败")
-        else:
-            st.warning("没有找到任何章节")
-    
-    elif operation == "添加新章节":
-        st.markdown("**添加新章节**")
-        new_section_name = st.text_input("章节名称（例如: 8. 新增规则）")
-        new_section_content = st.text_area("章节内容", height=300, key="new_section")
-        
-        # 选择插入位置
-        insert_positions = ["末尾"] + [f"在 '{s}' 之后" for s in section_order]
-        insert_pos = st.selectbox("插入位置", insert_positions)
-        
-        if st.button("➕ 添加章节", type="primary"):
-            if new_section_name and new_section_content:
-                # 保存当前规则到历史（用于撤销）
-                st.session_state.rules_history.append(rules_content)
-                st.session_state.rules_history = st.session_state.rules_history[-10:]
-                
-                sections[new_section_name] = new_section_content
-                if insert_pos == "末尾":
-                    section_order.append(new_section_name)
-                else:
-                    after_section = insert_pos.replace("在 '", "").replace("' 之后", "")
-                    idx = section_order.index(after_section) + 1
-                    section_order.insert(idx, new_section_name)
-                
-                new_content = rebuild_rules(rules_title, sections, section_order)
-                if save_rules(new_content):
-                    st.success(f"✅ 章节 '{new_section_name}' 已添加")
-                    st.rerun()
-                else:
-                    st.error("❌ 保存失败")
-            else:
-                st.warning("请填写章节名称和内容")
-    
-    elif operation == "删除章节":
-        if sections:
-            st.markdown("**删除章节**")
-            st.warning("⚠️ 删除后可通过顶部“撤销上次修改”恢复")
-            delete_section = st.selectbox("选择要删除的章节", section_order, key="delete_select")
-            
-            if st.button("删除章节", type="primary"):
-                if delete_section in sections:
-                    # 保存当前规则到历史（用于撤销）
-                    st.session_state.rules_history.append(rules_content)
-                    st.session_state.rules_history = st.session_state.rules_history[-10:]
-                    
-                    del sections[delete_section]
-                    section_order.remove(delete_section)
-                    new_content = rebuild_rules(rules_title, sections, section_order)
-                    if save_rules(new_content):
-                        st.success(f"✅ 章节 '{delete_section}' 已删除")
-                        st.rerun()
-                    else:
-                        st.error("❌ 保存失败")
-        else:
-            st.warning("没有可删除的章节")
-    
-    # 显示所有章节预览
-    st.divider()
-    st.markdown("### 所有章节")
-    for section_name in section_order:
-        with st.expander(f"{section_name}"):
-            st.markdown(sections.get(section_name, ""))
-    
