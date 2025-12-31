@@ -472,13 +472,19 @@ def analyze_format_issues(text: str) -> list:
     
     # 检查正文加粗（排除列表小标题）
     for i, line in enumerate(lines, 1):
-        # 排除列表小标题：- **Title**: 或 - **Title**（无冒号）
+        # 排除无序列表小标题：- **Title**: 或 - **Title**（无冒号）
         if re.match(r'^\s*-\s+\*\*[^*]+\*\*:?\s*$', line):
             continue
         if re.match(r'^\s*-\s+\*\*[^*]+\*\*:', line):
             continue
-        # 排除列表项开头的加粗小标题
+        # 排除无序列表项开头的加粗小标题
         if re.match(r'^\s*-\s+\*\*', line):
+            continue
+        # 排除有序列表小标题：1. **Title**: 或 1. **Title**
+        if re.match(r'^\s*\d+\.\s+\*\*[^*]+\*\*:?\s*', line):
+            continue
+        # 排除有序列表项开头的加粗小标题
+        if re.match(r'^\s*\d+\.\s+\*\*', line):
             continue
         match = re.search(r'(?<!\*)\*\*(?!\*)([^*]+)(?<!\*)\*\*(?!\*)', line)
         if match:
