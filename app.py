@@ -2633,12 +2633,65 @@ with tab5:
             label_visibility="collapsed"
         )
     
+    # 快捷指令按钮
+    st.markdown("**快捷指令**")
+    quick_col1, quick_col2, quick_col3, quick_col4 = st.columns(4)
+    
+    # 预设的快捷指令
+    QUICK_PROMPTS = {
+        "analyze": """请全面分析这段内容有哪些问题，按以下维度逐一检查：
+
+## 一、结构问题
+1. **四级标题泛化**：是否使用了 Concept、Philosophy、Offerings、Features、Information、Overview 等通用词？
+2. **小标题泛化**：是否使用了 Core Focus、Target Audience、Visual Design、Market Positioning 等抽象概念？
+3. **内容归属错误**：列表项是否与所属四级标题主题直接相关？有无放错位置的内容？
+4. **首段与正文不对应**：首段提到的要点正文是否都有展开？正文是否有首段未提及的内容？
+5. **小标题不平行**：同一标题下的小标题是否属于同一维度/类别？
+
+## 二、内容问题
+6. **首段定义准确性**：首段的核心定义是否准确、完整？是否遗漏了重要特征？
+7. **内容冗余**：是否有重复信息？是否有"概括+展开"的重复？
+8. **废话/填充词**：是否有 "It is important to note"、"Based on the search results" 等废话？
+9. **信息价值**：每个列表项是否都提供了有价值的信息？有无空洞的描述？
+10. **多义词处理**：如果主题是多义词，是否在首段列出了所有主要含义？各义项内容是否均衡？
+
+请用表格形式列出发现的问题，包含：行号/位置、问题类型、具体问题、修改建议。
+不要直接修改内容，只分析问题。""",
+        "fix_titles": "把所有泛化的四级标题和列表小标题改成更具体的名称。从内容中提取核心特征词，避免使用 Concept、Philosophy、Features、Overview、Details 等通用词。",
+        "check_first": "检查首段与正文的对应关系：首段提到的要点正文是否都有展开？正文是否有首段未提及的内容？如有问题请修正。",
+        "merge": "检查并合并概念相近的小标题，避免拆分过细。同时确保同一标题下的小标题属于同一维度。"
+    }
+    
+    with quick_col1:
+        if st.button("🔍 分析问题", use_container_width=True, key="quick_analyze"):
+            st.session_state.chat_quick_prompt = QUICK_PROMPTS["analyze"]
+            st.rerun()
+    with quick_col2:
+        if st.button("✏️ 修标题", use_container_width=True, key="quick_fix_titles"):
+            st.session_state.chat_quick_prompt = QUICK_PROMPTS["fix_titles"]
+            st.rerun()
+    with quick_col3:
+        if st.button("🔗 查对应", use_container_width=True, key="quick_check_first"):
+            st.session_state.chat_quick_prompt = QUICK_PROMPTS["check_first"]
+            st.rerun()
+    with quick_col4:
+        if st.button("🔀 合并项", use_container_width=True, key="quick_merge"):
+            st.session_state.chat_quick_prompt = QUICK_PROMPTS["merge"]
+            st.rerun()
+    
+    # 如果有快捷指令被选中，使用它
+    if "chat_quick_prompt" in st.session_state and st.session_state.chat_quick_prompt:
+        actual_prompt = st.session_state.chat_quick_prompt
+        st.session_state.chat_quick_prompt = ""  # 清空
+    else:
+        actual_prompt = chat_prompt
+    
     # 发送按钮
     if st.button("🚀 发送给 AI", type="primary", use_container_width=True, key="chat_send_btn"):
         if not chat_markdown.strip():
             st.warning("请输入待修改的 Markdown")
-        elif not chat_prompt.strip():
-            st.warning("请输入修改指令")
+        elif not actual_prompt.strip():
+            st.warning("请输入修改指令或选择快捷指令")
         else:
             user_cfg = st.session_state.user_config
             api_url = user_cfg.get("api_url", DEFAULT_API_URL)
@@ -2653,7 +2706,7 @@ with tab5:
                     full_prompt = f"""## 任务：按用户指令修改 Markdown
 
 ## 用户指令
-{chat_prompt}
+{actual_prompt}
 
 ## 待修改的 Markdown
 {chat_markdown}
@@ -2671,13 +2724,13 @@ with tab5:
                         st.session_state.chat_result = result
                         st.session_state.chat_translated = ""  # 清空翻译
                         st.session_state.play_sound = True  # 播放提示音
-                        log_operation("AI对话", f"指令: {chat_prompt[:50]}", extra={
+                        log_operation("AI对话", f"指令: {actual_prompt[:50]}", extra={
                             "input_preview": chat_markdown[:100] if chat_markdown else "",
                             "input_length": len(chat_markdown) if chat_markdown else 0,
                             "output_length": len(result),
                             "model": model,
                             "tokens": {"input": token_info.get("prompt_tokens", 0), "output": token_info.get("completion_tokens", 0)},
-                            "instruction": chat_prompt[:100]
+                            "instruction": actual_prompt[:100]
                         })
                         st.rerun()
                     else:
