@@ -104,6 +104,19 @@
   - 具体分类（正确）：Natural Sites、Theme Parks、Museums、Beaches、Landmarks、Cleansers 等
   - ❌ 错误：`**Beaches**`、`**Entertainment**`、`**Nature**`（混用具体和抽象）
   - ✅ 正确：`**Beaches**`、`**Landmarks**`、`**Theme Parks**`（都是具体分类）
+- **四级标题禁止使用通用词（重要）**：四级标题禁止使用以下类型的通用词：
+  - **禁止词汇清单**：Concept、Atmosphere、Offerings、Features、Information、Overview、Details、Aspects、Elements、Factors、Positioning、Background 等
+  - **禁止搭配模式**：`X & Y` 形式的并列抽象词（如 `Concept & Atmosphere`、`Services & Locations`）
+  - **判断标准**：如果标题换到其他任何主题上也成立，说明太泛化。例如 `Product Offerings` 对任何商店都适用，应改为体现本店特色的词。
+- **标题改写方法（重要）**：将泛化标题改写为具体标题时，需提取内容中的**核心特征词**：
+  - 提取方式：从该标题下的列表内容中找出最有区分度的关键词
+  - ❌ `#### Concept & Atmosphere` → ✅ `#### Pink Store Design`（提取了"Pink"这个特色）
+  - ❌ `#### Product Offerings` → ✅ `#### Beauty & Lifestyle Products`（仍保持分类但更具体）
+  - ❌ `#### Services & Locations` → ✅ `#### In-Store Services` 和 `#### Store Locations`（拆分为两个具体标题）
+- **列表小标题同理**：小标题也需提取特征词，避免商业术语和抽象概念：
+  - ❌ `**Visual Design**` → ✅ `**Pink Interior**`（提取实际设计特点）
+  - ❌ `**Market Positioning**` → ✅ `**Similar to Olive Young**`（转为具体对比）
+  - ❌ `**Beauty & Cosmetics**` → ✅ `**K-Beauty Brands**` 或 `**Japanese Cosmetics**`（具体到品类来源）
 - **四级标题精简原则**：四级标题应按用户决策逻辑组织，围绕用户核心关注点划分，而非罗列产品规格。相关性强的信息必须合并。
 - **层级限制**：分点层级不宜过多，逻辑需前后对应。
 - **禁止重复与冗余**：
