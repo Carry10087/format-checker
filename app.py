@@ -2275,6 +2275,19 @@ with tab2:
     else:
         st.caption(" AI 检查格式逻辑，有参考笔记时同时检查内容准确性")
     
+    # AI质检时在输入框上方显示"只看问题"开关
+    qc_issues_only = False  # 默认输出问题+修改结果
+    if qc_mode == "AI 质检":
+        col_toggle, col_help = st.columns([1, 3])
+        with col_toggle:
+            qc_issues_only = st.toggle("只看问题", value=False, key="qc_issues_only_toggle", 
+                                        help="开启后只输出问题清单，不输出修改后的 Markdown")
+        with col_help:
+            if qc_issues_only:
+                st.caption("📋 模式：只输出问题清单，方便快速审阅")
+            else:
+                st.caption("📝 模式：输出问题清单 + 修改后的 Markdown")
+    
     # 输入区域
     qc_input = st.text_area("待检查的回答", height=300, 
                             placeholder="粘贴需要质检的回答...", 
@@ -2366,33 +2379,23 @@ with tab2:
                 else:
                     with st.spinner("正在质检，请勿切换页面..."):
                         # 根据是否有参考笔记构建不同的 prompt（使用程序修复后的文本）
-                        if qc_notes.strip():
-                            # 有参考笔记：同时检查格式和内容，使用两套规则
-                            qc_prompt = f"""## 任务：格式+内容质检
+                        # 根据是否只看问题，选择输出格式
+                        if qc_issues_only:
+                            output_format = """## 输出格式（严格按此格式）
 
-你是一个质检员。请**逐条对照规则**检查格式问题，并对照参考笔记检查内容准确性。
+---ISSUES_START---
+（如果有问题，用表格列出；如果**没有问题**，只写一行：✅ 未发现问题）
 
-**检查要求**：
-1. 逐条对照规则文件中的每一条规则进行检查
-2. 特别注意：小标题命名一致性、禁止兜底型泛化命名、多义词内容平衡、信息来源筛选等规则
-3. 如果发现问题，必须指出并修复；如果确实没问题，才写"✅ 未发现问题"
-4. 以下问题已由程序自动修复，无需检查：引用格式[NoteX]、标点空格、列表缩进、Title Case、中文标点等
+| 序号 | 问题类型 | 问题描述 | 修改建议 |
+|------|----------|----------|----------|
+| 1 | 格式/内容 | ... | ... |
 
-## 待检查的回答
-{qc_input}
+---ISSUES_END---
 
-## 参考笔记
-{qc_notes}
-
-## 格式规则（无需参考笔记）
-{format_rules}
-
-## 内容规则（需对照参考笔记检查）
-{notes_rules}
-
----
-
-## 输出格式（严格按此格式）
+注意：只需输出问题清单，不要输出修改后的 Markdown。
+"""
+                        else:
+                            output_format = """## 输出格式（严格按此格式）
 
 ---ISSUES_START---
 （如果有问题，用表格列出；如果**没有问题**，只写一行：✅ 未发现问题）
@@ -2409,6 +2412,36 @@ with tab2:
 （不要任何解释，不要用代码块包裹）
 ---FIXED_END---
 """
+                        
+                        if qc_notes.strip():
+                            # 有参考笔记：同时检查格式和内容，使用两套规则
+                            qc_prompt = f"""## 任务：格式+内容质检
+
+你是一个质检员。请**逐条对照规则**检查格式问题，并对照参考笔记检查内容准确性。
+
+**检查要求**：
+1. 逐条对照规则文件中的每一条规则进行检查
+2. 特别注意：小标题命名一致性、禁止兜底型泛化命名、多义词内容平衡、信息来源筛选等规则
+3. 如果发现问题，必须指出{"" if qc_issues_only else "并修复"}；如果确实没问题，才写"✅ 未发现问题"
+4. **绝对禁止删除 Note 引用**：原文中的所有 `[Note X](#)` 标记必须100%保留，修改内容时需保持引用位置正确
+5. 以下格式问题已由程序处理，无需检查：标点空格、列表缩进、Title Case、中文标点等
+
+## 待检查的回答
+{qc_input}
+
+## 参考笔记
+{qc_notes}
+
+## 格式规则（无需参考笔记）
+{format_rules}
+
+## 内容规则（需对照参考笔记检查）
+{notes_rules}
+
+---
+
+{output_format}
+"""
                         else:
                             # 无参考笔记：只检查格式
                             qc_prompt = f"""## 任务：格式质检
@@ -2418,8 +2451,9 @@ with tab2:
 **检查要求**：
 1. 逐条对照规则文件中的每一条规则进行检查
 2. 特别注意：小标题命名一致性、禁止兜底型泛化命名、多义词内容平衡等规则
-3. 如果发现问题，必须指出并修复；如果确实没问题，才写"✅ 未发现格式问题"
-4. 以下问题已由程序自动修复，无需检查：引用格式[NoteX]、标点空格、列表缩进、Title Case、中文标点等
+3. 如果发现问题，必须指出{"" if qc_issues_only else "并修复"}；如果确实没问题，才写"✅ 未发现格式问题"
+4. **绝对禁止删除 Note 引用**：原文中的所有 `[Note X](#)` 标记必须100%保留，修改内容时需保持引用位置正确
+5. 以下格式问题已由程序处理，无需检查：标点空格、列表缩进、Title Case、中文标点等
 
 ## 待检查的回答
 {qc_input}
@@ -2429,22 +2463,7 @@ with tab2:
 
 ---
 
-## 输出格式（严格按此格式）
-
----ISSUES_START---
-（如果有问题，用表格列出；如果**没有问题**，只写一行：✅ 未发现格式问题）
-
-| 序号 | 问题描述 | 对应规则 |
-|------|----------|----------|
-| 1 | ... | ... |
-
----ISSUES_END---
-
----FIXED_START---
-（如果有问题：输出修改后的完整 Markdown）
-（如果没有问题：**原样输出原文**，一字不改）
-（不要任何解释，不要用代码块包裹）
----FIXED_END---
+{output_format}
 """
                         result, success, token_info = call_single_step(qc_prompt, api_url, api_key, model)
                         if success:
@@ -2458,19 +2477,25 @@ with tab2:
                                 except:
                                     issues = ""
                             
-                            if "---FIXED_START---" in result and "---FIXED_END---" in result:
-                                try:
-                                    fixed = result.split("---FIXED_START---")[1].split("---FIXED_END---")[0].strip()
-                                except:
-                                    fixed = result
+                            # 只有非"只看问题"模式才解析修改结果
+                            if not qc_issues_only:
+                                if "---FIXED_START---" in result and "---FIXED_END---" in result:
+                                    try:
+                                        fixed = result.split("---FIXED_START---")[1].split("---FIXED_END---")[0].strip()
+                                    except:
+                                        fixed = result
+                            else:
+                                # "只看问题"模式下，fixed 设为空或原文
+                                fixed = ""
                             
                             st.session_state.qc_issues = issues
                             st.session_state.qc_result = fixed
                             st.session_state.qc_tokens = token_info
                             st.session_state.qc_auto_fixed = False
+                            st.session_state.qc_issues_only_mode = qc_issues_only  # 保存当前模式
                             st.session_state.qc_translated = ""  # 清空上一条的翻译
                             st.session_state.play_sound = True  # 播放提示音
-                            log_operation("AI质检", f"输入: {len(qc_input)} 字符, 输出: {len(fixed)} 字符", extra={
+                            log_operation("AI质检", f"输入: {len(qc_input)} 字符, 模式: {'只看问题' if qc_issues_only else '问题+修复'}", extra={
                                 "input_preview": qc_input[:100],
                                 "input_length": len(qc_input),
                                 "output_length": len(fixed),
@@ -2484,12 +2509,19 @@ with tab2:
             st.warning("请输入待检查的回答")
     
     # 显示质检结果
-    if "qc_result" in st.session_state and st.session_state.qc_result:
+    # 判断是否有结果需要显示（问题清单或修改结果）
+    has_qc_result = ("qc_result" in st.session_state and st.session_state.qc_result) or \
+                    ("qc_issues" in st.session_state and st.session_state.qc_issues and 
+                     st.session_state.get("qc_issues_only_mode", False))
+    
+    if has_qc_result:
         st.divider()
         
         # 显示修复来源标识
         if st.session_state.get("qc_auto_fixed", False):
             st.success("程序自动修复完成")
+        elif st.session_state.get("qc_issues_only_mode", False):
+            st.info("📋 只看问题模式 - 仅显示问题清单")
         
         # 显示 Token 用量（仅AI质检）
         if "qc_tokens" in st.session_state and st.session_state.qc_tokens.get("total_tokens", 0) > 0:
@@ -2505,10 +2537,16 @@ with tab2:
         
         # 显示问题清单
         if "qc_issues" in st.session_state and st.session_state.qc_issues:
-            with st.expander("发现的问题", expanded=True):
+            # 在"只看问题"模式下，问题清单默认展开且不放在 expander 里
+            if st.session_state.get("qc_issues_only_mode", False):
+                st.markdown("### 📋 问题清单")
                 st.markdown(st.session_state.qc_issues)
-        
-        # 英文结果和中文翻译并排显示
+            else:
+                with st.expander("发现的问题", expanded=True):
+                    st.markdown(st.session_state.qc_issues)
+    
+    # 只有在非"只看问题"模式下，才显示修改后的 Markdown
+    if "qc_result" in st.session_state and st.session_state.qc_result and not st.session_state.get("qc_issues_only_mode", False):
         col_en, col_cn = st.columns(2)
         
         with col_en:
