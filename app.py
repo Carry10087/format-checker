@@ -2278,10 +2278,18 @@ with tab2:
     # AI质检时在输入框上方显示"只看问题"开关
     qc_issues_only = False  # 默认输出问题+修改结果
     if qc_mode == "AI 质检":
+        # 初始化 session_state 中的按钮状态（记住用户选择）
+        if "qc_issues_only_preference" not in st.session_state:
+            st.session_state.qc_issues_only_preference = False
+        
         col_toggle, col_help = st.columns([1, 3])
         with col_toggle:
-            qc_issues_only = st.toggle("只看问题", value=False, key="qc_issues_only_toggle", 
+            qc_issues_only = st.toggle("只看问题", 
+                                        value=st.session_state.qc_issues_only_preference, 
+                                        key="qc_issues_only_toggle", 
                                         help="开启后只输出问题清单，不输出修改后的 Markdown")
+            # 保存用户选择
+            st.session_state.qc_issues_only_preference = qc_issues_only
         with col_help:
             if qc_issues_only:
                 st.caption("📋 模式：只输出问题清单，方便快速审阅")
@@ -2319,6 +2327,7 @@ with tab2:
                 st.session_state.qc_issues = "\n".join([f"- {issue}" for issue in issues]) if issues else "未发现可自动修复的格式问题"
                 st.session_state.qc_tokens = {}
                 st.session_state.qc_auto_fixed = True
+                st.session_state.qc_issues_only_mode = False  # 程序自动修复不是"只看问题"模式
                 st.session_state.qc_translated = ""  # 清空上一条的翻译
                 st.session_state.play_sound = True  # 播放提示音
                 log_operation("自动修复", f"输入: {len(qc_input)} 字符, 发现 {len(issues)} 个问题", extra={
