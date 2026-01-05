@@ -2488,13 +2488,24 @@ with tab2:
                             
                             # 只有非"只看问题"模式才解析修改结果
                             if not qc_issues_only:
-                                if "---FIXED_START---" in result and "---FIXED_END---" in result:
+                                if "---FIXED_START---" in result:
                                     try:
-                                        fixed = result.split("---FIXED_START---")[1].split("---FIXED_END---")[0].strip()
+                                        # 先尝试正常解析（有 END 标记）
+                                        if "---FIXED_END---" in result:
+                                            fixed = result.split("---FIXED_START---")[1].split("---FIXED_END---")[0].strip()
+                                        else:
+                                            # 没有 END 标记，取 FIXED_START 之后的所有内容
+                                            fixed = result.split("---FIXED_START---")[1].strip()
                                     except:
                                         fixed = result
+                                else:
+                                    # 没有 FIXED_START 标记，尝试去除 ISSUES 部分后使用
+                                    if "---ISSUES_END---" in result:
+                                        fixed = result.split("---ISSUES_END---")[1].strip()
+                                    else:
+                                        fixed = result
                             else:
-                                # "只看问题"模式下，fixed 设为空或原文
+                                # "只看问题"模式下，fixed 设为空
                                 fixed = ""
                             
                             st.session_state.qc_issues = issues

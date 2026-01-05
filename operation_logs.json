@@ -584,5 +584,25 @@
     "input_preview": "Mr. Big refers to ***an American hard rock band best known for the hit song 'To Be With You' and a f",
     "output_length": 1429,
     "input_length": 1429
+  },
+  {
+    "timestamp": "2026-01-05 11:47:33",
+    "user": "Carry",
+    "action": "登录",
+    "details": "用户 Carry 登录成功"
+  },
+  {
+    "timestamp": "2026-01-05 11:52:33",
+    "user": "Carry",
+    "action": "AI质检",
+    "details": "输入: 1613 字符, 模式: 问题+修复",
+    "input_preview": "Mr. Big refers to ***an American hard rock band formed in Los Angeles and a fictional character from",
+    "output_length": 1601,
+    "model": "gemini-3-pro-preview-search",
+    "tokens": {
+      "input": 8108,
+      "output": 512
+    },
+    "input_length": 1613
   }
 ]
