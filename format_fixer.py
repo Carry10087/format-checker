@@ -469,13 +469,31 @@ def analyze_format_issues(text: str) -> list:
                 issues.append(f"⚠️「{title.strip()}」下只有1个列表项（需AI判断）")
     
     # 检查四级标题后是否紧跟列表
+    # 注意：根据规则，单项内容可以用段落形式，所以需要检查是否是单项内容的情况
     for i, line in enumerate(lines, 1):
         if line.startswith('####'):
             if i < len(lines):
                 next_line = lines[i].lstrip() if i < len(lines) else ""
                 if next_line and not re.match(r'^[-\d]', next_line):
-                    issues.append(f"⚠️ 第{i}行：「{line.strip()}」后不是列表")
-                    break
+                    # 检查这是否是"单项内容"的情况：
+                    # 如果四级标题后只有一段内容（到下一个四级标题或文件结束），则允许段落形式
+                    is_single_item = True
+                    content_lines = 0
+                    for j in range(i, len(lines)):
+                        check_line = lines[j].strip()
+                        if check_line.startswith('####'):
+                            break  # 遇到下一个四级标题
+                        if check_line:  # 非空行
+                            content_lines += 1
+                            if content_lines > 1:
+                                is_single_item = False
+                                break
+                    
+                    if not is_single_item:
+                        # 有多项内容但没有用列表，报错
+                        issues.append(f"⚠️ 第{i}行：「{line.strip()}」后不是列表（多项内容应使用列表格式）")
+                        break
+                    # 单项内容用段落是允许的，不报错
     
     # 检查正文加粗（排除列表小标题）
     for i, line in enumerate(lines, 1):
@@ -525,9 +543,15 @@ def analyze_format_issues(text: str) -> list:
     # 检查首段句号位置（句号应在 *** 外面，但引号结尾除外）
     first_line = lines[0] if lines else ""
     if '***' in first_line:
-        # 错误：.*** 且前面不是引号
-        if re.search(r'[^"]\.\*\*\*', first_line):
+        # 错误1：.*** 且前面不是引号（句号在***内）
+        if re.search(r'[^"\']\.\*\*\*', first_line):
             issues.append(f"第1行：首段句号在 *** 内，应移到 *** 外面")
+        
+        # 错误2：首段以引号结尾时，句号在引号外面
+        # 如 ''***.[Note 或 "***.[Note（引号***后跟句号）
+        # 正确应该是 .''***[Note 或 ."***[Note（句号在引号内）
+        if re.search(r"['\"]''?\*\*\*\.", first_line) or re.search(r'["\']["\']?\*\*\*\.', first_line):
+            issues.append(f"第1行：首段以引号结尾时，句号应在引号内（如 .''*** 而非 ''***.）")
     
     # 检查列表项缺少小标题加粗
     for i, line in enumerate(lines, 1):
@@ -542,6 +566,11 @@ def analyze_format_issues(text: str) -> list:
     for i, line in enumerate(lines, 1):
         if re.match(r'^\s*-\s+\*\*[^*]+\*\*:', line):
             if not re.search(r'\[Note\s*\d+\]', line):
+                # 检查下一行是否是二级列表（如果是，则 Note 应该在二级列表中，不报错）
+                next_line_idx = i  # i 是 1-indexed，所以 i 就是下一行的 0-indexed
+                if next_line_idx < len(lines) and re.match(r'^\s+-', lines[next_line_idx]):
+                    # 后面跟着二级列表，Note 应该在二级列表项中，跳过检查
+                    continue
                 title_match = re.search(r'\*\*([^*]+)\*\*', line)
                 title = title_match.group(1) if title_match else "未知"
                 issues.append(f"第{i}行：列表项「{title}」缺少 Note 引用")
