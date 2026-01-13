@@ -604,5 +604,17 @@
       "output": 512
     },
     "input_length": 1613
+  },
+  {
+    "timestamp": "2026-01-12 18:27:18",
+    "user": "Carry",
+    "action": "登录",
+    "details": "用户 Carry 登录成功"
+  },
+  {
+    "timestamp": "2026-01-13 10:14:06",
+    "user": "Carry",
+    "action": "登录",
+    "details": "用户 Carry 登录成功"
   }
 ]
