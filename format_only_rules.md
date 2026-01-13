@@ -12,17 +12,27 @@
 
 ## 1. 首段内容规范
 
-- **核心定义精简**：单义词的核心定义只写"是什么"，不写"怎么做/有什么特点"。配料、做法、特征、目标、数量、出生地等细节必须下沉到正文
-- **多义词格式**：首段必须列举所有主要含义，禁止使用废话开头如"a term with multiple meanings"
-  - ❌ 错误：`Janet refers to ***several notable individuals across various fields, including Janet Jackson and...***`
-  - ✅ 正确：`Janet refers to ***American singer Janet Jackson, sculptor Janet Echelman, and an academic network***`
+- **核心定义精简（重要）**：单义词的核心定义**只写"是什么"**（最核心的分类/身份），禁止附加任何细节
+  - **禁止的内容**：描述性修饰语（`best known for`、`featuring`、`known for`）、地理位置（`in X`、`located in/on`）、时间、数量、特征描述等
+  - ❌ 错误：`Toulouse is ***a major historic city in Southern France located on the Garonne River***.`
+  - ✅ 正确：`Toulouse is ***a major historic city***.`
+  - ❌ 错误：`The Chloé Woody is ***a product line from Chloé, best known for its tote bags***.`
+  - ✅ 正确：`The Chloé Woody is ***a product line from the brand Chloé***.`
+- **多义词格式**：首段必须列举所有主要含义，每个义项也要精简；次要/冷门义项在正文中必须合并
+  - **首段精简**：只写核心分类，禁止描述性内容
+  - **首段概括**：若正文含 `Other Meanings`，首段末尾必须加 `...among other meanings` 以涵盖全文
+  - **正文结构**：主要义项独立标题，次要义项合并到 `#### Other Meanings`，禁止生造 `Brands and Media` 这种泛词标题
 - **多义词内容平衡**：当首段列出多个义项时，正文中各义项的内容量应大致均衡。禁止某个义项占据大量篇幅，而其他义项只有寥寥几笔（并列不当）
   - ❌ 错误：首段说 X 指代"A、B、C 三个事物"，正文 A 有 5 段，B 有 3 段，C 只有 2 段
   - ✅ 正确：各义项内容量基本均衡，或在首段按重要性排序（如"X 主要指 A，也可指 B 和 C"）
 - **首段与正文对应**：首段是结论，正文是论据。首段提到的核心点，正文需展开细节，但不要简单重复首段的原话
-- **人物/品牌定义需具体化**：对于知名人物或品牌，首段不能只给泛化描述，必须体现其最具标志性的成就或关联
-  - ❌ 错误：`Karl Lagerfeld was ***a German fashion designer***.`（未体现核心成就）
-  - ✅ 正确：`Karl Lagerfeld was ***a German fashion designer best known as the creative director of Chanel and Fendi***.`
+- **人物定义规则**：
+  - 一般人物：只写职业，荣誉/成就（如 "Olympic champion"）下沉到正文
+    - ❌ 错误：`Sun Yingsha is ***a professional table tennis player, an Olympic champion, and a World Champion***.`
+    - ✅ 正确：`Sun Yingsha is ***a Chinese professional table tennis player***.`
+  - 极知名人物：职业过于泛化时，写核心职位（如所属公司）
+    - ❌ 错误：`Karl Lagerfeld was ***a German fashion designer***.`
+    - ✅ 正确：`Karl Lagerfeld was ***the creative director of Chanel and Fendi***.`
 - **首段主语引号规则**：只有作品名才加引号，人名、地名、品牌名不加引号
 
 ## 2. 列表逻辑规范
@@ -74,7 +84,9 @@
 
 ### 4.2 内容风格
 - **禁止过度关联**：不能将概念与不固有的象征意义、文化隐喻或情感联想绑定，只描述客观属性
-- **禁止重复与冗余**：同一回答中禁止出现重复信息
+- **禁止重复与冗余**：同一回答中禁止出现重复信息；叙事细节（同一事件的不同侧面）和同类特质（如座右铭与愿望）**必须合并**，禁止拆得太细
+  - ❌ 错误：分开写 `**Resilience**`（祖母去世）和 `**Tribute**`（纪念祖母）
+  - ✅ 正确：合并为 `**Grandmother's Influence**: ...`
 - **正文内禁止先概括后展开**：在正文的同一板块内，不要先概括罗列所有子项名称再逐个展开，应直接逐项展开（此规则仅针对正文内部，不影响首段是结论、正文是论据的总分结构）
 - **禁止车轱辘话**：禁止空洞形容词（如 "tastes good"、"beautiful scenery"），需改为具体参数或具象化描述
 

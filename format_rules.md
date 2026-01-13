@@ -28,22 +28,43 @@
 #### 首段（Core Answer）
 - **长度限制**：首段应精简，优先用一句话概括核心定义。
   - **单义词格式**：首段 = 主语 + is/are + `***核心定义***` + 句号，第二句及之后下沉到正文。
-  - **核心定义精简**：单义词的核心定义只写"是什么"，不写"怎么做/有什么特点/目标是什么"。配料、做法、特征、目标、数量、出生地、知名原因等细节必须下沉到正文。
-  - **人物/品牌定义需具体化**：对于知名人物或品牌，首段定义不能只给泛化描述（如"designer""entrepreneur"），必须体现其最具标志性的成就或关联。
-    - ❌ 错误：`Steve Jobs was ***an American entrepreneur***.`（过于泛化）
-    - ✅ 正确：`Steve Jobs was ***the co-founder of Apple Inc.***.`
-    - ❌ 错误：`Karl Lagerfeld was ***a German fashion designer***.`（未体现核心成就）
-    - ✅ 正确：`Karl Lagerfeld was ***a German fashion designer best known as the creative director of Chanel and Fendi***.`
+  - **核心定义精简（重要）**：单义词的核心定义**只写"是什么"**（最核心的分类/身份），禁止附加任何细节。
+    - **禁止的描述性内容**：
+      - 描述性修饰语：`best known for`、`featuring`、`known for`、`famous for`、`characterized by`、`recognized for`
+      - 地理位置信息：`in X`、`located in/on`、`based in`、`from X`（国家/地区/城市）
+      - 其他细节：时间、数量、特征描述、用途、目标用户等
+    - **只保留核心分类**：职业、品类、身份等最简洁的定位词
+    - ❌ 错误：`Toulouse is ***a major historic city in Southern France located on the Garonne River***.`（地理位置下沉）
+    - ✅ 正确：`Toulouse is ***a major historic city***.`
+    - ❌ 错误：`The Chloé Woody is ***a product line from Chloé, best known for its tote bags***.`
+    - ✅ 正确：`The Chloé Woody is ***a product line from the brand Chloé***.`
+    - ❌ 错误：`Olaplex is ***a haircare brand known for its patented bond-building technology***.`
+    - ✅ 正确：`Olaplex is ***a haircare brand***.`
+  - **人物定义规则**：
+    - **一般人物**：只写职业，荣誉/成就（如 "Olympic champion"、"World Champion"）下沉到正文
+      - ❌ 错误：`Sun Yingsha is ***a Chinese professional table tennis player, an Olympic champion, and a World Champion***.`（荣誉下沉）
+      - ✅ 正确：`Sun Yingsha is ***a Chinese professional table tennis player***.`
+    - **极知名人物**：职业过于泛化时，写核心职位（如所属公司/品牌）
+      - ❌ 错误：`Steve Jobs was ***an American entrepreneur***.`（过于泛化）
+      - ✅ 正确：`Steve Jobs was ***the co-founder of Apple Inc.***.`
+      - ❌ 错误：`Karl Lagerfeld was ***a German fashion designer***.`（未体现核心职位）
+      - ✅ 正确：`Karl Lagerfeld was ***the creative director of Chanel and Fendi***.`
 - **首段禁止第二句（铁律）**：首段只能有一句话，`***` 闭合后的句号就是首段结尾，句号后不能再有任何内容。
     - ❌ 错误：`Juanmi refers to ***Juan Miguel Jiménez López, a Spanish footballer***. Born in Coín, Spain, he is known for his agility.`（有第二句）
     - ❌ 错误：`SDG refers to ***the Sustainable Development Goals...to ensure prosperity for all by 2030***. Also known as...`（定义太长+有第二句）
-    - ✅ 正确：`Juanmi refers to ***Juan Miguel Jiménez López, a Spanish professional footballer who plays as a forward***.`
+    - ✅ 正确：`Juanmi refers to ***Juan Miguel Jiménez López, a Spanish professional footballer***.`
   - **高亮完整性**：`***` 必须包住首段句号前的全部定义内容，不能只高亮一部分然后在高亮外继续写。
-  - **多义词格式**：当词条存在多个常用义项时，首段必须列举所有主要含义，`***` 必须包住所有含义。禁止使用以下废话开头：
-    - "a term with multiple meanings, including"
-    - "several notable individuals/entities across various fields, including"
-    - "a word/name that can refer to"
-    - 任何类似的概括性废话
+  - **多义词格式**：当词条存在多个常用义项时，首段必须列举所有主要含义，`***` 必须包住所有含义。
+    - **每个义项也要精简**：多义词的每个义项同样只写核心分类，禁止添加描述性内容（如 "used for..."、"known for..."）
+    - **涵盖次要义项**：如果正文包含 `#### Other Meanings`，首段末尾**必须**添加概括性短语（如 `...among other meanings` 或 `...and other entities`），以确保首段涵盖全文。
+    - ❌ 错误：`Caya refers to ***a villa community and a medical device***.`（正文却有 Other Meanings）
+    - ✅ 正确：`Caya refers to ***a villa community and a medical device, among other meanings***.`
+    - ❌ 错误：`"mac221" refers to ***an academic course code used for subjects such as communication or application development and a lip gloss shade from the brand MAC***.`（义项描述太多）
+    - ✅ 正确：`"mac221" refers to ***an academic course code and a lip gloss shade from the brand MAC***.`
+    - 禁止使用以下废话开头：
+      - "a term with multiple meanings, including"
+      - "several notable individuals/entities across various fields, including"
+      - "a word/name that can refer to"
     - ❌ 错误：`Janet refers to ***several notable individuals across various fields, including Janet Jackson and...***`
     - ✅ 正确：`Janet refers to ***American singer Janet Jackson, sculptor Janet Echelman, and an academic network***`.
 - **内容要求**：仅给出最直接的结论。任何背景铺垫、解释说明、举例、费用细节、名单列表、目标用户描述等扩展信息，**必须全部下沉**到正文，严禁滞留在首段。
@@ -92,9 +113,10 @@
 - **四级标题与首段对应（铁律）**：
   - 四级标题必须围绕首段核心答案展开，首段提到的要点正文必须有对应标题
   - 首段未提及的主题不能在正文中出现新的四级标题
-  - **多义词场景的标题结构**：首段列出 N 个义项时，正文应有 N 个对应的四级标题。禁止在义项标题之间穿插辅助标题（如 Market Presence），否则读者无法判断辅助标题属于哪个义项。辅助内容应合并到对应义项的标题下。
-    - ❌ 错误：首段说"A 和 B 两个事物"，正文却有 `#### A`、`#### Market Info`、`#### B`（3 个标题，Market 归属不明）
-    - ✅ 正确：将 Market Info 合并到 `#### A` 下作为列表项，或拆分后分别放入 A 和 B
+  - **多义词场景的标题结构**：
+    - **主要义项独立**：重要且内容丰富的义项（如地理位置、著名水果），每个义项独占一个四级标题。
+    - **次要义项合并（重要）**：所有内容较少、冷门或零碎的义项（如小众品牌、不知名歌手），**必须合并**到一个 `#### Other Meanings` 标题下，禁止强行分类为 "Brands and Media" 等泛词标题。
+  - **内容完整性**：首段提到的所有义项，在正文中必须都能找到（要么有独立标题，要么在 Other Meanings 下）。
   - ❌ 错误：首段定义 X 是"歌手"，正文却出现 `#### Business Ventures`（首段未提及商业）
   - ✅ 正确：首段定义 X 是"歌手和企业家"，正文可有 `#### Music Career` 和 `#### Business Ventures`
 - **列表小标题平行原则**：同一四级标题下的所有列表小标题必须属于同一类别/维度，保持逻辑平行。
@@ -127,8 +149,15 @@
     - ✅ 正确：直接写 `**A**: ...`、`**B**: ...`，无需先概括
     - 注意：此规则仅针对正文内部，不影响首段是结论、正文是论据的总分结构
   - **信息合并原则**：可自然合并的信息应合并为一项，避免重复拆分
-    - ❌ 错误：分开写 `**Demographics**: 9 members` 和 `**Member List**: K, FUMA...`
-    - ✅ 正确：合并为 `**Members**: 9 members including K, FUMA...`
+    - **叙事细节合并**：同一事件或主题的不同侧面（如起因、经过、结果、相关举动）应合并。
+      - ❌ 错误：分开写 `**Resilience**`（祖母去世）和 `**Tribute**`（看天纪念祖母）
+      - ✅ 正确：合并为 `**Grandmother's Influence**: Experienced the loss... often looks up at the sky as a tribute...`
+    - **同类特质合并**：属于同一维度的个人特质（如座右铭、愿望、爱好）应合并。
+      - ❌ 错误：分开写 `**Motto**` 和 `**Aspirations**`
+      - ✅ 正确：合并为 `**Personal Beliefs**: Adopts the motto... and dreams of achieving...`
+    - **基础信息合并**：
+      - ❌ 错误：分开写 `**Demographics**: 9 members` 和 `**Member List**: K, FUMA...`
+      - ✅ 正确：合并为 `**Members**: 9 members including K, FUMA...`
   - **小标题合并原则**：概念相近或属于同一维度的小标题必须合并，避免拆分过细
     - ❌ 错误：分开写 `**Texture Types**`、`**Visuals and Feel**`、`**Issues**`、`**Service**`
     - ✅ 正确：合并为 `**Texture and Appearance**`、`**Quality and Service**`
@@ -205,10 +234,6 @@
         - Cleansers and Facial Washes.
         - Toners and Essences.
         - Moisturizers and Serums.
-    - **Makeup Products**:
-        - Foundation and Concealer.
-        - Lipstick and Lip Gloss.
-        - Eyeshadow and Mascara.
     ```
 - **二级列表格式规则**：一级标题后只能有冒号，不能有其他描述内容，所有描述放在二级列表中。
 - **二级列表缩进**：二级列表前必须缩进4个空格。

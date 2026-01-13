@@ -38,10 +38,22 @@ def fix_list_item_period(text: str) -> str:
     lines = text.split('\n')
     result = []
     
-    for line in lines:
+    for i, line in enumerate(lines):
         # 检查是否是列表项（以 - 或数字. 开头）
         if re.match(r'^[\s]*[-\d]+\.?\s', line):
             stripped = line.rstrip()
+            
+            # 检查下一行是否是二级列表（有前导空格 + -）
+            # 如果是，则当前行应该以冒号结尾，不需要加句号
+            next_is_secondary_list = False
+            if i + 1 < len(lines) and re.match(r'^\s+-', lines[i + 1]):
+                next_is_secondary_list = True
+            
+            # 如果后面跟着二级列表，跳过（让 fix_list_item_colon 处理）
+            if next_is_secondary_list:
+                result.append(line)
+                continue
+            
             # 如果末尾是引用，检查引用前是否有句号
             if re.search(r'\[Note\s*\d+\](\(#\))?$', stripped):
                 match = re.search(r'(\[Note\s*\d+\](\(#\))?)+$', stripped)
@@ -95,9 +107,18 @@ def fix_chinese_punctuation(text: str) -> str:
     }
     for cn, en in replacements.items():
         text = text.replace(cn, en)
-    # 清理多余空格
-    text = re.sub(r'  +', ' ', text)
-    return text
+    # 清理行内多余空格（保留行首缩进）
+    lines = text.split('\n')
+    result = []
+    for line in lines:
+        # 保留行首缩进
+        leading_spaces = len(line) - len(line.lstrip())
+        indent = line[:leading_spaces]
+        content = line[leading_spaces:]
+        # 只清理内容部分的多余空格
+        content = re.sub(r'  +', ' ', content)
+        result.append(indent + content)
+    return '\n'.join(result)
 
 
 # 真正的中文标点（使用 Unicode 转义，避免字符混淆）
@@ -279,6 +300,25 @@ def fix_colon_after_no_content(text: str) -> str:
     return '\n'.join(result)
 
 
+def fix_list_item_colon(text: str) -> str:
+    """修复一级列表项后有二级列表但缺少冒号的情况"""
+    lines = text.split('\n')
+    result = []
+    
+    for i, line in enumerate(lines):
+        # 匹配一级列表项（以 - **xxx** 开头，没有前导空格）
+        match = re.match(r'^(-\s+\*\*[^*]+\*\*)(\s*)$', line)
+        if match:
+            # 检查下一行是否是二级列表（有前导空格 + -）
+            if i + 1 < len(lines) and re.match(r'^\s+-', lines[i + 1]):
+                # 后面跟着二级列表，但当前行没有以冒号结尾
+                # 添加冒号
+                line = match.group(1) + ':'
+        result.append(line)
+    
+    return '\n'.join(result)
+
+
 def fix_bold_in_content(text: str) -> str:
     """
     检测并移除正文中的加粗（保留列表小标题的加粗）
@@ -289,71 +329,99 @@ def fix_bold_in_content(text: str) -> str:
 
 
 def fix_paragraph_spacing(text: str) -> str:
-    """修复大段落间距：主要内容板块之间应空两行"""
+    """
+    修复空行问题：
+    1. 首段与正文之间、四级标题与四级标题/免责声明之间：强制空2行
+    2. 四级标题与其下方的列表：强制无空行
+    3. 列表项之间：强制无空行
+    """
     lines = text.split('\n')
-    result = []
+    # 第一步：清理原有的多余空行，生成初步的处理列表
+    # 我们遍历每一行，同时判断上下文来决定保留多少空行
     
-    # 免责声明的模式
+    clean_lines = []
+    
+    # 免责声明模式
     disclaimer_patterns = [
         r'^The above content is for reference only',
         r'^This information is for entertainment purposes only',
         r'^please consult a professional',
     ]
     
+    for i, line in enumerate(lines):
+        clean_lines.append(line)
+    
+    # 使用状态机思想重新构建文本
+    final_lines = []
     i = 0
-    while i < len(lines):
-        current_line = lines[i]
-        current_stripped = current_line.strip()
-        result.append(current_line)
+    n = len(lines)
+    
+    while i < n:
+        line = lines[i]
+        stripped = line.strip()
         
-        # 情况1：首段（包含 *** 且以句号结尾）后面应该空两行
-        if '***' in current_stripped and current_stripped.endswith('.'):
-            # 计算当前空行数
-            empty_count = 0
-            j = i + 1
-            while j < len(lines) and not lines[j].strip():
-                empty_count += 1
-                j += 1
-            
-            # 检查下一个非空行是否是四级标题
-            if j < len(lines) and lines[j].strip().startswith('####'):
-                # 需要确保有两个空行
-                if empty_count < 2:
-                    # 添加缺少的空行
-                    for _ in range(2 - empty_count):
-                        result.append('')
-                    # 跳过原有的空行
-                    i += empty_count
-                    i += 1
-                    continue
+        # 存入当前行
+        final_lines.append(line)
         
-        # 情况2：列表内容结束后，下一个四级标题或免责声明前应空两行
-        if current_stripped.startswith('- ') or current_stripped.startswith('1.') or (current_stripped and not current_stripped.startswith('####')):
-            # 计算当前空行数
-            empty_count = 0
-            j = i + 1
-            while j < len(lines) and not lines[j].strip():
-                empty_count += 1
-                j += 1
+        # 预读下一行非空内容
+        next_content_idx = -1
+        next_content_line = ""
+        empty_lines_count = 0
+        
+        j = i + 1
+        while j < n:
+            if lines[j].strip():
+                next_content_idx = j
+                next_content_line = lines[j].strip()
+                break
+            empty_lines_count += 1
+            j += 1
+        
+        # 如果后面没有内容了，结束循环
+        if next_content_idx == -1:
+            break
             
-            # 检查下一个非空行
-            if j < len(lines):
-                next_stripped = lines[j].strip()
-                is_h4 = next_stripped.startswith('####')
-                is_disclaimer = any(re.match(p, next_stripped, re.IGNORECASE) for p in disclaimer_patterns)
-                
-                if (is_h4 or is_disclaimer) and empty_count > 0 and empty_count < 2:
-                    # 添加缺少的空行
-                    for _ in range(2 - empty_count):
-                        result.append('')
-                    # 跳过原有的空行
-                    i += empty_count
-                    i += 1
-                    continue
+        # 判断当前行类型
+        is_core_end = ('***' in stripped and stripped.endswith('.'))
+        is_h4 = stripped.startswith('####')
+        is_list_item = (stripped.startswith('- ') or stripped.startswith('1.') or 
+                       (stripped and not is_h4 and not is_core_end))
+        
+        # 判断下一行类型
+        next_is_h4 = next_content_line.startswith('####')
+        next_is_list = (next_content_line.startswith('- ') or next_content_line.startswith('1.'))
+        next_is_disclaimer = any(re.match(p, next_content_line, re.IGNORECASE) for p in disclaimer_patterns)
+        
+        # 决策空行数量
+        target_empty_lines = -1 # -1 表示保持原样（如果不符合规则）
+        
+        # 规则1：首段 -> 四级标题：空2行
+        if is_core_end and next_is_h4:
+            target_empty_lines = 2
+            
+        # 规则2：四级标题 -> 列表：空0行
+        elif is_h4 and next_is_list:
+            target_empty_lines = 0
+            
+        # 规则3：列表项 -> 四级标题 或 免责声明：空2行
+        elif is_list_item and (next_is_h4 or next_is_disclaimer):
+            target_empty_lines = 2
+            
+        # 规则4：列表项 -> 列表项：空0行
+        elif is_list_item and next_is_list:
+            target_empty_lines = 0
+
+        # 应用空行调整
+        if target_empty_lines != -1:
+            # 添加指定数量的空行
+            for _ in range(target_empty_lines):
+                final_lines.append('')
+            # 跳过原文本中的空行，直接跳到下一段内容前
+            i = next_content_idx - 1 # 外层循环会 +1
         
         i += 1
-    
-    return '\n'.join(result)
+        
+    return '\n'.join(final_lines)
 
 
 # ==================== 主修复函数 ====================
@@ -376,6 +444,7 @@ def fix_all_format(text: str) -> str:
     text = fix_colon_capitalization(text)
     text = fix_taiwan_reference(text)
     text = fix_colon_after_no_content(text)
+    text = fix_list_item_colon(text)  # 修复一级列表项缺少冒号
     text = fix_paragraph_spacing(text)  # 修复大段落间距
     return text
 
@@ -527,13 +596,15 @@ def analyze_format_issues(text: str) -> list:
     if re.match(r'^"[^"]+"\s+(is|are|refers)', text):
         issues.append("⚠️ 第1行：首段主语有引号（需AI判断是否为作品名）")
     
-    # 检查四级标题下是否只有一项
+    # 检查四级标题下是否只有一项（一级列表项）
     sections = re.split(r'(####\s+[^\n]+)', text)
     for i in range(1, len(sections), 2):
         if i + 1 < len(sections):
             title = sections[i]
             content = sections[i + 1]
-            list_items = re.findall(r'^-\s+\*\*[^*]+\*\*:', content, re.MULTILINE)
+            # 匹配一级列表项：以 `- **xxx**` 开头（可能有冒号也可能没有），且没有前导空格
+            # 排除二级列表（有前导空格的）
+            list_items = re.findall(r'^-\s+\*\*[^*]+\*\*', content, re.MULTILINE)
             if len(list_items) == 1:
                 issues.append(f"⚠️「{title.strip()}」下只有1个列表项（需AI判断）")
     
@@ -633,6 +704,22 @@ def analyze_format_issues(text: str) -> list:
                 issues.append(f"第{i}行：列表项缺少加粗小标题「{content}...」")
                 break
     
+    # 检查一级列表项后有二级列表时，一级列表项必须以冒号结尾
+    for i, line in enumerate(lines, 1):
+        # 匹配一级列表项（以 - **xxx** 开头，没有前导空格）
+        if re.match(r'^-\s+\*\*[^*]+\*\*', line):
+            # 检查下一行是否是二级列表（有前导空格 + -）
+            next_line_idx = i  # i 是 1-indexed，所以 i 就是下一行的 0-indexed
+            if next_line_idx < len(lines) and re.match(r'^\s+-', lines[next_line_idx]):
+                # 后面跟着二级列表，检查当前行是否以冒号结尾（在 ** 之后）
+                # 正确格式：- **Key Albums**:
+                # 错误格式：- **Key Albums**
+                if not re.search(r'\*\*:\s*$', line.rstrip()):
+                    title_match = re.search(r'\*\*([^*]+)\*\*', line)
+                    title = title_match.group(1) if title_match else "未知"
+                    issues.append(f"第{i}行：一级列表项「{title}」后有二级列表，但缺少冒号（应为 **{title}**:）")
+                    break
+    
     # 检查列表项缺少引用
     for i, line in enumerate(lines, 1):
         if re.match(r'^\s*-\s+\*\*[^*]+\*\*:', line):
@@ -677,18 +764,6 @@ def analyze_format_issues(text: str) -> list:
         else:
             continue
         break
-    
-    # 检查多义词首段废话格式
-    bad_multi_patterns = [
-        r'a term with multiple meanings',
-        r'several notable individuals',
-        r'a word.*that can refer to',
-        r'a name.*that can refer to',
-    ]
-    for pattern in bad_multi_patterns:
-        if re.search(pattern, first_line, re.IGNORECASE):
-            issues.append(f"第1行：多义词首段使用了废话格式")
-            break
     
     # 检查首段是否有 *** 高亮
     if lines and not re.search(r'\*\*\*', lines[0]):
