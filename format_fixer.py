@@ -288,6 +288,74 @@ def fix_bold_in_content(text: str) -> str:
     return text
 
 
+def fix_paragraph_spacing(text: str) -> str:
+    """修复大段落间距：主要内容板块之间应空两行"""
+    lines = text.split('\n')
+    result = []
+    
+    # 免责声明的模式
+    disclaimer_patterns = [
+        r'^The above content is for reference only',
+        r'^This information is for entertainment purposes only',
+        r'^please consult a professional',
+    ]
+    
+    i = 0
+    while i < len(lines):
+        current_line = lines[i]
+        current_stripped = current_line.strip()
+        result.append(current_line)
+        
+        # 情况1：首段（包含 *** 且以句号结尾）后面应该空两行
+        if '***' in current_stripped and current_stripped.endswith('.'):
+            # 计算当前空行数
+            empty_count = 0
+            j = i + 1
+            while j < len(lines) and not lines[j].strip():
+                empty_count += 1
+                j += 1
+            
+            # 检查下一个非空行是否是四级标题
+            if j < len(lines) and lines[j].strip().startswith('####'):
+                # 需要确保有两个空行
+                if empty_count < 2:
+                    # 添加缺少的空行
+                    for _ in range(2 - empty_count):
+                        result.append('')
+                    # 跳过原有的空行
+                    i += empty_count
+                    i += 1
+                    continue
+        
+        # 情况2：列表内容结束后，下一个四级标题或免责声明前应空两行
+        if current_stripped.startswith('- ') or current_stripped.startswith('1.') or (current_stripped and not current_stripped.startswith('####')):
+            # 计算当前空行数
+            empty_count = 0
+            j = i + 1
+            while j < len(lines) and not lines[j].strip():
+                empty_count += 1
+                j += 1
+            
+            # 检查下一个非空行
+            if j < len(lines):
+                next_stripped = lines[j].strip()
+                is_h4 = next_stripped.startswith('####')
+                is_disclaimer = any(re.match(p, next_stripped, re.IGNORECASE) for p in disclaimer_patterns)
+                
+                if (is_h4 or is_disclaimer) and empty_count > 0 and empty_count < 2:
+                    # 添加缺少的空行
+                    for _ in range(2 - empty_count):
+                        result.append('')
+                    # 跳过原有的空行
+                    i += empty_count
+                    i += 1
+                    continue
+        
+        i += 1
+    
+    return '\n'.join(result)
+
+
 # ==================== 主修复函数 ====================
 
 def fix_all_format(text: str) -> str:
@@ -308,6 +376,7 @@ def fix_all_format(text: str) -> str:
     text = fix_colon_capitalization(text)
     text = fix_taiwan_reference(text)
     text = fix_colon_after_no_content(text)
+    text = fix_paragraph_spacing(text)  # 修复大段落间距
     return text
 
 
@@ -778,6 +847,65 @@ def analyze_format_issues(text: str) -> list:
         # 首段有 *** 且第二行是四级标题
         if '***' in first_line and second_line.startswith('####'):
             issues.append(f"第2行：首段后直接接四级标题，应有解释文字")
+    
+    # 检查大段落间距：主要内容板块之间应空两行
+    # 检测模式：首段 → 正文、四级标题 → 四级标题、正文 → 免责声明
+    disclaimer_patterns = [
+        r'^The above content is for reference only',
+        r'^This information is for entertainment purposes only',
+        r'^please consult a professional',
+    ]
+    
+    for i in range(len(lines) - 1):
+        current_line = lines[i].strip()
+        next_idx = i + 1
+        
+        # 跳过空行
+        if not current_line:
+            continue
+        
+        # 情况1：首段（包含 ***）后面应该空两行再接四级标题
+        if '***' in current_line and current_line.endswith('.'):
+            # 查找下一个非空内容
+            empty_count = 0
+            for j in range(next_idx, min(next_idx + 5, len(lines))):
+                if not lines[j].strip():
+                    empty_count += 1
+                elif lines[j].strip().startswith('####'):
+                    if empty_count < 2:
+                        issues.append(f"第{i+1}行：首段与正文之间应空两行（当前只有{empty_count}个空行）")
+                    break
+                else:
+                    break
+        
+        # 情况2：四级标题内容结束后，下一个四级标题前应空两行
+        if current_line.startswith('####'):
+            # 找到这个四级标题的内容结束位置
+            content_end = next_idx
+            for j in range(next_idx, len(lines)):
+                line_j = lines[j].strip()
+                if line_j.startswith('####') or any(re.match(p, line_j, re.IGNORECASE) for p in disclaimer_patterns):
+                    break
+                if line_j:  # 非空行
+                    content_end = j
+            
+            # 检查 content_end 到下一个四级标题/免责声明之间的空行数
+            if content_end < len(lines) - 1:
+                empty_count = 0
+                for j in range(content_end + 1, min(content_end + 5, len(lines))):
+                    line_j = lines[j].strip()
+                    if not line_j:
+                        empty_count += 1
+                    elif line_j.startswith('####'):
+                        if empty_count < 2:
+                            issues.append(f"第{content_end + 1}行：四级标题之间应空两行（当前只有{empty_count}个空行）")
+                        break
+                    elif any(re.match(p, line_j, re.IGNORECASE) for p in disclaimer_patterns):
+                        if empty_count < 2:
+                            issues.append(f"第{j + 1}行：正文与免责声明之间应空两行（当前只有{empty_count}个空行）")
+                        break
+                    else:
+                        break
     
     return issues
 

@@ -2211,9 +2211,10 @@ with tab1:
                             key="result_en_edit", label_visibility="collapsed",
                             on_change=save_main_edit)
                 
-                # 编辑模式：从 textarea 读取实时内容
+                # 编辑模式：找到距离复制按钮最近的 textarea
                 st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
-                copy_js_en = f'''{html_style}<script>function copyEn(){{const tas=window.parent.document.querySelectorAll('textarea');let content='';for(let i=tas.length-1;i>=0;i--){{if(tas[i].value&&tas[i].value.length>50){{content=tas[i].value;break;}}}}if(!content){{content=tas[tas.length-1]?tas[tas.length-1].value:'';}}if(content){{navigator.clipboard.writeText(content).then(()=>{{document.getElementById('btnEn').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnEn').innerText='复制英文',1500);}});}}else{{alert('请先输入内容');}}}}</script><button id="btnEn" onclick="copyEn()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
+                # 找到与当前 iframe 距离最近的 textarea
+                copy_js_en = f'''{html_style}<script>function copyEn(){{const iframes=window.parent.document.querySelectorAll('iframe');let thisIframe=null;for(const f of iframes){{if(f.contentWindow===window){{thisIframe=f;break;}}}}if(thisIframe){{const iRect=thisIframe.getBoundingClientRect();const tas=window.parent.document.querySelectorAll('textarea');let closest=null;let minDist=Infinity;for(const ta of tas){{const tRect=ta.getBoundingClientRect();const dist=Math.abs(tRect.bottom-iRect.top)+Math.abs(tRect.left-iRect.left);if(dist<minDist){{minDist=dist;closest=ta;}}}}if(closest&&closest.value){{navigator.clipboard.writeText(closest.value).then(()=>{{document.getElementById('btnEn').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnEn').innerText='复制英文',1500);}});return;}}}}alert('找不到编辑框');}}</script><button id="btnEn" onclick="copyEn()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
                 components.html(copy_js_en, height=60)
         
         with col_translate:
@@ -2599,11 +2600,11 @@ with tab2:
                             key="qc_edit_area", label_visibility="collapsed",
                             on_change=save_qc_edit)
                 
-                # 编辑模式：从 textarea 读取实时内容
+                # 编辑模式：找到距离复制按钮最近的 textarea
                 import streamlit.components.v1 as components
                 html_style = "<style>body{margin:0;padding:0;overflow:hidden;}button{width:100%;height:40px;padding:0;margin:0;display:block;font-size:14px;color:white;border:none;border-radius:5px;cursor:pointer;line-height:40px;font-family:'Source Sans Pro',sans-serif;transition:0.3s;}button:hover{opacity:0.9;}button:active{transform:scale(0.98);}</style>"
-                # 直接从 textarea 读取（查找页面上所有 textarea，取最后一个有内容的）
-                copy_js_qc = f'''{html_style}<script>function copyQc(){{const tas=window.parent.document.querySelectorAll('textarea');let content='';for(let i=tas.length-1;i>=0;i--){{if(tas[i].value&&tas[i].value.length>50){{content=tas[i].value;break;}}}}if(!content){{content=tas[tas.length-1]?tas[tas.length-1].value:'';}}if(content){{navigator.clipboard.writeText(content).then(()=>{{document.getElementById('btnQc').innerText='已复制';setTimeout(()=>document.getElementById('btnQc').innerText='复制英文',1500);}});}}else{{alert('请先输入内容');}}}}</script><button id="btnQc" onclick="copyQc()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
+                # 找到与当前 iframe 距离最近的 textarea
+                copy_js_qc = f'''{html_style}<script>function copyQc(){{const iframes=window.parent.document.querySelectorAll('iframe');let thisIframe=null;for(const f of iframes){{if(f.contentWindow===window){{thisIframe=f;break;}}}}if(thisIframe){{const iRect=thisIframe.getBoundingClientRect();const tas=window.parent.document.querySelectorAll('textarea');let closest=null;let minDist=Infinity;for(const ta of tas){{const tRect=ta.getBoundingClientRect();const dist=Math.abs(tRect.bottom-iRect.top)+Math.abs(tRect.left-iRect.left);if(dist<minDist){{minDist=dist;closest=ta;}}}}if(closest&&closest.value){{navigator.clipboard.writeText(closest.value).then(()=>{{document.getElementById('btnQc').innerText='已复制';setTimeout(()=>document.getElementById('btnQc').innerText='复制英文',1500);}});return;}}}}alert('找不到编辑框');}}</script><button id="btnQc" onclick="copyQc()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
                 components.html(copy_js_qc, height=60)
         
         with col_cn:
@@ -2785,10 +2786,11 @@ with tab5:
                             key="chat_edit_area", label_visibility="collapsed",
                             on_change=save_chat_edit)
                 
-                # 编辑模式：从 textarea 读取实时内容
+                # 编辑模式：找到距离复制按钮最近的 textarea
                 import streamlit.components.v1 as components
                 html_style = "<style>body{margin:0;padding:0;overflow:hidden;}button{width:100%;height:40px;padding:0;margin:0;display:block;font-size:14px;color:white;border:none;border-radius:5px;cursor:pointer;line-height:40px;font-family:'Source Sans Pro',sans-serif;transition:0.3s;}button:hover{opacity:0.9;}button:active{transform:scale(0.98);}</style>"
-                copy_js_chat = f'''{html_style}<script>function copyChat(){{const tas=window.parent.document.querySelectorAll('textarea');let content='';for(let i=tas.length-1;i>=0;i--){{if(tas[i].value&&tas[i].value.length>50){{content=tas[i].value;break;}}}}if(!content){{content=tas[tas.length-1]?tas[tas.length-1].value:'';}}if(content){{navigator.clipboard.writeText(content).then(()=>{{document.getElementById('btnChat').innerText='已复制';setTimeout(()=>document.getElementById('btnChat').innerText='复制英文',1500);}});}}else{{alert('请先输入内容');}}}}</script><button id="btnChat" onclick="copyChat()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
+                # 找到与当前 iframe 距离最近的 textarea
+                copy_js_chat = f'''{html_style}<script>function copyChat(){{const iframes=window.parent.document.querySelectorAll('iframe');let thisIframe=null;for(const f of iframes){{if(f.contentWindow===window){{thisIframe=f;break;}}}}if(thisIframe){{const iRect=thisIframe.getBoundingClientRect();const tas=window.parent.document.querySelectorAll('textarea');let closest=null;let minDist=Infinity;for(const ta of tas){{const tRect=ta.getBoundingClientRect();const dist=Math.abs(tRect.bottom-iRect.top)+Math.abs(tRect.left-iRect.left);if(dist<minDist){{minDist=dist;closest=ta;}}}}if(closest&&closest.value){{navigator.clipboard.writeText(closest.value).then(()=>{{document.getElementById('btnChat').innerText='已复制';setTimeout(()=>document.getElementById('btnChat').innerText='复制英文',1500);}});return;}}}}alert('找不到编辑框');}}</script><button id="btnChat" onclick="copyChat()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
                 components.html(copy_js_chat, height=60)
         
         with col_cn:

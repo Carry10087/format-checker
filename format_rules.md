@@ -132,6 +132,27 @@
   - **小标题合并原则**：概念相近或属于同一维度的小标题必须合并，避免拆分过细
     - ❌ 错误：分开写 `**Texture Types**`、`**Visuals and Feel**`、`**Issues**`、`**Service**`
     - ✅ 正确：合并为 `**Texture and Appearance**`、`**Quality and Service**`
+- **大段落间距规则**：主要内容板块之间必须空**两行**（即有一个空白行分隔）。主要内容板块包括：
+  - 首段（Core Answer）
+  - 正文（各四级标题及其内容）
+  - 免责声明（Disclaimer）
+  - Tips 区块
+  - 示例：
+    ```
+    Subject is ***the Core Definition***.
+    
+    
+    #### First Section
+    - Content...
+    
+    
+    #### Second Section
+    - Content...
+    
+    
+    The above content is for reference only...
+    ```
+  - 注意：四级标题下的列表项之间**不需要**空两行，只有大板块之间需要
 
 #### 双星号（粗体）使用铁律
 - **小标题必须加粗**：列表开头的 **Title/Key** 必须加粗。
