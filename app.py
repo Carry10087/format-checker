@@ -2194,21 +2194,27 @@ with tab1:
             if view_mode: # 预览模式
                 with st.container(height=300):
                     st.markdown(st.session_state.final_result)
+                # 预览模式：使用预编码内容
+                st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
+                encoded_en = base64.b64encode(st.session_state.final_result.encode('utf-8')).decode('utf-8')
+                copy_js_en = f'''{html_style}<script>function copyEn(){{const b='{encoded_en}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnEn').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnEn').innerText='复制英文',1500);}});}}</script><button id="btnEn" onclick="copyEn()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
+                components.html(copy_js_en, height=60)
             else:
-                edited_en = st.text_area("英文结果", value=st.session_state.final_result, height=300, 
-                                         key="result_en_edit", label_visibility="collapsed")
-                if edited_en != st.session_state.final_result:
-                    st.session_state.final_result = edited_en
+                # 使用 on_change 自动保存编辑内容
+                def save_main_edit():
+                    st.session_state.final_result = st.session_state.result_en_edit
                     if st.session_state.history and st.session_state.current_history_idx >= 0:
-                        st.session_state.history[st.session_state.current_history_idx]["final"] = edited_en
+                        st.session_state.history[st.session_state.current_history_idx]["final"] = st.session_state.result_en_edit
                         save_history(st.session_state.history)
-            
-            encoded_en = base64.b64encode(st.session_state.final_result.encode('utf-8')).decode('utf-8')
-            
-            # 复制英文按钮
-            st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
-            copy_js_en = f'''{html_style}<script>function copyEn(){{const b='{encoded_en}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnEn').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnEn').innerText='复制英文',1500);}});}}</script><button id="btnEn" onclick="copyEn()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
-            components.html(copy_js_en, height=60)
+                
+                st.text_area("英文结果", value=st.session_state.final_result, height=300, 
+                            key="result_en_edit", label_visibility="collapsed",
+                            on_change=save_main_edit)
+                
+                # 编辑模式：从 textarea 读取实时内容
+                st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
+                copy_js_en = f'''{html_style}<script>function copyEn(){{const tas=window.parent.document.querySelectorAll('textarea');let content='';for(let i=tas.length-1;i>=0;i--){{if(tas[i].value&&tas[i].value.length>50){{content=tas[i].value;break;}}}}if(!content){{content=tas[tas.length-1]?tas[tas.length-1].value:'';}}if(content){{navigator.clipboard.writeText(content).then(()=>{{document.getElementById('btnEn').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnEn').innerText='复制英文',1500);}});}}else{{alert('请先输入内容');}}}}</script><button id="btnEn" onclick="copyEn()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
+                components.html(copy_js_en, height=60)
         
         with col_translate:
             # 标题栏放翻译按钮
@@ -2578,19 +2584,27 @@ with tab2:
             if qc_view_mode:
                 with st.container(height=400):
                     st.markdown(st.session_state.qc_result)
-                copy_content = st.session_state.qc_result
+                # 预览模式：使用预编码内容
+                import streamlit.components.v1 as components
+                html_style = "<style>body{margin:0;padding:0;overflow:hidden;}button{width:100%;height:40px;padding:0;margin:0;display:block;font-size:14px;color:white;border:none;border-radius:5px;cursor:pointer;line-height:40px;font-family:'Source Sans Pro',sans-serif;transition:0.3s;}button:hover{opacity:0.9;}button:active{transform:scale(0.98);}</style>"
+                encoded_qc = base64.b64encode(st.session_state.qc_result.encode('utf-8')).decode('utf-8')
+                copy_js_qc = f'''{html_style}<script>function copyQc(){{const b='{encoded_qc}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnQc').innerText='已复制';setTimeout(()=>document.getElementById('btnQc').innerText='复制英文',1500);}});}}</script><button id="btnQc" onclick="copyQc()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
+                components.html(copy_js_qc, height=60)
             else:
-                edited_qc = st.text_area("编辑结果", value=st.session_state.qc_result, height=400, key="qc_edit_area", label_visibility="collapsed")
-                if edited_qc != st.session_state.qc_result:
-                    st.session_state.qc_result = edited_qc
-                copy_content = edited_qc
-            
-            # 复制按钮 - 使用当前显示的内容
-            import streamlit.components.v1 as components
-            encoded_qc = base64.b64encode(copy_content.encode('utf-8')).decode('utf-8')
-            html_style = "<style>body{margin:0;padding:0;overflow:hidden;}button{width:100%;height:40px;padding:0;margin:0;display:block;font-size:14px;color:white;border:none;border-radius:5px;cursor:pointer;line-height:40px;font-family:'Source Sans Pro',sans-serif;transition:0.3s;}button:hover{opacity:0.9;}button:active{transform:scale(0.98);}</style>"
-            copy_js_qc = f'''{html_style}<script>function copyQc(){{const b='{encoded_qc}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnQc').innerText='已复制';setTimeout(()=>document.getElementById('btnQc').innerText='复制英文',1500);}});}}</script><button id="btnQc" onclick="copyQc()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
-            components.html(copy_js_qc, height=60)
+                # 使用 on_change 自动保存编辑内容
+                def save_qc_edit():
+                    st.session_state.qc_result = st.session_state.qc_edit_area
+                
+                st.text_area("编辑结果", value=st.session_state.qc_result, height=400, 
+                            key="qc_edit_area", label_visibility="collapsed",
+                            on_change=save_qc_edit)
+                
+                # 编辑模式：从 textarea 读取实时内容
+                import streamlit.components.v1 as components
+                html_style = "<style>body{margin:0;padding:0;overflow:hidden;}button{width:100%;height:40px;padding:0;margin:0;display:block;font-size:14px;color:white;border:none;border-radius:5px;cursor:pointer;line-height:40px;font-family:'Source Sans Pro',sans-serif;transition:0.3s;}button:hover{opacity:0.9;}button:active{transform:scale(0.98);}</style>"
+                # 直接从 textarea 读取（查找页面上所有 textarea，取最后一个有内容的）
+                copy_js_qc = f'''{html_style}<script>function copyQc(){{const tas=window.parent.document.querySelectorAll('textarea');let content='';for(let i=tas.length-1;i>=0;i--){{if(tas[i].value&&tas[i].value.length>50){{content=tas[i].value;break;}}}}if(!content){{content=tas[tas.length-1]?tas[tas.length-1].value:'';}}if(content){{navigator.clipboard.writeText(content).then(()=>{{document.getElementById('btnQc').innerText='已复制';setTimeout(()=>document.getElementById('btnQc').innerText='复制英文',1500);}});}}else{{alert('请先输入内容');}}}}</script><button id="btnQc" onclick="copyQc()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
+                components.html(copy_js_qc, height=60)
         
         with col_cn:
             # 标题 + 翻译按钮
@@ -2756,19 +2770,26 @@ with tab5:
             if chat_view_mode:
                 with st.container(height=400):
                     st.markdown(st.session_state.chat_result)
-                copy_content = st.session_state.chat_result
+                # 预览模式：使用预编码内容
+                import streamlit.components.v1 as components
+                html_style = "<style>body{margin:0;padding:0;overflow:hidden;}button{width:100%;height:40px;padding:0;margin:0;display:block;font-size:14px;color:white;border:none;border-radius:5px;cursor:pointer;line-height:40px;font-family:'Source Sans Pro',sans-serif;transition:0.3s;}button:hover{opacity:0.9;}button:active{transform:scale(0.98);}</style>"
+                encoded_chat = base64.b64encode(st.session_state.chat_result.encode('utf-8')).decode('utf-8')
+                copy_js_chat = f'''{html_style}<script>function copyChat(){{const b='{encoded_chat}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnChat').innerText='已复制';setTimeout(()=>document.getElementById('btnChat').innerText='复制英文',1500);}});}}</script><button id="btnChat" onclick="copyChat()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
+                components.html(copy_js_chat, height=60)
             else:
-                edited_chat = st.text_area("编辑结果", value=st.session_state.chat_result, height=400, key="chat_edit_area", label_visibility="collapsed")
-                if edited_chat != st.session_state.chat_result:
-                    st.session_state.chat_result = edited_chat
-                copy_content = edited_chat
-            
-            # 复制按钮
-            import streamlit.components.v1 as components
-            encoded_chat = base64.b64encode(copy_content.encode('utf-8')).decode('utf-8')
-            html_style = "<style>body{margin:0;padding:0;overflow:hidden;}button{width:100%;height:40px;padding:0;margin:0;display:block;font-size:14px;color:white;border:none;border-radius:5px;cursor:pointer;line-height:40px;font-family:'Source Sans Pro',sans-serif;transition:0.3s;}button:hover{opacity:0.9;}button:active{transform:scale(0.98);}</style>"
-            copy_js_chat = f'''{html_style}<script>function copyChat(){{const b='{encoded_chat}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnChat').innerText='已复制';setTimeout(()=>document.getElementById('btnChat').innerText='复制英文',1500);}});}}</script><button id="btnChat" onclick="copyChat()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
-            components.html(copy_js_chat, height=60)
+                # 使用 on_change 自动保存编辑内容
+                def save_chat_edit():
+                    st.session_state.chat_result = st.session_state.chat_edit_area
+                
+                st.text_area("编辑结果", value=st.session_state.chat_result, height=400, 
+                            key="chat_edit_area", label_visibility="collapsed",
+                            on_change=save_chat_edit)
+                
+                # 编辑模式：从 textarea 读取实时内容
+                import streamlit.components.v1 as components
+                html_style = "<style>body{margin:0;padding:0;overflow:hidden;}button{width:100%;height:40px;padding:0;margin:0;display:block;font-size:14px;color:white;border:none;border-radius:5px;cursor:pointer;line-height:40px;font-family:'Source Sans Pro',sans-serif;transition:0.3s;}button:hover{opacity:0.9;}button:active{transform:scale(0.98);}</style>"
+                copy_js_chat = f'''{html_style}<script>function copyChat(){{const tas=window.parent.document.querySelectorAll('textarea');let content='';for(let i=tas.length-1;i>=0;i--){{if(tas[i].value&&tas[i].value.length>50){{content=tas[i].value;break;}}}}if(!content){{content=tas[tas.length-1]?tas[tas.length-1].value:'';}}if(content){{navigator.clipboard.writeText(content).then(()=>{{document.getElementById('btnChat').innerText='已复制';setTimeout(()=>document.getElementById('btnChat').innerText='复制英文',1500);}});}}else{{alert('请先输入内容');}}}}</script><button id="btnChat" onclick="copyChat()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
+                components.html(copy_js_chat, height=60)
         
         with col_cn:
             # 标题 + 翻译按钮

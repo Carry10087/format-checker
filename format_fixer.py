@@ -727,6 +727,21 @@ def analyze_format_issues(text: str) -> list:
             issues.append(f"第{i}行：引用应在句号后，不是句号前")
             break
     
+    # 检查段中有 Note（Note 应在段末，Note 后不能再有其他文字）
+    # 错误：Sentence A.[Note 1](#) Sentence B.
+    # 正确：Sentence A. Sentence B.[Note 1](#)
+    for i, line in enumerate(lines, 1):
+        # 匹配 [Note X](#) 后面跟着非 Note 的内容（排除空格、换行、更多 Note）
+        # 模式：[Note X](#) 后面有字母或数字开头的内容
+        match = re.search(r'\[Note\s*\d+\](\(#\))?\s+[A-Za-z0-9]', line)
+        if match:
+            # 找到具体位置用于显示上下文
+            context_start = max(0, match.start() - 20)
+            context_end = min(len(line), match.end() + 20)
+            context = line[context_start:context_end]
+            issues.append(f"第{i}行：Note 引用应在段末，引用后不能有其他内容，上下文：...{context}...")
+            break
+    
     # 检查一级列表有二级列表时，一级标题后有非冒号内容
     for i, line in enumerate(lines, 1):
         # 检查是否是一级列表项
