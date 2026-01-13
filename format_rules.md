@@ -202,13 +202,13 @@
   - ✅ 正确（用二级列表细分）：
     ```
     - **Skincare Products**:
-        - Cleansers and facial washes.
-        - Toners and essences.
-        - Moisturizers and serums.
+        - Cleansers and Facial Washes.
+        - Toners and Essences.
+        - Moisturizers and Serums.
     - **Makeup Products**:
-        - Foundation and concealer.
-        - Lipstick and lip gloss.
-        - Eyeshadow and mascara.
+        - Foundation and Concealer.
+        - Lipstick and Lip Gloss.
+        - Eyeshadow and Mascara.
     ```
 - **二级列表格式规则**：一级标题后只能有冒号，不能有其他描述内容，所有描述放在二级列表中。
 - **二级列表缩进**：二级列表前必须缩进4个空格。
@@ -248,7 +248,6 @@
     - ❌ 错误（段中引用）：`Sentence A ends.[Note 1](#) Sentence B follows.`
     - ✅ 正确（移至段末）：`Sentence A ends. Sentence B follows.[Note 1](#)`
   - **顺序规则**：先写句号，再写引用标记，格式为 `内容.[Note X](#)`，引用标记在句号之后、无空格。
-- **禁止堆砌**：除短答案外，严禁将所有注释集中堆在文本最后，必须随文标注。
 - **原声引用**：可引用原文佐证观点，格式为 `"原文内容"[Note X](#)`，内容需基本一致。
 - **四级标题下列表必须有引用**：所有四级标题（`#### Title`）下方的列表项，每一项都必须包含至少一个引用标注（Note）。即使是简单的信息罗列，也需要标注信息来源。
   - 正确示例：

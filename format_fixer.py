@@ -622,11 +622,13 @@ def analyze_format_issues(text: str) -> list:
         if re.search(r"['\"]''?\*\*\*\.", first_line) or re.search(r'["\']["\']?\*\*\*\.', first_line):
             issues.append(f"第1行：首段以引号结尾时，句号应在引号内（如 .''*** 而非 ''***.）")
     
-    # 检查列表项缺少小标题加粗
+    # 检查列表项缺少小标题加粗（只检查一级列表，二级列表不需要加粗）
     for i, line in enumerate(lines, 1):
-        if re.match(r'^\s*-\s+[^*\[]', line) and not re.match(r'^\s*-\s+\*\*', line):
-            # 是列表项但没有加粗小标题
-            if not re.match(r'^\s+-\s*$', line):  # 排除空列表项
+        # 一级列表：以 `- ` 开头，没有前导空格
+        # 二级列表：有前导空格（如 4 个空格）+ `- `，不需要加粗
+        if re.match(r'^-\s+[^*\[]', line) and not re.match(r'^-\s+\*\*', line):
+            # 是一级列表项但没有加粗小标题
+            if not re.match(r'^-\s*$', line):  # 排除空列表项
                 content = line.strip()[:40]
                 issues.append(f"第{i}行：列表项缺少加粗小标题「{content}...」")
                 break
