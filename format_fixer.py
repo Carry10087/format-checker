@@ -301,19 +301,30 @@ def fix_colon_after_no_content(text: str) -> str:
 
 
 def fix_list_item_colon(text: str) -> str:
-    """修复一级列表项后有二级列表但缺少冒号的情况"""
+    """修复一级列表项缺少冒号的情况：
+    1. 后面有二级列表但缺少冒号
+    2. 小标题后直接跟内容但缺少冒号
+    """
     lines = text.split('\n')
     result = []
     
     for i, line in enumerate(lines):
-        # 匹配一级列表项（以 - **xxx** 开头，没有前导空格）
-        match = re.match(r'^(-\s+\*\*[^*]+\*\*)(\s*)$', line)
-        if match:
+        # 情况1：一级列表项后跟二级列表（以 - **xxx** 结尾，没有冒号）
+        match1 = re.match(r'^(-\s+\*\*[^*]+\*\*)(\s*)$', line)
+        if match1:
             # 检查下一行是否是二级列表（有前导空格 + -）
             if i + 1 < len(lines) and re.match(r'^\s+-', lines[i + 1]):
-                # 后面跟着二级列表，但当前行没有以冒号结尾
-                # 添加冒号
-                line = match.group(1) + ':'
+                # 后面跟着二级列表，添加冒号
+                line = match1.group(1) + ':'
+        
+        # 情况2：一级列表项小标题后直接跟内容但缺少冒号
+        # 错误格式：- **Sizing Advice** Some users report...
+        # 正确格式：- **Sizing Advice**: Some users report...
+        match2 = re.match(r'^(-\s+\*\*[^*]+\*\*)(\s+)([^:\s].*)$', line)
+        if match2:
+            # 在 ** 后添加冒号
+            line = match2.group(1) + ':' + match2.group(2) + match2.group(3)
+        
         result.append(line)
     
     return '\n'.join(result)
@@ -719,6 +730,17 @@ def analyze_format_issues(text: str) -> list:
                     title = title_match.group(1) if title_match else "未知"
                     issues.append(f"第{i}行：一级列表项「{title}」后有二级列表，但缺少冒号（应为 **{title}**:）")
                     break
+    
+    # 检查一级列表项加粗小标题后缺少冒号（后面跟内容而不是二级列表）
+    # 错误格式：- **Sizing Advice** Some users report...
+    # 正确格式：- **Sizing Advice**: Some users report...
+    for i, line in enumerate(lines, 1):
+        # 匹配一级列表项：以 `- **xxx**` 开头，后面紧跟非冒号的内容
+        match = re.match(r'^-\s+\*\*([^*]+)\*\*\s+[^:\s]', line)
+        if match:
+            title = match.group(1)
+            issues.append(f"第{i}行：列表项「{title}」小标题后缺少冒号（应为 **{title}**:）")
+            break
     
     # 检查列表项缺少引用
     for i, line in enumerate(lines, 1):
