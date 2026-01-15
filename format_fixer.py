@@ -143,12 +143,20 @@ def fix_spacing_rules(text: str) -> str:
     """修复空格规则：句号/逗号后空格、括号空格、冒号前后空格"""
     # 冒号前移除多余空格（如 "A : B" → "A: B"）
     text = re.sub(r'\s+:', ':', text)
-    # 句号后加空格（排除 [Note X] 和 *** 和域名情况）
+    # 句号后加空格（排除以下情况）：
+    # 1. 域名如 .com, .org
+    # 2. 缩写如 U.S., e.g., i.e.
     # 先保护域名
     text = re.sub(r'\.(com|org|net|edu|gov|io|co|uk|cn)\b', r'.__DOMAIN_\1__', text)
+    # 保护缩写（单个大写字母+句号+大写字母，如 U.S.）
+    text = re.sub(r'([A-Z])\.([A-Z])', r'\1.__ABBR__\2', text)
+    # 保护常见缩写
+    text = re.sub(r'\b(e\.g|i\.e|etc|vs|Dr|Mr|Mrs|Ms|Jr|Sr|St)\b', lambda m: m.group(0).replace('.', '.__ABBR__'), text)
+    # 句号后加空格
     text = re.sub(r'\.([A-Za-z])', r'. \1', text)
-    # 恢复域名
+    # 恢复保护的内容
     text = re.sub(r'\.__DOMAIN_(\w+)__', r'.\1', text)
+    text = re.sub(r'\.__ABBR__', '.', text)
     # 逗号后加空格
     text = re.sub(r',([A-Za-z])', r', \1', text)
     # 冒号后加空格
@@ -621,6 +629,12 @@ def analyze_format_issues(text: str) -> list:
     
     # 检查四级标题后是否紧跟列表
     # 注意：根据规则，单项内容可以用段落形式，所以需要检查是否是单项内容的情况
+    # 免责声明模式（不计入内容）
+    disclaimer_patterns = [
+        r'^The above content is for reference only',
+        r'^This information is for entertainment purposes only',
+        r'^please consult a professional',
+    ]
     for i, line in enumerate(lines, 1):
         if line.startswith('####'):
             if i < len(lines):
@@ -634,7 +648,9 @@ def analyze_format_issues(text: str) -> list:
                         check_line = lines[j].strip()
                         if check_line.startswith('####'):
                             break  # 遇到下一个四级标题
-                        if check_line:  # 非空行
+                        # 排除免责声明
+                        is_disclaimer = any(re.match(p, check_line, re.IGNORECASE) for p in disclaimer_patterns)
+                        if check_line and not is_disclaimer:  # 非空行且不是免责声明
                             content_lines += 1
                             if content_lines > 1:
                                 is_single_item = False

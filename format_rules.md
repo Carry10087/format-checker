@@ -258,11 +258,20 @@
   - **允许**：1级数字+2级圆点、1级圆点+2级圆点、1级圆点+2级数字
   - **禁止**：1级数字+2级数字、任何层级使用emoji作为列表符号
 - **分点上限**：一般分点/分步骤不超过6个（特殊情况除外）。
-- **单项内容处理**：如果某个四级标题下只有1项内容，按以下顺序处理：
+- **单项内容处理（铁律）**：**任何**四级标题下只有1项内容时，**必须**写成段落形式，**禁止**使用列表符号 `-` 和加粗小标题 `**xxx**:`
   1. **优先合并**：将该项内容合并到其他相关的四级标题下
-  2. **无法合并时**：保留四级标题，但内容写成段落形式，不使用列表符号和加粗小标题
-  - ❌ 错误：`#### Availability` + `- **Purchase Channels**: Products are sold through...`
-  - ✅ 正确：`#### Availability` + `Products are sold through official online stores...`
+  2. **无法合并时**：保留四级标题，但内容写成段落形式
+  - ❌ 错误（单项却用了列表）：
+    ```
+    #### Companies
+    - **AKASA**: A company that develops generative AI solutions...
+    ```
+  - ✅ 正确（单项用段落）：
+    ```
+    #### Companies
+    AKASA develops generative AI solutions for the healthcare revenue cycle, assisting with tasks such as prior authorization and claim management.
+    ```
+  - **判断方法**：数一数四级标题下有几个独立的信息点。如果只有1个，就用段落；如果有2个及以上，才用列表
 
 ### 2.3 引用规范 (Crucial)
 - **格式**：必须使用 `[Note 数字](#)` 的格式（例如 `[Note 1](#)`）。
