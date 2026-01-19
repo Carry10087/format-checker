@@ -9,8 +9,51 @@ import re
 # ==================== 基础修复函数 ====================
 
 def fix_note_format(text: str) -> str:
-    """修复引用格式：[Note1] → [Note 1]"""
-    return re.sub(r'\[Note(\d+)\]', r'[Note \1]', text)
+    """修复引用格式：
+    1. [Note1] → [Note 1]（数字前加空格）
+    2. 内容.[Note X](#) → 内容 [Note X](#).（引用移到句号前，加空格）
+    3. 内容[Note X](#). → 内容 [Note X](#).（引用前加空格）
+    4. 首段 ***. [Note] → *** [Note].（*** 后的引用格式）
+    5. 引号结尾 "内容." [Note] → "内容" [Note].（句号移到引号外、引用后）
+    """
+    # 步骤1：修复 [Note1] → [Note 1]
+    text = re.sub(r'\[Note(\d+)\]', r'[Note \1]', text)
+    
+    # 步骤2：将 .[Note X](#) 改为 [Note X](#).（引用移到句号前）
+    # 匹配：句号后紧跟一个或多个 [Note X](#)
+    def move_notes_before_period(match):
+        notes = match.group(1)  # 所有的 [Note X](#) 部分
+        return ' ' + notes + '.'
+    text = re.sub(r'\.(\[Note\s*\d+\]\(#\)(?:\[Note\s*\d+\]\(#\))*)', move_notes_before_period, text)
+    
+    # 步骤3：修复首段 ***. [Note] → *** [Note].
+    # 匹配：***. 后面跟着空格和引用
+    def fix_highlight_notes(match):
+        notes = match.group(1)  # 所有的 [Note X](#) 部分
+        return '*** ' + notes + '.'
+    text = re.sub(r'\*\*\*\.\s*(\[Note\s*\d+\]\(#\)(?:\[Note\s*\d+\]\(#\))*)', fix_highlight_notes, text)
+    
+    # 步骤4：修复引号结尾 "内容." [Note] → "内容" [Note].
+    # 匹配：引号内句号 + 引号 + 空格 + 引用（没有句号结尾）
+    def fix_quote_ending(match):
+        content = match.group(1)  # 引号前的内容
+        notes = match.group(2)  # 所有的 [Note X](#) 部分
+        return content + '" ' + notes + '.'
+    # 匹配 ." [Note...]（引号内有句号，且后面没有句号）
+    text = re.sub(r'([^"]+)\.\"\s*(\[Note\s*\d+\]\(#\)(?:\[Note\s*\d+\]\(#\))*)(?!\.)', fix_quote_ending, text)
+    
+    # 步骤5：修复引号+星号 ".*** [Note] → "*** [Note].
+    # 匹配：引号 + 句号 + *** + 空格 + 引用
+    def fix_quote_star_ending(match):
+        notes = match.group(1)  # 所有的 [Note X](#) 部分
+        return '"*** ' + notes + '.'
+    text = re.sub(r'"\.\*\*\*\s*(\[Note\s*\d+\]\(#\)(?:\[Note\s*\d+\]\(#\))*)(?!\.)', fix_quote_star_ending, text)
+    
+    # 步骤6：确保引用前有空格（如果前面是字母/数字/引号/***，但不是另一个引用）
+    # 排除 )[Note 的情况（这是连续引用）
+    text = re.sub(r'([^\s\)])\[Note\s', r'\1 [Note ', text)
+    
+    return text
 
 
 def fix_highlight_spaces(text: str) -> str:
@@ -477,11 +520,24 @@ def analyze_format_issues(text: str) -> list:
     
     # ===== 可自动修复的问题 =====
     
-    # 检查引用格式
+    # 检查引用格式（[Note1] 应为 [Note 1]）
     for i, line in enumerate(lines, 1):
         matches = re.findall(r'\[Note\d+\]', line)
         if matches:
             issues.append(f"第{i}行：引用格式错误 {matches} → 应为 [Note X]")
+            break
+    
+    # 检查引用位置（应在句号前，而非句号后）
+    for i, line in enumerate(lines, 1):
+        if re.search(r'\.\[Note\s*\d+\]', line):
+            issues.append(f"第{i}行：引用应在句号前，格式：内容 [Note X](#).")
+            break
+    
+    # 检查引用前是否有空格
+    for i, line in enumerate(lines, 1):
+        # 排除连续引用的情况 )[Note
+        if re.search(r'[^\s\)]\[Note\s', line):
+            issues.append(f"第{i}行：引用前应有空格")
             break
     
     # 检查 *** 内多余空格
