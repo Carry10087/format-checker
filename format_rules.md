@@ -278,9 +278,30 @@
     2. **Cooking**: Heat oil and scramble the eggs.
     3. **Finishing**: Add tomatoes and stir-fry.
     ```
-- **烹饪/菜谱类内容强制有序**：当Notes中包含菜谱或烹饪步骤时，生成的回答中**必须至少有一组有序列表**来展示操作步骤。
-  - ❌ 错误：烹饪方法全部用无序列表 `- **清蒸**: ... - **煎炸**: ...`（这是并列的烹饪方式，可以无序）
-  - ✅ 正确：每种烹饪方式内部的步骤用有序列表，或有一个"经典做法"用有序列表展示完整步骤
+- **烹饪/菜谱类内容强制有序（重要）**：当内容涉及烹饪方法时，**必须至少有一组有序列表**来展示操作步骤。
+  - **判断标准**：问自己"Notes中是否有任何具体的烹饪步骤描述？"
+    - 有 → 必须提取至少一种做法的完整步骤，用有序列表展示
+    - 没有 → 可以只列举烹饪方式概述，但需标注"Notes中无详细步骤"
+  - **实施方式**：
+    - **方式一**：从Notes中选择一种最详细的做法，展开成有序步骤
+    - **方式二**：在每种烹饪方式下用二级有序列表展示具体步骤
+  - **示例（食材类主题如Halibut）**：
+    - ❌ 错误：全部用无序列表 `- **Steaming**: preserves flavor... - **Pan-Frying**: creates crispy skin...`
+    - ✅ 正确（方式一）：选一种做法展开
+      ```
+      #### Recommended Recipe: Steamed Halibut
+      1. Prepare the fish by cleaning and scoring.
+      2. Place ginger and scallions on top.
+      3. Steam for 8-10 minutes.
+      4. Drizzle with soy sauce and hot oil.
+      ```
+    - ✅ 正确（方式二）：在烹饪方式下用二级有序
+      ```
+      - **Steaming**:
+        1. Clean and score the fish.
+        2. Steam with ginger and scallions.
+        3. Finish with soy sauce and hot oil.
+      ```
 - **并列内容强制列表**：正文中3个及以上的并列内容须改为列表，不能用逗号或顿号连接成一句话。
 
 #### 二级列表使用场景
@@ -344,6 +365,9 @@
 
 #### 引用格式
 - **基本格式**：`[Note 数字](#)`（例如 `[Note 1](#)`），Note 和数字之间有空格。
+- **每个引用必须独立**：多个引用时，每个 `[Note X](#)` 必须是独立的，禁止用逗号分隔放在一个方括号内。
+  - ❌ 错误：`[Note 3, Note 5, Note 12]`、`[Note 8, Note 9]`
+  - ✅ 正确：`[Note 3](#)[Note 5](#)[Note 12](#)`
 
 #### 引用位置规则（核心）
 引用标记放在**句号前面**，且与前面内容之间**必须有一个空格**。
@@ -361,6 +385,7 @@
 
 | ❌ 错误格式 | ✅ 正确格式 | 问题 |
 |------------|------------|------|
+| `[Note 3, Note 5]` | `[Note 3](#)[Note 5](#)` | 引用必须独立，不能用逗号分隔 |
 | `...takes over.[Note 4](#)` | `...takes over [Note 4](#).` | 引用应在句号前 |
 | `...takes over[Note 4](#).` | `...takes over [Note 4](#).` | 引用前缺少空格 |
 | `...management***. [Note 1](#)` | `...management*** [Note 1](#).` | 引用应在句号前 |

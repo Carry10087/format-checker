@@ -10,12 +10,21 @@ import re
 
 def fix_note_format(text: str) -> str:
     """修复引用格式：
+    0. [Note 3, Note 5] → [Note 3](#)[Note 5](#)（逗号分隔的引用拆分）
     1. [Note1] → [Note 1]（数字前加空格）
     2. 内容.[Note X](#) → 内容 [Note X](#).（引用移到句号前，加空格）
     3. 内容[Note X](#). → 内容 [Note X](#).（引用前加空格）
     4. 首段 ***. [Note] → *** [Note].（*** 后的引用格式）
     5. 引号结尾 "内容." [Note] → "内容" [Note].（句号移到引号外、引用后）
     """
+    # 步骤0：修复逗号分隔的引用 [Note 3, Note 5, Note 12] → [Note 3](#)[Note 5](#)[Note 12](#)
+    def expand_comma_notes(match):
+        content = match.group(1)  # 如 "Note 3, Note 5, Note 12"
+        # 提取所有 Note 数字
+        notes = re.findall(r'Note\s*(\d+)', content)
+        return ''.join(f'[Note {n}](#)' for n in notes)
+    text = re.sub(r'\[(Note\s*\d+(?:\s*,\s*Note\s*\d+)+)\]', expand_comma_notes, text)
+    
     # 步骤1：修复 [Note1] → [Note 1]
     text = re.sub(r'\[Note(\d+)\]', r'[Note \1]', text)
     
