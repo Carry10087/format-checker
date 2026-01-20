@@ -5,27 +5,26 @@
 
 ## 1. 首段内容规范
 
-- **核心定义精简（重要）**：单义词的核心定义**只写"是什么"**（最核心的分类/身份），禁止附加任何细节
-  - **禁止的内容**：描述性修饰语（`best known for`、`featuring`、`known for`）、地理位置（`in X`、`located in/on`）、时间、数量、特征描述等
-  - ❌ 错误：`Toulouse is ***a major historic city in Southern France located on the Garonne River***.`
-  - ✅ 正确：`Toulouse is ***a major historic city***.`
-  - ❌ 错误：`The Chloé Woody is ***a product line from Chloé, best known for its tote bags***.`
-  - ✅ 正确：`The Chloé Woody is ***a product line from the brand Chloé***.`
-- **多义词格式**：首段必须列举所有主要含义，每个义项也要精简；次要/冷门义项在正文中必须合并
-  - **首段精简**：只写核心分类，禁止描述性内容
-  - **首段概括**：若正文含 `Other Meanings`，首段末尾必须加 `...among other meanings` 以涵盖全文
-  - **正文结构**：主要义项独立标题，次要义项合并到 `#### Other Meanings`，禁止生造 `Brands and Media` 这种泛词标题
-- **多义词内容平衡**：当首段列出多个义项时，正文中各义项的内容量应大致均衡。禁止某个义项占据大量篇幅，而其他义项只有寥寥几笔（并列不当）
-  - ❌ 错误：首段说 X 指代"A、B、C 三个事物"，正文 A 有 5 段，B 有 3 段，C 只有 2 段
-  - ✅ 正确：各义项内容量基本均衡，或在首段按重要性排序（如"X 主要指 A，也可指 B 和 C"）
-- **首段与正文对应**：首段是结论，正文是论据。首段提到的核心点，正文需展开细节，但不要简单重复首段的原话
+- **核心定义原则（重要）**：核心定义需要**精简但有概括性**，让用户快速了解主题的核心信息
+  - **必须包含**：身份/分类 + **最具辨识度的代表性信息**（1-2个即可）
+  - **禁止堆砌**：不要在首段罗列多项成就、多个特征、详细描述
+  - **目的**：用户搜索一个词时，首段应该能回答"这是什么/谁，为什么值得了解"
+- **示例对比**：
+  - ❌ 太精简（无信息量）：`Owen Painter is ***an actor***.`
+  - ❌ 太冗长（堆砌信息）：`Owen Painter is ***an American actor, social media personality, and model, best known for...***.`
+  - ✅ 精简且有效：`Owen Painter is ***an American actor known for portraying "Slurp" in the series "Wednesday"***.`
 - **人物定义规则**：
-  - 一般人物：只写职业，荣誉/成就（如 "Olympic champion"）下沉到正文
-    - ❌ 错误：`Sun Yingsha is ***a professional table tennis player, an Olympic champion, and a World Champion***.`
-    - ✅ 正确：`Sun Yingsha is ***a Chinese professional table tennis player***.`
-  - 极知名人物：职业过于泛化时，写核心职位（如所属公司）
-    - ❌ 错误：`Karl Lagerfeld was ***a German fashion designer***.`
-    - ✅ 正确：`Karl Lagerfeld was ***the creative director of Chanel and Fendi***.`
+  - **演员/歌手**：职业 + 代表作品（最知名的1个）
+  - **运动员**：国籍 + 职业（荣誉可简述1个最重要的）
+    - ✅ `Sun Yingsha is ***a Chinese professional table tennis player and Olympic champion***.`
+  - **企业家/名人**：核心成就/职位
+    - ✅ `Karl Lagerfeld was ***the creative director of Chanel and Fendi***.`
+- **产品/品牌定义**：品类 + 核心特色/定位
+  - ✅ `Olaplex is ***a haircare brand known for its bond-building technology***.`
+- **多义词格式**：首段必须列举所有主要含义；次要义项在正文合并到 `#### Other Meanings`
+- **首段与标题顺序一致（重要）**：首段中义项的出现顺序必须与正文四级标题的顺序**完全一致**
+  - ❌ 错误：首段"A指X、Y、Z"，正文顺序 `#### Y` → `#### X` → `#### Z`
+  - ✅ 正确：首段"A指X、Y、Z"，正文顺序 `#### X` → `#### Y` → `#### Z`
 - **首段主语引号规则**：只有作品名才加引号，人名、地名、品牌名不加引号
 
 ## 2. 列表逻辑规范

@@ -23,32 +23,32 @@
 
 ## 2. 结构与格式规范
 
-### 2.1 整体结构（总分式）
-
-#### 首段（Core Answer）
+### 2.1 首段规范（Core Answer）
 - **长度限制**：首段应精简，优先用一句话概括核心定义。
   - **单义词格式**：首段 = 主语 + is/are + `***核心定义***` + 句号，第二句及之后下沉到正文。
-  - **核心定义精简（重要）**：单义词的核心定义**只写"是什么"**（最核心的分类/身份），禁止附加任何细节。
-    - **禁止的描述性内容**：
-      - 描述性修饰语：`best known for`、`featuring`、`known for`、`famous for`、`characterized by`、`recognized for`
-      - 地理位置信息：`in X`、`located in/on`、`based in`、`from X`（国家/地区/城市）
-      - 其他细节：时间、数量、特征描述、用途、目标用户等
-    - **只保留核心分类**：职业、品类、身份等最简洁的定位词
-    - ❌ 错误：`Toulouse is ***a major historic city in Southern France located on the Garonne River***.`（地理位置下沉）
-    - ✅ 正确：`Toulouse is ***a major historic city***.`
-    - ❌ 错误：`The Chloé Woody is ***a product line from Chloé, best known for its tote bags***.`
-    - ✅ 正确：`The Chloé Woody is ***a product line from the brand Chloé***.`
-    - ❌ 错误：`Olaplex is ***a haircare brand known for its patented bond-building technology***.`
-    - ✅ 正确：`Olaplex is ***a haircare brand***.`
+  - **核心定义原则（重要）**：核心定义需要**精简但有概括性**，让用户快速了解主题的核心信息。
+    - **必须包含**：身份/分类 + **最具辨识度的代表性信息**（1-2个即可）
+    - **禁止堆砌**：不要在首段罗列多项成就、多个特征、详细描述
+    - **目的**：用户搜索一个词时，首段应该能回答"这是什么/谁，为什么值得了解"
+  - **示例对比**：
+    - ❌ 太精简（无信息量）：`Owen Painter is ***an actor***.`
+    - ❌ 太冗长（堆砌信息）：`Owen Painter is ***an American actor, social media personality, and model, best known for portraying "Slurp" in Wednesday, who also appeared in multiple TV shows***.`
+    - ✅ 精简且有效：`Owen Painter is ***an American actor known for portraying "Slurp" in the series "Wednesday"***.`
+    - ❌ 太精简：`Olaplex is ***a haircare brand***.`
+    - ✅ 精简且有效：`Olaplex is ***a haircare brand known for its bond-building hair repair technology***.`
   - **人物定义规则**：
-    - **一般人物**：只写职业，荣誉/成就（如 "Olympic champion"、"World Champion"）下沉到正文
-      - ❌ 错误：`Sun Yingsha is ***a Chinese professional table tennis player, an Olympic champion, and a World Champion***.`（荣誉下沉）
-      - ✅ 正确：`Sun Yingsha is ***a Chinese professional table tennis player***.`
-    - **极知名人物**：职业过于泛化时，写核心职位（如所属公司/品牌）
-      - ❌ 错误：`Steve Jobs was ***an American entrepreneur***.`（过于泛化）
-      - ✅ 正确：`Steve Jobs was ***the co-founder of Apple Inc.***.`
-      - ❌ 错误：`Karl Lagerfeld was ***a German fashion designer***.`（未体现核心职位）
-      - ✅ 正确：`Karl Lagerfeld was ***the creative director of Chanel and Fendi***.`
+    - **演员/歌手等**：职业 + 代表作品（最知名的1个）
+      - ✅ `Owen Painter is ***an actor known for portraying "Slurp" in "Wednesday"***.`
+    - **运动员**：国籍 + 职业 + 项目（荣誉可简述1个最重要的）
+      - ✅ `Sun Yingsha is ***a Chinese professional table tennis player and Olympic champion***.`
+    - **企业家/名人**：核心成就/职位
+      - ✅ `Steve Jobs was ***the co-founder of Apple Inc.***.`
+      - ✅ `Karl Lagerfeld was ***the creative director of Chanel and Fendi***.`
+  - **产品/品牌定义规则**：品类 + 核心特色/定位
+    - ✅ `Olaplex is ***a haircare brand known for its bond-building technology***.`
+    - ✅ `The Chloé Woody is ***a product line from Chloé, featuring signature canvas tote bags***.`
+  - **地点定义规则**：类型 + 显著特征/地位
+    - ✅ `Toulouse is ***a major historic city in Southern France***.`（地理位置属于核心信息，保留国家级定位）
 - **首段禁止第二句（铁律）**：首段只能有一句话，`***` 闭合后的句号就是首段结尾，句号后不能再有任何内容。
     - ❌ 错误：`Juanmi refers to ***Juan Miguel Jiménez López, a Spanish footballer***. Born in Coín, Spain, he is known for his agility.`（有第二句）
     - ❌ 错误：`SDG refers to ***the Sustainable Development Goals...to ensure prosperity for all by 2030***. Also known as...`（定义太长+有第二句）
@@ -69,6 +69,9 @@
     - ✅ 正确：`Janet refers to ***American singer Janet Jackson, sculptor Janet Echelman, and an academic network***`.
 - **内容要求**：仅给出最直接的结论。任何背景铺垫、解释说明、举例、费用细节、名单列表、目标用户描述等扩展信息，**必须全部下沉**到正文，严禁滞留在首段。
 - **首段与正文对应**：首段是结论，正文是论据。首段提到的核心点，正文需展开细节，但不要简单重复首段的原话。
+- **首段与标题顺序一致（重要）**：多义词首段中各义项的**出现顺序**必须与正文四级标题的出现顺序**完全一致**。
+  - ❌ 错误：首段写"A指代X、Y、Z"，但正文顺序是 `#### Y` → `#### X` → `#### Z`
+  - ✅ 正确：首段写"A指代X、Y、Z"，正文顺序是 `#### X` → `#### Y` → `#### Z`
 - **格式关键（视觉包裹）**：
   - **冠词强制包含**：定义句中的冠词 (`a`, `an`, `the`) **必须**被包裹在 `***` 内部，严禁留在外面。
   - **系动词隔离**：系动词 (`is`, `are`, `was`, `refer to` 等) 必须在 `***` 外部。
@@ -84,11 +87,18 @@
   - **核心锁定**：全文必须紧紧围绕首段确定的核心定义（Core Answer）展开。
   - **杂质剔除**：如果参考素材中包含多个不同义项（如 `costo` 既指 Costco 超市，又指“成本”），**仅保留与首段定义一致的内容**。与首段定义无关的义项（即使出现在 Note 中）必须**直接丢弃**，不得出现在正文中。
   - 示例：Core Answer 定义了 `Apple` 是科技公司，正文中就绝对不能出现水果苹果的营养介绍。
-  - **个性化内容验证（重要）**：以下类型的内容**必须回原笔记确认**，判断是否为用户个性化偏好内容（非事实性内容可能需要删除）：
-    - **成员发展**（Member Developments）：如成员个人活动、舞台表现风格变化等
-    - **粉丝关切**（Fan Concerns）：如粉丝对成员状态的担忧、应援情况、粉丝评价等
-    - **个人观点/感受**：如"粉丝认为..."、"给人的印象是..."等主观表述
-    - 如果原笔记中这些内容来自用户个人观察而非官方/媒体来源，应标记为**需要确认**或**建议删除**
+  - **非事实性内容验证（重要）**：以下类型的内容**必须回原笔记确认**其来源，判断是否应保留：
+    - **判断标准**：问自己"这个信息能否被第三方验证？"
+      - ✅ 可验证（保留）：官方发布、媒体报道、公开数据、历史记录
+      - ❌ 不可验证（需确认/删除）：个人观察、主观感受、未经证实的说法
+    - **常见需确认的内容类型**：
+      - **主观评价类**：如"粉丝认为..."、"给人的印象是..."、"据说..."
+      - **个人观察类**：如"舞台表现变化"、"状态似乎..."、"看起来..."
+      - **群体情绪类**：如"粉丝担忧..."、"网友热议..."、"引发争议..."
+      - **未署名观点**：无明确来源的评价或分析
+    - **处理方式**：
+      - 来自官方/媒体 → 保留
+      - 来自用户个人观察 → 标记**需要确认**或**建议删除**
 - **多义词处理**：
   - **场景一（多义词查询）**：当搜索词本身是多义词（如 Prince, Apple），无论用户是否明确询问，首段必须涵盖该词条的所有主要含义，正文分板块详细展开各义项。首段与正文必须一一对应，不可正文有某义项而首段未提及。
   - **场景二（意图明确）**：当用户意图明确指向某个特定含义时（如询问Prince的音乐作品），则执行上述杂质剔除规则，首段仅定义该特定含义。
@@ -96,7 +106,9 @@
     - ❌ 错误：首段说 X 指代"A、B、C 三个事物"，正文 A 有 5 段，B 有 3 段，C 只有 2 段（比例失衡）
     - ✅ 正确：各义项内容量基本均衡，或在首段按重要性排序说明（如"X 主要指 A，也可指 B 和 C"）
 
-#### 正文分段（强制列表结构）
+### 2.2 正文结构规范
+
+#### 四级标题与列表结构
 - **四级标题后强制列表**：所有的四级标题 (`#### Title`) 下方，**必须直接跟随列表**（`-` 或 `1.`）。
 - **严禁段落**：四级标题下**严禁**出现非列表的普通段落文本。如果原文是段落，必须拆解为分点列表。
   - **例外**：当四级标题下只有1项内容时，可以用段落形式，详见下方"单项内容处理"规则。
@@ -113,7 +125,21 @@
     ```
 - **逻辑分组**：相关性强的内容必须归入同一标题下，禁止按产品参数或属性机械拆分成多个标题。
 - **四级标题内聚性（重要）**：每个列表项必须与所属四级标题的主题直接相关，不相关的内容必须移至合适的标题下
-- **内容归属准确**：每个列表项必须与其所属四级标题的主题直接相关，不相关的内容必须移至合适的标题下或删除。
+- **内容归属准确（重要）**：每个列表项必须与其所属四级标题的主题**直接相关**。不相关的内容必须处理：
+  - **处理方式一（合并）**：如果内容可以补充说明同一标题下的其他列表项，应**合并到相关列表项中**
+  - **处理方式二（移动）**：如果内容与其他列表项也无关，应**移至更合适的四级标题下**
+  - **处理方式三（删除）**：如果内容与全文主题都不相关，应**删除**
+  - **判断标准**：问自己"这个小标题是否是四级标题的子集/具体实例？"
+  - **常见错误类型**：
+    - **维度不匹配**：四级标题是"声音特征"，列表项却是"活动场所" → 应移走或合并
+    - **抽象层次不匹配**：四级标题是具体的，列表项却是抽象的 → 应具体化或移走
+    - **内容类别错误**：营养成分出现在"特征与品种"下 → 应移到"营养概况"
+  - **示例1（合并）**：
+    - ❌ 错误：`#### Sonic Characteristics` 下同时有 `**Atmosphere**` 和 `**Event Focus**`（Event Focus 不是声音特征）
+    - ✅ 正确：将 Event Focus 的内容合并到 Atmosphere 中，如 `**Atmosphere**: Produces a powerful, high-energy sound designed for large-scale dance events.`
+  - **示例2（移动）**：
+    - ❌ 错误：`#### 特征与品种` 下出现 `**胶原蛋白含量**`
+    - ✅ 正确：将"胶原蛋白含量"移至 `#### 营养概况` 下
 - **标题层级对应**：列表项的加粗小标题必须是四级标题的具体实例或子类。例如四级标题是 `Notable Village Examples`，列表小标题应为 `Historic Villages`、`Alpine Villages` 等（村庄类型），而非 `Historic Preservation`、`Alpine Landscape`（抽象特征）。
 - **四级标题与首段对应（铁律）**：
   - 四级标题必须围绕首段核心答案展开，首段提到的要点正文必须有对应标题
@@ -127,11 +153,28 @@
 - **列表小标题平行原则**：同一四级标题下的所有列表小标题必须属于同一类别/维度，保持逻辑平行。
   - ❌ 错误：`#### Features` 下混杂 `**Color**`、`**How to Use**`、`**Price**`（属性、操作、价格不平行）
   - ✅ 正确：`#### Features` 下为 `**Color**`、`**Size**`、`**Material**`（都是产品属性）
+- **列表项排序逻辑（重要）**：同一四级标题下的列表项必须按**逻辑顺序**排列，不要随意交叉。
+  - **通用排序原则**（按优先级选用）：
+    1. **相似性分组**：同类内容放在一起（如：美妆产品放一起，生活用品放一起）
+    2. **核心→边缘**：与四级标题主题最相关的内容放前面，关联较弱的放后面
+    3. **重要→次要**：用户最关心的信息放前面
+    4. **时间/流程顺序**：如果内容有先后关系，按时间或流程排列
+  - **判断方法**：问自己"用户读这些条目时，期望的自然阅读顺序是什么？"
+  - **示例**：
+    - ❌ 错误：Cosmetics → Skincare → Lifestyle Items → Beauty Tools（Beauty Tools 被 Lifestyle 隔开）
+    - ✅ 正确：Cosmetics → Skincare → Beauty Tools → Lifestyle Items（美妆放一起，非美妆放最后）
 - **列表小标题必须具体（重要）**：列表小标题必须使用具体的分类名称，禁止使用抽象概念。
-  - 抽象概念（禁止）：Nature、Entertainment、Culture、General、Other、Range、Misc 等
-  - 具体分类（正确）：Natural Sites、Theme Parks、Museums、Beaches、Landmarks、Cleansers 等
-  - ❌ 错误：`**Beaches**`、`**Entertainment**`、`**Nature**`（混用具体和抽象）
-  - ✅ 正确：`**Beaches**`、`**Landmarks**`、`**Theme Parks**`（都是具体分类）
+  - **判断标准**（抽象 vs 具体）：
+    - **抽象词特征**：适用于几乎任何主题、无法在脑中形成具体画面、是上位概念
+    - **具体词特征**：只适用于特定主题、能在脑中形成具体画面、是下位概念
+  - **快速测试**：问自己"换到其他10个不同主题上，这个词还能用吗？"
+    - 能 → 太抽象，需改
+    - 不能 → 足够具体，可保留
+  - **常见抽象词**（禁止）：Nature、Entertainment、Culture、General、Other、Range、Misc、Experience、Aspects 等
+  - **对应具体词**：Natural Sites、Theme Parks、Museums、Beaches、Landmarks、Cleansers 等
+  - **示例**：
+    - ❌ 错误：`**Beaches**`、`**Entertainment**`、`**Nature**`（Entertainment 和 Nature 太抽象）
+    - ✅ 正确：`**Beaches**`、`**Landmarks**`、`**Theme Parks**`（都是具体可触达的类别）
 - **四级标题禁止使用通用词（重要）**：四级标题禁止使用以下类型的通用词：
   - **禁止词汇清单**：Concept、Atmosphere、Offerings、Features、Information、Overview、Details、Aspects、Elements、Factors、Positioning、Background 等
   - **禁止搭配模式**：`X & Y` 形式的并列抽象词（如 `Concept & Atmosphere`、`Services & Locations`）
@@ -145,6 +188,12 @@
   - ❌ `**Visual Design**` → ✅ `**Pink Interior**`（提取实际设计特点）
   - ❌ `**Market Positioning**` → ✅ `**Similar to Olive Young**`（转为具体对比）
   - ❌ `**Beauty & Cosmetics**` → ✅ `**K-Beauty Brands**` 或 `**Japanese Cosmetics**`（具体到品类来源）
+- **小标题命名准确性（重要）**：列表小标题的命名必须**准确反映内容**，不能用模糊或宽泛的词汇代替精确描述。
+  - **规则**：如果内容是关于A的，小标题就应该叫A，不能叫包含A的更宽泛的概念B。
+  - ❌ 错误：内容是关于"实习机会"的，小标题却叫 `**Practical Experience**`（太宽泛）
+  - ✅ 正确：内容是关于"实习机会"的，小标题应叫 `**Internship**` 或 `**Internship Opportunities**`
+  - ❌ 错误：内容是关于"薪资水平"的，小标题却叫 `**Career Returns**`
+  - ✅ 正确：小标题应叫 `**Salary Potential**` 或 `**Starting Salary**`
 - **四级标题精简原则**：四级标题应按用户决策逻辑组织，围绕用户核心关注点划分，而非罗列产品规格。相关性强的信息必须合并。
 - **层级限制**：分点层级不宜过多，逻辑需前后对应。
 - **禁止重复与冗余**：
@@ -188,7 +237,7 @@
     ```
   - 注意：四级标题下的列表项之间**不需要**空两行，只有大板块之间需要
 
-#### 双星号（粗体）使用铁律
+#### 小标题格式规范（粗体与大小写）
 - **小标题必须加粗**：列表开头的 **Title/Key** 必须加粗。
 - **小标题大小写规则**：列表小标题遵循 Title Case，每个单词首字母大写（介词、冠词除外）。
   - ❌ 错误：`- **vs. OLED**: ...`、`- **how to use**: ...`
@@ -196,11 +245,19 @@
 - **四级标题大小写规则**：四级标题（`#### Title`）同样遵循 Title Case，每个单词首字母大写（介词、冠词除外）。
   - ❌ 错误：`#### who should use`、`#### key features`
   - ✅ 正确：`#### Who Should Use`、`#### Key Features`
+- **括号内容也要 Title Case**：四级标题中的括号内容同样遵循 Title Case。
+  - ❌ 错误：`#### For Car Owners (hosts)`
+  - ✅ 正确：`#### For Car Owners (Hosts)`
+- **小标题必须与内容匹配**：如果内容实际上不包含某个概念，小标题就不应该提到。
+  - **示例**：如果内容只有"建议/提示"而没有"缺点"，就不应该叫 "Cons and Tips"
+  - ❌ 错误：`**Cons and Tips**`（但内容没有 Cons）
+  - ✅ 正确：`**Tips**`（准确反映内容）
+  - **对称性调整**：如果因此修改了一个小标题，相关的对应小标题也应一起调整（如 Pros → Advantages）
 - **正文内容禁止加粗**：除列表小标题外，正文内容一律不能使用双星号加粗，包括人名、地名、作品名等关键实体。
   - ❌ 错误：`- **Artist**: **Jean Dunand** was a master of **lacquerware**.`
   - ✅ 正确：`- **Artist**: Jean Dunand was a master of lacquerware.`
 
-### 2.2 列表规范
+### 2.3 列表规范
 
 #### 无序列表 vs 有序列表
 - **无序列表**：使用 `-` 开头，适用于并列信息、特征罗列、分类说明等无先后顺序的内容。
@@ -221,6 +278,9 @@
     2. **Cooking**: Heat oil and scramble the eggs.
     3. **Finishing**: Add tomatoes and stir-fry.
     ```
+- **烹饪/菜谱类内容强制有序**：当Notes中包含菜谱或烹饪步骤时，生成的回答中**必须至少有一组有序列表**来展示操作步骤。
+  - ❌ 错误：烹饪方法全部用无序列表 `- **清蒸**: ... - **煎炸**: ...`（这是并列的烹饪方式，可以无序）
+  - ✅ 正确：每种烹饪方式内部的步骤用有序列表，或有一个"经典做法"用有序列表展示完整步骤
 - **并列内容强制列表**：正文中3个及以上的并列内容须改为列表，不能用逗号或顿号连接成一句话。
 
 #### 二级列表使用场景
@@ -278,7 +338,7 @@
     ```
   - **判断方法**：数一数四级标题下有几个独立的信息点。如果只有1个，就用段落；如果有2个及以上，才用列表
 
-### 2.3 引用规范 (Crucial - AI修改时必须遵守)
+### 2.4 引用规范 (Crucial - AI修改时必须遵守)
 
 > **重要提醒**：AI在修改内容时，**绝对禁止删除任何 `[Note X](#)` 引用标记**。如果原文有引用，修改后也必须保留。
 
@@ -326,13 +386,13 @@
     - **Base Note**: Musk
     ```
 
-### 2.4 标题与冒号规范
+### 2.5 标题与冒号规范
 - **四级标题后冒号**：标题后跟随描述性内容时需加冒号；标题仅作为标题、下方跟列表时不加冒号。
 - **一级标题冒号规则**：一级标题后面只有二级标题（无正文）时不加冒号；一级标题后跟正文内容时加冒号。
 - **禁止空一级标题**：一级标题不能单独存在（无后续内容），必须后跟冒号+正文内容，或换行使用二级标题展开。
 - **短答案后禁止直接接标题**：短答案后必须跟一段解释文字，不能直接使用四级标题。
 
-### 2.5 标点符号规范
+### 2.6 标点符号规范
 
 #### 句号位置规则（按优先级判断）
 1. **首段 `***` 高亮**：句号在 `***` **外面**
@@ -487,25 +547,6 @@
 1.  **意图不明**：搜索词指意不明无法判断意图时，输出 `"No relevant information was found for XXX."`
 2.  **无相关内容**：搜索词意图明确但参考笔记无相关内容时，输出 `"Reference materials do not contain specific information about XXX."`
 3.  **拼写差异处理**：
-    - 如果能确认用户的正确拼写意图（如 typo），且能在参考笔记中找到印证，直接输出正确答案，无需提及错误拼写。
     - 如果无法确认正确拼写，也无法在笔记中找到印证，则视为无相关内容丢弃。
 
 以上情况均**禁止编造**，直接结束回答。
-
-## 7. 标准案例 (Case Study)
-
-**User Query:** how to make tomato scrambled eggs
-
-**Response:**
-
-Tomato scrambled eggs is ***a classic dish made by stir-frying tomatoes and eggs, known for its sweet and savory taste***.[Note 1](#)[Note 2](#)
-
-#### Ingredients
-- **Main**: Tomatoes, Eggs.[Note 3](#)
-- **Seasoning**: Salt, Sugar (optional), Green onions, Oil.[Note 4](#)
-
-#### Cooking Steps
-1. Beat the eggs in a bowl with a pinch of salt. Cut tomatoes into wedges.[Note 5](#)
-2. Heat oil in a pan, scramble the eggs until just set, then remove them from the pan.[Note 6](#)
-3. In the same pan, stir-fry tomatoes until soft and juicy. Add sugar if preferred.[Note 7](#)
-4. Return the eggs to the pan, mix well with tomatoes, and garnish with green onions before serving.[Note 8](#)
