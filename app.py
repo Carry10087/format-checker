@@ -1623,16 +1623,11 @@ with tab4:
     
     # 模型选项列表
     MODEL_OPTIONS = [
-        "gemini-3-flash-preview-nothinking-search",
-        "gemini-3-flash-preview-maxthinking-search",
-        "gemini-3-flash-preview-search",
-        "gemini-3-flash-preview-nothinking",
-        "gemini-3-flash-preview-maxthinking",
-        "gemini-3-flash-preview",
         "gemini-3-pro-preview",
         "gemini-3-pro-preview-maxthinking",
         "gemini-3-pro-preview-nothinking",
         "gemini-3-pro-preview-search",
+        "gemini-pro-latest",
         "claude-opus-4-5",
         "claude-opus-4-5-thinking",
     ]
