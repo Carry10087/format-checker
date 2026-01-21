@@ -225,6 +225,15 @@
   - ✅ 正确：内容是关于"实习机会"的，小标题应叫 `**Internship**` 或 `**Internship Opportunities**`
   - ❌ 错误：内容是关于"薪资水平"的，小标题却叫 `**Career Returns**`
   - ✅ 正确：小标题应叫 `**Salary Potential**` 或 `**Starting Salary**`
+- **避免使用平台/技术术语**：小标题应使用用户熟悉的自然语言，而非平台术语、运营术语或技术性词汇。
+  - **判断标准**：问自己"普通用户会用这个词搜索吗？"
+  - **常见平台/技术术语**（禁止）：Content Themes、Engagement Metrics、User Demographics、Brand Positioning、Target Audience、Value Proposition
+  - **对应自然语言**：Creative Interests、Popularity、Audience、Market Position、Who It's For、Key Benefits
+  - **示例**：
+    - ❌ 错误：`**Content Themes**: Focuses on fashion, beauty, and poetry.`
+    - ✅ 正确：`**Creative Interests**: Focuses on fashion, beauty, and poetry.`
+    - ❌ 错误：`**Engagement Metrics**: Has 1M followers.`
+    - ✅ 正确：`**Popularity**: Has 1M followers.`
 - **四级标题精简原则**：四级标题应按用户决策逻辑组织，围绕用户核心关注点划分，而非罗列产品规格。相关性强的信息必须合并。
 - **层级限制**：分点层级不宜过多，逻辑需前后对应。
 - **禁止重复与冗余**：
@@ -262,6 +271,14 @@
       - ❌ 错误：分开写 `**Demographics**: 9 members` 和 `**Member List**: K, FUMA...`
       - ✅ 正确：合并为 `**Members**: 9 members including K, FUMA...`
   - **小标题合并原则**：概念相近或属于同一维度的小标题必须合并，避免拆分过细
+    - **同一主题不同方面合并**：当两个小标题描述的是同一主题的不同方面时，应合并为一个小标题。
+      - **判断标准**：问自己"这两个小标题能否用一个更高层次的概念统一？"
+      - ❌ 错误：分开写 `**Transportation**: airport and railway...` 和 `**Getting Around**: self-driving recommended...`
+      - ✅ 正确：合并为 `**Transportation**: Served by Ningbo Lishe International Airport and railway stations; self-driving or hiring a car is recommended for distant attractions.`
+      - **常见可合并的组合**：
+        - Transportation + Getting Around → `**Transportation and Getting Around**` 或 `**Transportation**`
+        - Features + Specifications → `**Features and Specifications**`
+        - Pros + Advantages → 选一个即可
     - ❌ 错误：分开写 `**Texture Types**`、`**Visuals and Feel**`、`**Issues**`、`**Service**`
     - ✅ 正确：合并为 `**Texture and Appearance**`、`**Quality and Service**`
 - **大段落间距规则**：主要内容板块之间必须空**两行**（即有一个空白行分隔）。主要内容板块包括：

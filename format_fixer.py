@@ -62,6 +62,49 @@ def fix_note_format(text: str) -> str:
     # 排除 )[Note 的情况（这是连续引用）
     text = re.sub(r'([^\s\)])\[Note\s', r'\1 [Note ', text)
     
+    # 步骤7：修复段中note - 将段落中间的引用移到段落末尾
+    # 匹配：引用后面还有内容，然后以句号结尾
+    # 例如：The product [Note 1](#) is good. → The product is good [Note 1](#).
+    def move_mid_note_to_end(match):
+        before_note = match.group(1)  # 引用前的内容
+        notes = match.group(2)  # 引用（可能有多个）
+        after_note = match.group(3)  # 引用后、句号前的内容
+        # 将引用移到句号前，确保空格正确
+        return before_note.rstrip() + ' ' + after_note.strip() + ' ' + notes + '.'
+    # 匹配模式：内容 + 引用 + 更多内容 + 句号
+    text = re.sub(
+        r'([^.]+?)\s*(\[Note\s*\d+\]\(#\)(?:\[Note\s*\d+\]\(#\))*)\s+([A-Za-z][^.]*)\.',
+        move_mid_note_to_end,
+        text
+    )
+    
+    # 步骤8：去除重复的Note引用
+    # 匹配连续的相同引用，只保留一个
+    # 例如：[Note 1](#)[Note 1](#) → [Note 1](#)
+    def remove_duplicate_notes(line):
+        # 找到所有 [Note X](#) 引用
+        notes = re.findall(r'\[Note\s*(\d+)\]\(#\)', line)
+        if not notes:
+            return line
+        # 按顺序去重（保持第一次出现的顺序）
+        seen = set()
+        unique_notes = []
+        for n in notes:
+            if n not in seen:
+                seen.add(n)
+                unique_notes.append(n)
+        # 如果没有重复，直接返回
+        if len(notes) == len(unique_notes):
+            return line
+        # 重建引用部分
+        new_notes = ''.join(f'[Note {n}](#)' for n in unique_notes)
+        # 替换原有的所有连续引用
+        line = re.sub(r'(\[Note\s*\d+\]\(#\))+', new_notes, line, count=1)
+        return line
+    
+    lines = text.split('\n')
+    text = '\n'.join(remove_duplicate_notes(line) for line in lines)
+    
     return text
 
 
@@ -82,6 +125,43 @@ def fix_period_position(text: str) -> str:
     # 修复：内容.*** → 内容***. 的情况（英文句号，非引号结尾）
     # 注意：不处理 "text."*** 这种情况，因为引号内句号是正确的
     text = re.sub(r'([^""])\.(\*\*\*)', r'\1\2.', text)
+    return text
+
+
+def fix_title_case_in_parentheses(text: str) -> str:
+    """修复小标题和四级标题中括号内容的Title Case
+    例如：**Old Bund (lao Waitan)**: → **Old Bund (Lao Waitan)**:
+    """
+    # 定义介词和冠词（这些词不需要首字母大写，除非是括号开头）
+    minor_words = {'a', 'an', 'the', 'and', 'but', 'or', 'for', 'nor', 'on', 'at', 'to', 'by', 'of', 'in', 'with', 'as'}
+    
+    def title_case_word(word, is_first):
+        """将单词转为Title Case，考虑介词规则"""
+        if not word:
+            return word
+        # 如果是第一个词，或者不是介词/冠词，则首字母大写
+        if is_first or word.lower() not in minor_words:
+            return word[0].upper() + word[1:] if len(word) > 1 else word.upper()
+        return word.lower()
+    
+    def fix_parentheses_content(match):
+        """修复括号内容"""
+        prefix = match.group(1)  # 括号前的内容
+        content = match.group(2)  # 括号内的内容
+        suffix = match.group(3)  # 括号后的内容（如 **: 或 **:）
+        
+        # 将括号内容按空格分割，逐词处理Title Case
+        words = content.split()
+        fixed_words = [title_case_word(w, i == 0) for i, w in enumerate(words)]
+        fixed_content = ' '.join(fixed_words)
+        
+        return f'{prefix}({fixed_content}){suffix}'
+    
+    # 匹配小标题中的括号：**Title (content)**: 或 **Title (content)**:
+    # 以及四级标题中的括号：#### Title (content)
+    text = re.sub(r'(\*\*[^*]+)\(([^)]+)\)(\*\*:?)', fix_parentheses_content, text)
+    text = re.sub(r'(#### [^(\n]+)\(([^)]+)\)', fix_parentheses_content, text)
+    
     return text
 
 
@@ -509,6 +589,7 @@ def fix_all_format(text: str) -> str:
     text = fix_hyphen_spaces(text)
     text = fix_single_asterisk_symbol(text)
     text = fix_title_case(text)
+    text = fix_title_case_in_parentheses(text)  # 修复括号内容的Title Case
     text = fix_backticks_and_asterisks(text)
     text = fix_semicolon_sentences(text)
     text = fix_quote_punctuation(text)
@@ -547,6 +628,16 @@ def analyze_format_issues(text: str) -> list:
         # 排除连续引用的情况 )[Note
         if re.search(r'[^\s\)]\[Note\s', line):
             issues.append(f"第{i}行：引用前应有空格")
+            break
+    
+    # 检查段中note（引用应在段落末尾，不应在段落中间）
+    for i, line in enumerate(lines, 1):
+        # 匹配：引用后面还有内容（不是句号、不是另一个引用、不是行尾）
+        # 正确格式：内容 [Note X](#). 或 内容 [Note X](#)[Note Y](#).
+        # 错误格式：内容 [Note X](#) 还有更多内容...
+        match = re.search(r'\[Note\s*\d+\]\(#\)(?!\.)(?!\[Note)(?!$)\s*[A-Za-z]', line)
+        if match:
+            issues.append(f"第{i}行：引用应在段落末尾，不应在段落中间")
             break
     
     # 检查 *** 内多余空格
@@ -616,6 +707,24 @@ def analyze_format_issues(text: str) -> list:
             for w in words:
                 if w and w[0].islower() and w.lower() not in lowercase_exceptions:
                     issues.append(f"第{i}行：四级标题未使用 Title Case「{title}」")
+                    break
+            break
+    
+    # 检查小标题和四级标题中括号内容的 Title Case
+    for i, line in enumerate(lines, 1):
+        # 匹配小标题中的括号：**Title (content)**
+        paren_match = re.search(r'\*\*[^*]+\(([^)]+)\)\*\*', line)
+        if not paren_match:
+            # 匹配四级标题中的括号：#### Title (content)
+            paren_match = re.search(r'^####\s+[^(]+\(([^)]+)\)', line)
+        if paren_match:
+            content = paren_match.group(1)
+            words = content.split()
+            lowercase_exceptions = {'a', 'an', 'the', 'and', 'or', 'of', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'as'}
+            for idx, w in enumerate(words):
+                # 第一个词或非介词词必须首字母大写
+                if w and w[0].islower() and (idx == 0 or w.lower() not in lowercase_exceptions):
+                    issues.append(f"第{i}行：括号内容未使用 Title Case「({content})」→ 应为「({content.title()})」")
                     break
             break
     
