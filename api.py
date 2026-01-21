@@ -11,11 +11,11 @@ DEFAULT_API_URL = "https://nvewvip.preview.tencent-zeabur.cn/v1/chat/completions
 DEFAULT_API_KEY = "sk-mw0pY9lLORPwuDBab3CYIlzgnJLZO4zgj0kYn7wJ8NVOZjpi"
 
 # 默认模型配置
-DEFAULT_MODEL = "gemini-3-pro-preview-search"  # 通用默认
-DEFAULT_MODEL_EDIT = "gemini-3-pro-preview-search"  # 深度修改
-DEFAULT_MODEL_TRANSLATE = "gemini-3-flash-preview-nothinking"  # 翻译
-DEFAULT_MODEL_QC = "gemini-3-pro-preview-search"  # AI质检
-DEFAULT_MODEL_CHAT = "gemini-3-pro-preview-search"  # AI对话
+DEFAULT_MODEL = "claude-opus-4-5-thinking"  # 通用默认
+DEFAULT_MODEL_EDIT = "claude-opus-4-5-thinking"  # 深度修改
+DEFAULT_MODEL_TRANSLATE = "claude-opus-4-5"  # 翻译
+DEFAULT_MODEL_QC = "claude-opus-4-5-thinking"  # AI质检
+DEFAULT_MODEL_CHAT = "claude-opus-4-5-thinking"  # AI对话
 
 
 def call_single_step(prompt, api_url, api_key, model, image_base64=None, max_retries=3):
