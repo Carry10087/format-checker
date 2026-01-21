@@ -59,8 +59,10 @@
     - **涵盖次要义项**：如果正文包含 `#### Other Meanings`，首段末尾**必须**添加概括性短语（如 `...among other meanings` 或 `...and other entities`），以确保首段涵盖全文。
     - ❌ 错误：`Caya refers to ***a villa community and a medical device***.`（正文却有 Other Meanings）
     - ✅ 正确：`Caya refers to ***a villa community and a medical device, among other meanings***.`
-    - ❌ 错误：`"mac221" refers to ***an academic course code used for subjects such as communication or application development and a lip gloss shade from the brand MAC***.`（义项描述太多）
     - ✅ 正确：`"mac221" refers to ***an academic course code and a lip gloss shade from the brand MAC***.`
+    - **统一广义定义（推荐）**：如果各义项共享同一个核心概念（只是应用场景不同），首段应使用**统一的广义定义**，而不要逐一罗列，以保持精简。
+      - ❌ 错误（罗列过长）：`Alias is ***an alternative name for a person, a shortcut for a long command in computing, and a label for data types***.`
+      - ✅ 正确（广义定义）：`Alias refers to ***an alternative name, label, or computing shortcut used to identify an entity or command***.`
     - 禁止使用以下废话开头：
       - "a term with multiple meanings, including"
       - "several notable individuals/entities across various fields, including"
@@ -109,6 +111,20 @@
 ### 2.2 正文结构规范
 
 #### 四级标题与列表结构
+- **单一主题可省略四级标题（重要）**：当正文只有一个主题板块时，**可以省略四级标题**，首段后直接用列表展开。
+  - **判断标准**：问自己"正文内容是否只围绕一个主题？是否只需要一个四级标题？"
+    - 是 → 省略四级标题，直接用列表
+  - **适用场景**：内容单一、无需多个板块区分的简单主题（如配对、缩写解释、单一概念等）
+
+#### 内容聚焦原则（概念 vs 实例）
+- **概念类词条聚焦机制（通用规则）**：当解释一个通用概念、机制或术语时，正文应聚焦于**定义、作用机制、使用场景**，而非单纯罗列**实例列表**。
+  - **判断标准**：问自己"用户搜这个词，是想知道'它是什么/怎么运作'，还是想看'它包含哪些具体例子'？"
+    - 搜 "List of aliases" → 罗列实例
+    - 搜 "Alias" (概念) → 解释机制和用法
+  - **示例（Alias）**：
+    - ❌ 错误（罗列实例）：在 `#### Naming` 下机械罗列："Xi'an's alias is Chang'an", "Advil is alias for Ibuprofen".（变成了杂乱的实例展示）
+    - ✅ 正确（解释用法）：在 `#### Naming and Identification` 下解释："Used as alternative names for individual privacy (pseudonyms) or preserving historical naming conventions for cities."（解释了Alias在命名中起什么作用）
+  - **修正建议**：只有当实例能很好地**辅助解释概念**时才使用，且要作为例子（Example），不能作为主要内容（Main Content）。
 - **四级标题后强制列表**：所有的四级标题 (`#### Title`) 下方，**必须直接跟随列表**（`-` 或 `1.`）。
 - **严禁段落**：四级标题下**严禁**出现非列表的普通段落文本。如果原文是段落，必须拆解为分点列表。
   - **例外**：当四级标题下只有1项内容时，可以用段落形式，详见下方"单项内容处理"规则。
@@ -213,11 +229,29 @@
 - **层级限制**：分点层级不宜过多，逻辑需前后对应。
 - **禁止重复与冗余**：
   - 同一回答中禁止出现重复信息
+  - **正文禁止重复首段信息（重要）**：首段已经给出的定义/信息，正文**不应再重复**。
+    - **判断标准**：问自己"这个信息在首段已经说过了吗？"
+    - ❌ 错误：首段写"Nicojoo is the pairing of Nicholas and EJ"，正文又写 `**Members**: Nicholas and EJ`
+    - ✅ 正确：删除与首段重复的列表项，正文应**展开新信息**，而非复述旧信息
+    - **常见重复类型**：
+      - 成员组成（首段已定义） → 删除
+      - 名字来源（首段已说明） → 删除
+      - 核心定义再解释 → 删除
+  - **单薄四级标题应合并**：如果某个四级标题下只有1-2个简短列表项，且内容与另一个四级标题相关，应该合并。
+    - **判断标准**：问自己"这个四级标题的内容能否作为另一个标题的子项？"
+    - ❌ 错误：`#### Pairing Overview` 只有3项且其中2项重复首段，`#### Fan Culture` 有丰富内容
+    - ✅ 正确：将有价值的内容（如 Relationship）合并到 Fan Culture 作为小标题
+    - **示例**：
+      - 原结构：`#### Pairing Overview` → `**Relationship**: close friendship`
+      - 合并后：`#### Fan Culture` → `**Relationship Perception**: characterized as a close friendship or "bromance"`
   - **正文内禁止先概括后展开**：在正文的同一板块内，不要先用一个列表项概括罗列所有子项名称，再逐个展开详述。应直接逐项展开。
     - ❌ 错误：先写 `**Core Offerings**: includes A, B, C`，再分别展开 `**A**: ...`、`**B**: ...`
     - ✅ 正确：直接写 `**A**: ...`、`**B**: ...`，无需先概括
     - 注意：此规则仅针对正文内部，不影响首段是结论、正文是论据的总分结构
   - **信息合并原则**：可自然合并的信息应合并为一项，避免重复拆分
+    - **同一对象不同属性合并**：描述同一对象的多个属性（如名称、身份、特征）应合并为一项。
+      - ❌ 错误：分开写 `**Character Identity**: portrays "Slurp"...` 和 `**Character Name**: actual name is Isaac...`
+      - ✅ 正确：合并为 `**Character Details**: Portrays the zombie character "Slurp" (real name Isaac) in "Wednesday," depicted as Taylor's uncle and a genius artist.`
     - **叙事细节合并**：同一事件或主题的不同侧面（如起因、经过、结果、相关举动）应合并。
       - ❌ 错误：分开写 `**Resilience**`（祖母去世）和 `**Tribute**`（看天纪念祖母）
       - ✅ 正确：合并为 `**Grandmother's Influence**: Experienced the loss... often looks up at the sky as a tribute...`
