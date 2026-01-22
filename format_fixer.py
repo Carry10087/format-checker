@@ -441,21 +441,22 @@ def fix_colon_after_no_content(text: str) -> str:
 
 
 def fix_list_item_colon(text: str) -> str:
-    """修复一级列表项缺少冒号的情况：
-    1. 后面有二级列表但缺少冒号
-    2. 小标题后直接跟内容但缺少冒号
+    """修复一级列表项冒号的问题：
+    1. 后面有二级列表时，应删除冒号（因为二级列表已经是展开形式）
+    2. 小标题后直接跟内容但缺少冒号时，应添加冒号
     """
     lines = text.split('\n')
     result = []
     
     for i, line in enumerate(lines):
-        # 情况1：一级列表项后跟二级列表（以 - **xxx** 结尾，没有冒号）
-        match1 = re.match(r'^(-\s+\*\*[^*]+\*\*)(\s*)$', line)
+        # 情况1：一级列表项后跟二级列表（以 - **xxx**: 结尾，有冒号）
+        # 这种情况应该删除冒号
+        match1 = re.match(r'^(-\s+\*\*[^*]+\*\*):\s*$', line)
         if match1:
             # 检查下一行是否是二级列表（有前导空格 + -）
             if i + 1 < len(lines) and re.match(r'^\s+-', lines[i + 1]):
-                # 后面跟着二级列表，添加冒号
-                line = match1.group(1) + ':'
+                # 后面跟着二级列表，删除冒号
+                line = match1.group(1)
         
         # 情况2：一级列表项小标题后直接跟内容但缺少冒号
         # 错误格式：- **Sizing Advice** Some users report...
@@ -691,6 +692,16 @@ def analyze_format_issues(text: str) -> list:
             issues.append(f"第{i}行：Taiwan 需加上 China")
             break
     
+    # 检查四级标题与列表之间的空行（不应有空行）
+    for i, line in enumerate(lines, 1):
+        if line.strip().startswith('####'):
+            # 检查下一行是否为空行
+            if i < len(lines) and lines[i].strip() == '':
+                # 检查空行后是否是列表
+                if i + 1 < len(lines) and (lines[i + 1].strip().startswith('- ') or lines[i + 1].strip().startswith('1.')):
+                    issues.append(f"第{i}行：四级标题与列表之间不应有空行")
+                    break
+    
     # 检查单个 ※ 符号
     for i, line in enumerate(lines, 1):
         if '※' in line:
@@ -765,6 +776,15 @@ def analyze_format_issues(text: str) -> list:
             context = line[max(0, match.start()-10):match.end()+10]
             issues.append(f"第{i}行：冒号前有多余空格，上下文：...{context}...")
             break
+    
+    # 检查一级列表后跟二级列表时的冒号（应删除）
+    for i, line in enumerate(lines, 1):
+        match = re.match(r'^-\s+\*\*[^*]+\*\*:\s*$', line)
+        if match:
+            # 检查下一行是否是二级列表
+            if i < len(lines) and re.match(r'^\s+-', lines[i]):
+                issues.append(f"第{i}行：一级列表后跟二级列表时，冒号应删除")
+                break
     
     # 检查冒号后小写（包括列表小标题后的内容）
     for i, line in enumerate(lines, 1):

@@ -387,7 +387,19 @@
         - Toners and Essences.
         - Moisturizers and Serums.
     ```
-- **二级列表格式规则**：一级标题后只能有冒号，不能有其他描述内容，所有描述放在二级列表中。
+- **二级列表格式规则（重要）**：当一级列表后面直接跟二级列表时，一级列表的小标题后**不应有冒号**。
+  - **判断标准**：一级列表项后面如果是二级列表（缩进的子列表），则一级小标题后不加冒号；如果是同行的描述内容，则加冒号。
+  - ❌ 错误：
+    ```
+    - **Programming References**:
+        - **C++**: A reference acts as an alias...
+    ```
+  - ✅ 正确：
+    ```
+    - **Programming References**
+        - **C++**: A reference acts as an alias...
+    ```
+  - ✅ 对比（后面跟内容时需要冒号）：`- **Programming References**: In programming, aliases are used...`
 - **二级列表缩进**：二级列表前必须缩进4个空格。
 
 #### 列表层级与格式
