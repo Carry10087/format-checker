@@ -320,6 +320,13 @@ def fix_title_case(text: str) -> str:
                        'into', 'through', 'during', 'before', 'after', 'above', 'below',
                        'between', 'under', 'over'}
     
+    def capitalize_compound_word(word: str) -> str:
+        """将复合词的每一部分首字母大写，如 Well-being → Well-Being"""
+        if '-' in word:
+            parts = word.split('-')
+            return '-'.join(p.capitalize() if p else p for p in parts)
+        return word.capitalize()
+    
     def to_title_case(title: str) -> str:
         """将标题转换为 Title Case"""
         words = title.split()
@@ -327,12 +334,12 @@ def fix_title_case(text: str) -> str:
         for i, word in enumerate(words):
             # 第一个词和最后一个词总是大写
             if i == 0 or i == len(words) - 1:
-                result.append(word.capitalize())
+                result.append(capitalize_compound_word(word))
             # 介词、冠词等小写（除非是第一个词）
             elif word.lower() in lowercase_words:
                 result.append(word.lower())
             else:
-                result.append(word.capitalize())
+                result.append(capitalize_compound_word(word))
         return ' '.join(result)
     
     lines = text.split('\n')
@@ -719,6 +726,45 @@ def analyze_format_issues(text: str) -> list:
                 if w and w[0].islower() and w.lower() not in lowercase_exceptions:
                     issues.append(f"第{i}行：四级标题未使用 Title Case「{title}」")
                     break
+            break
+    
+    # 检查复合词大小写（如 Well-being 应为 Well-Being）
+    for i, line in enumerate(lines, 1):
+        # 检查四级标题中的复合词
+        h4_match = re.match(r'^####\s+(.+)$', line)
+        if h4_match:
+            title = h4_match.group(1)
+            for word in title.split():
+                if '-' in word:
+                    parts = word.split('-')
+                    for p in parts:
+                        if p and p[0].islower():
+                            correct = '-'.join(part.capitalize() for part in parts)
+                            issues.append(f"第{i}行：复合词大小写错误「{word}」→ 应为「{correct}」")
+                            break
+                    else:
+                        continue
+                    break
+            else:
+                continue
+            break
+        # 检查列表小标题中的复合词
+        list_match = re.match(r'^(\s*-\s+\*\*)([^*]+)(\*\*)', line)
+        if list_match:
+            title = list_match.group(2)
+            for word in title.split():
+                if '-' in word:
+                    parts = word.split('-')
+                    for p in parts:
+                        if p and p[0].islower():
+                            correct = '-'.join(part.capitalize() for part in parts)
+                            issues.append(f"第{i}行：复合词大小写错误「{word}」→ 应为「{correct}」")
+                            break
+                    else:
+                        continue
+                    break
+            else:
+                continue
             break
     
     # 检查小标题和四级标题中括号内容的 Title Case

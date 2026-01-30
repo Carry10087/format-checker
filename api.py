@@ -13,7 +13,7 @@ DEFAULT_API_KEY = "sk-Q2pRMOToJf8kHCKHkEXx3od7AOhNh9x71vKnGDDPz7POWZJJ"
 # 默认模型配置
 DEFAULT_MODEL = "gemini-3-pro-preview-search"  # 通用默认
 DEFAULT_MODEL_EDIT = "gemini-3-pro-preview-search"  # 深度修改
-DEFAULT_MODEL_TRANSLATE = "gemini-3-pro-preview-nothinking"  # 翻译
+DEFAULT_MODEL_TRANSLATE = "gemini-3-pro-preview"  # 翻译
 DEFAULT_MODEL_QC = "gemini-3-pro-preview-search"  # AI质检
 DEFAULT_MODEL_CHAT = "gemini-3-pro-preview-search"  # AI对话
 
