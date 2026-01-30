@@ -85,6 +85,19 @@
   - ✅ 正确：`the movie "Super Family"` / `the file ".frm"`
   - 注意：列表小标题的加粗（`- **Title**:`）不受此规则影响，必须保留
 - **首段主语引号规则**：首段的主语（用户查询的核心词）通常不加引号。只有作品名（歌名、书名、电影名、专辑名等）才加引号。人名、地名、品牌名、普通名词等不加引号。
+- **Query大小写规则**：
+  - 如果Query是首段的第一个单词，需要首字母大写
+  - 如果Query不是首段第一个单词，按Query原本的大小写书写
+  - 示例：Query为"ado"，若在句首写"Ado"，若在句中写"ado"
+- **产品型号/缩写全称规则（重要）**：
+  - **不完整型号**：Query是某种产品的型号但表述不完整时，要先写全称，再阐释
+    - ✅ 正确：`The term "i17" can refer to ***the iPhone 17, a model of smartphone from Apple...***`
+    - ❌ 错误：`i17 is ***a smartphone model...***`（未写全称）
+  - **人名缩写/昵称**：核心答案建议包括全名
+    - ✅ 正确：`Sunoo refers to ***Kim Seon-woo, a South Korean singer...***`
+    - ❌ 错误：`Sunoo is ***a South Korean singer...***`（未写全名）
+  - **地名缩写**：同理，先写全称
+    - ✅ 正确：`LA refers to ***Los Angeles, a major city in California...***`
 - **内容一致性与纯度 (Crucial)**：
   - **核心锁定**：全文必须紧紧围绕首段确定的核心定义（Core Answer）展开。
   - **杂质剔除**：如果参考素材中包含多个不同义项（如 `costo` 既指 Costco 超市，又指“成本”），**仅保留与首段定义一致的内容**。与首段定义无关的义项（即使出现在 Note 中）必须**直接丢弃**，不得出现在正文中。
@@ -172,6 +185,16 @@
     - 如果主观声称有独立价值 → 移到合适的标题下（如 `#### Potential Benefits`，需加免责声明）
     - 如果主观声称无独立价值 → 直接删除
 - **标题层级对应**：列表项的加粗小标题必须是四级标题的具体实例或子类。例如四级标题是 `Notable Village Examples`，列表小标题应为 `Historic Villages`、`Alpine Villages` 等（村庄类型），而非 `Historic Preservation`、`Alpine Landscape`（抽象特征）。
+- **上下级标题一致性（重要）**：
+  - **性质一致**：上级标题与下级标题的性质必须匹配
+    - ❌ 错误：四级标题为 `Groups`（指人群），但下方小标题是对身体状况的描述（性质不匹配）
+    - ✅ 正确：四级标题为 `Groups`，下方小标题为具体人群类型（如 `Pregnant Women`、`Children`）
+  - **逻辑归属**：下级标题必须属于上级标题的范畴
+    - ❌ 错误：四级标题不属于段落标题，也不与其他四级标题平行
+    - ✅ 正确：所有四级标题在同一逻辑层面，互相平行
+- **Query不应在标题中反复出现**：Query不需要在段落标题、一级标题、二级标题中反复出现，这是冗余信息。
+  - ❌ 错误：Query为"iPhone"，标题写成 `#### iPhone Features`、`#### iPhone Design`、`#### iPhone Price`
+  - ✅ 正确：直接写 `#### Features`、`#### Design`、`#### Price`
 - **四级标题与首段对应（铁律）**：
   - 四级标题必须围绕首段核心答案展开，首段提到的要点正文必须有对应标题
   - 首段未提及的主题不能在正文中出现新的四级标题
@@ -226,6 +249,13 @@
   - ❌ 错误：内容是关于"薪资水平"的，小标题却叫 `**Career Returns**`
   - ✅ 正确：小标题应叫 `**Salary Potential**` 或 `**Starting Salary**`
 - **避免使用平台/技术术语**：小标题应使用用户熟悉的自然语言，而非平台术语、运营术语或技术性词汇。
+- **小标题措辞规范（重要）**：
+  - **避免中式英语**：名词并不是每次都能直接修饰另一个名词，需使用正确的英语表达
+    - ❌ 错误：`Material Selection`（直译）
+    - ✅ 正确：`Choice of Materials`（符合英语习惯）
+  - **注意复数形式**：标题中的可数名词在表示类别时通常需要复数
+    - ❌ 错误：`Material`、`Feature`、`Benefit`
+    - ✅ 正确：`Materials`、`Features`、`Benefits`
   - **判断标准**：问自己"普通用户会用这个词搜索吗？"
   - **常见平台/技术术语**（禁止）：Content Themes、Engagement Metrics、User Demographics、Brand Positioning、Target Audience、Value Proposition
   - **对应自然语言**：Creative Interests、Popularity、Audience、Market Position、Who It's For、Key Benefits
@@ -235,6 +265,13 @@
     - ❌ 错误：`**Engagement Metrics**: Has 1M followers.`
     - ✅ 正确：`**Popularity**: Has 1M followers.`
 - **四级标题精简原则**：四级标题应按用户决策逻辑组织，围绕用户核心关注点划分，而非罗列产品规格。相关性强的信息必须合并。
+- **产品类内容顺序规范**：产品类文本的信息应按以下顺序呈现：
+  1. **客观信息优先**：规格、设计、功能特点等官方呈现的客观信息放在前几段
+  2. **主观信息靠后**：用户体验与评价放在末段
+  - 具体情况可酌情调整，但总体遵循「客观→主观」的顺序
+- **分类细致化原则**：当内容可以进一步细分时，应建立层级结构而非扁平罗列
+  - ❌ 错误：直接罗列6种啤酒类型作为平级小标题
+  - ✅ 正确：将啤酒分为 `#### Ale` 和 `#### Lager` 两个四级标题，再在各标题下分别列出3种子类型
 - **层级限制**：分点层级不宜过多，逻辑需前后对应。
 - **禁止重复与冗余**：
   - 同一回答中禁止出现重复信息
@@ -319,11 +356,26 @@
   - ❌ 错误：`**Cons and Tips**`（但内容没有 Cons）
   - ✅ 正确：`**Tips**`（准确反映内容）
   - **对称性调整**：如果因此修改了一个小标题，相关的对应小标题也应一起调整（如 Pros → Advantages）
-- **正文内容禁止加粗**：除列表小标题外，正文内容一律不能使用双星号加粗，包括人名、地名、作品名等关键实体。
-  - ❌ 错误：`- **Artist**: **Jean Dunand** was a master of **lacquerware**.`
-  - ✅ 正确：`- **Artist**: Jean Dunand was a master of lacquerware.`
+- **复合词大小写规则**：复合词的每一部分都要首字母大写。
+  - ❌ 错误：`Well-being`、`Self-esteem`、`Long-term`
+  - ✅ 正确：`Well-Being`、`Self-Esteem`、`Long-Term`
+- **小标题必须与内容匹配**：如果内容实际上不包含某个概念，小标题就不应该提到。
+  - **示例**：如果内容只有"建议/提示"而没有"缺点"，就不应该叫 "Cons and Tips"
+  - ❌ 错误：`**Cons and Tips**`（但内容没有 Cons）
+  - ✅ 正确：`**Tips**`（准确反映内容）
+  - **对称性调整**：如果因此修改了一个小标题，相关的对应小标题也应一起调整（如 Pros → Advantages）
 
-### 2.3 列表规范
+#### 引用规范 (Crucial - AI修改时必须遵守)
+
+> **重要提醒**：AI在修改内容时，**绝对禁止删除任何 `[Note X](#)` 引用标记**。如果原文有引用，修改后也必须保留。
+
+#### 标题与冒号规范
+- **四级标题后冒号**：标题后跟随描述性内容时需加冒号；标题仅作为标题、下方跟列表时不加冒号。
+- **一级标题冒号规则**：一级标题后面只有二级标题（无正文）时不加冒号；一级标题后跟正文内容时加冒号。
+- **禁止空一级标题**：一级标题不能单独存在（无后续内容），必须后跟冒号+正文内容，或换行使用二级标题展开。
+- **短答案后禁止直接接标题**：短答案后必须跟一段解释文字，不能直接使用四级标题。
+
+#### 标点符号规范
 
 #### 无序列表 vs 有序列表
 - **无序列表**：使用 `-` 开头，适用于并列信息、特征罗列、分类说明等无先后顺序的内容。
@@ -539,6 +591,9 @@
 
 ### 3.3 医疗、法律与金融 (YMYL)
 - **强制免责声明**：仅当内容涉及具体的健康建议、法律建议或投资建议时，才需要添加免责提示。单纯介绍流程、费用、概念等客观信息不需要免责声明。
+- **水果/食材类免责豁免**：如果Query是水果、食材等，且答案没有明确提到医疗用途（如食疗或药方），而只是简单说明营养成分与功能，不用写医疗与健康方面的免责声明。
+  - ❌ 不需要免责：介绍草莓的营养成分（维生素C、膳食纤维等）
+  - ✅ 需要免责：介绍草莓在某种疾病食疗中的用法
 - **免责声明精准匹配**：只写实际涉及的领域，不要套用完整模板。
   - 仅涉及健康：`The above content is for reference only. If you have any health questions, please consult a professional.`
   - 仅涉及法律：`The above content is for reference only. If you have any legal questions, please consult a professional.`
@@ -642,14 +697,16 @@
    - **示例**：`Can meme` → 丢弃（用户想看meme图片）；`What is a meme` → 保留（用户想了解概念）
 3.  **纯营销内容**：除官网购买渠道外，丢弃纯广告语、夸大宣传及无实质信息的推销。→ 直接丢弃
 4.  **高度时效性**：如实时股价、汇率、实时天气等。→ 直接丢弃
+5.  **假冒伪劣品牌**：如果Query对应的内容是售卖假冒伪劣产品的品牌。→ 作风控丢弃
 
 ## 6. 无答案终止协议
 
 当无法正常回答时，按以下规则处理：
 
 1.  **意图不明**：搜索词指意不明无法判断意图时，输出 `"No relevant information was found for XXX."`
-2.  **无相关内容**：搜索词意图明确但参考笔记无相关内容时，输出 `"Reference materials do not contain specific information about XXX."`
+2.  **无相关内容**：搜索词意图明确但参考笔记无相关内容时，输出 `"Reference materials do not contain specific information about XXX."` 或 `"Relevant information cannot be found."`
 3.  **拼写差异处理**：
     - 如果无法确认正确拼写，也无法在笔记中找到印证，则视为无相关内容丢弃。
+4.  **信息极少时的处理**：如果内容很少，可作列表标题处理，不写段落标题，直接用列表展开。
 
 以上情况均**禁止编造**，直接结束回答。
