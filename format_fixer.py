@@ -62,8 +62,8 @@ def fix_note_format(text: str) -> str:
     # 排除 )[Note 的情况（这是连续引用）
     text = re.sub(r'([^\s\)])\[Note\s', r'\1 [Note ', text)
     
-    # 步骤7：修复段中note - 将段落中间的引用移到段落末尾
-    # 匹配：引用后面还有内容，然后以句号结尾
+    # 步骤7：修复段中note - 将段落中所有引用移到段落末尾
+    # 情况1：引用后面还有内容（无句号）
     # 例如：The product [Note 1](#) is good. → The product is good [Note 1](#).
     def move_mid_note_to_end(match):
         before_note = match.group(1)  # 引用前的内容
@@ -77,6 +77,35 @@ def fix_note_format(text: str) -> str:
         move_mid_note_to_end,
         text
     )
+    
+    # 情况2：多句段落中间的引用（引用后有句号，句号后还有新句子）
+    # 例如：content [Note 1](#). Some more [Note 2](#). → content. Some more [Note 1](#)[Note 2](#).
+    def merge_notes_to_line_end(line):
+        # 检查是否有段中引用（引用后有句号，句号后还有新内容）
+        if not re.search(r'\[Note\s*\d+\]\(#\)\.\s+[A-Z]', line):
+            return line
+        # 收集所有引用
+        all_notes = re.findall(r'\[Note\s*\d+\]\(#\)', line)
+        if not all_notes:
+            return line
+        # 移除所有引用（保留句号）
+        clean_line = re.sub(r'\s*\[Note\s*\d+\]\(#\)(?:\[Note\s*\d+\]\(#\))*', '', line)
+        # 去除末尾句号（如果有）
+        clean_line = clean_line.rstrip()
+        if clean_line.endswith('.'):
+            clean_line = clean_line[:-1]
+        # 在末尾添加所有引用（去重并按数字排序）
+        # 提取数字并排序
+        note_numbers = set()
+        for n in all_notes:
+            num_match = re.search(r'\d+', n)
+            if num_match:
+                note_numbers.add(int(num_match.group()))
+        sorted_notes = ['[Note {}](#)'.format(n) for n in sorted(note_numbers)]
+        return clean_line + ' ' + ''.join(sorted_notes) + '.'
+    
+    lines = text.split('\n')
+    text = '\n'.join(merge_notes_to_line_end(line) for line in lines)
     
     # 步骤8：去除重复的Note引用
     # 匹配连续的相同引用，只保留一个
@@ -640,11 +669,13 @@ def analyze_format_issues(text: str) -> list:
     
     # 检查段中note（引用应在段落末尾，不应在段落中间）
     for i, line in enumerate(lines, 1):
-        # 匹配：引用后面还有内容（不是句号、不是另一个引用、不是行尾）
-        # 正确格式：内容 [Note X](#). 或 内容 [Note X](#)[Note Y](#).
+        # 情况1：引用后面直接跟字母（没有句号）
         # 错误格式：内容 [Note X](#) 还有更多内容...
-        match = re.search(r'\[Note\s*\d+\]\(#\)(?!\.)(?!\[Note)(?!$)\s*[A-Za-z]', line)
-        if match:
+        match1 = re.search(r'\[Note\s*\d+\]\(#\)(?!\.)(?!\[Note)(?!$)\s*[A-Za-z]', line)
+        # 情况2：引用后有句号，句号后还有新内容（多句段落中间的引用）
+        # 错误格式：内容 [Note X](#). Some more content...
+        match2 = re.search(r'\[Note\s*\d+\]\(#\)\.\s+[A-Z]', line)
+        if match1 or match2:
             issues.append(f"第{i}行：引用应在段落末尾，不应在段落中间")
             break
     
