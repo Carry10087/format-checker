@@ -1002,29 +1002,18 @@ def analyze_format_issues(text: str) -> list:
                 issues.append(f"第{i}行：列表项缺少加粗小标题「{content}...」")
                 break
     
-    # 检查一级列表项后有二级列表时，一级列表项必须以冒号结尾
-    for i, line in enumerate(lines, 1):
-        # 匹配一级列表项（以 - **xxx** 开头，没有前导空格）
-        if re.match(r'^-\s+\*\*[^*]+\*\*', line):
-            # 检查下一行是否是二级列表（有前导空格 + -）
-            next_line_idx = i  # i 是 1-indexed，所以 i 就是下一行的 0-indexed
-            if next_line_idx < len(lines) and re.match(r'^\s+-', lines[next_line_idx]):
-                # 后面跟着二级列表，检查当前行是否以冒号结尾（在 ** 之后）
-                # 正确格式：- **Key Albums**:
-                # 错误格式：- **Key Albums**
-                if not re.search(r'\*\*:\s*$', line.rstrip()):
-                    title_match = re.search(r'\*\*([^*]+)\*\*', line)
-                    title = title_match.group(1) if title_match else "未知"
-                    issues.append(f"第{i}行：一级列表项「{title}」后有二级列表，但缺少冒号（应为 **{title}**:）")
-                    break
-    
-    # 检查一级列表项加粗小标题后缺少冒号（后面跟内容而不是二级列表）
+    # 检查一级列表项加粗小标题后缺少冒号（后面跟同行内容而不是二级列表时）
     # 错误格式：- **Sizing Advice** Some users report...
     # 正确格式：- **Sizing Advice**: Some users report...
+    # 注意：后面跟二级列表时不应加冒号，所以要排除
     for i, line in enumerate(lines, 1):
         # 匹配一级列表项：以 `- **xxx**` 开头，后面紧跟非冒号的内容
         match = re.match(r'^-\s+\*\*([^*]+)\*\*\s+[^:\s]', line)
         if match:
+            # 排除后面跟二级列表的情况（二级列表时不需要冒号）
+            next_line_idx = i  # i 是 1-indexed，所以 i 就是下一行的 0-indexed
+            if next_line_idx < len(lines) and re.match(r'^\s+-', lines[next_line_idx]):
+                continue  # 后跟二级列表，不报错
             title = match.group(1)
             issues.append(f"第{i}行：列表项「{title}」小标题后缺少冒号（应为 **{title}**:）")
             break
@@ -1197,9 +1186,9 @@ def analyze_format_issues(text: str) -> list:
             issues.append(f"第{i}行：Note 引用应在段末，引用后不能有其他内容，上下文：...{context}...")
             break
     
-    # 检查一级列表有二级列表时，一级标题后有非冒号内容
+    # 检查一级列表有二级列表时，一级标题后不应有冒号和内容
     for i, line in enumerate(lines, 1):
-        # 检查是否是一级列表项
+        # 检查是否是一级列表项（有冒号且冒号后有内容）
         if re.match(r'^-\s+\*\*[^*]+\*\*:', line):
             # 检查冒号后是否有内容（除了空格）
             after_colon = re.search(r'\*\*:\s*(.+)$', line)
@@ -1207,7 +1196,7 @@ def analyze_format_issues(text: str) -> list:
                 # 检查下一行是否是二级列表
                 if i < len(lines) and re.match(r'^\s+-', lines[i]):
                     content = after_colon.group(1).strip()[:20]
-                    issues.append(f"第{i}行：有二级列表时，一级标题后只能有冒号，不能有「{content}...」")
+                    issues.append(f"第{i}行：有二级列表时，一级标题后不应有冒号和额外内容「{content}...」（应删除冒号和内容，仅保留小标题）")
                     break
     
     # 检查无后续内容时有冒号（列表项末尾只有冒号）
