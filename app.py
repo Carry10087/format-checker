@@ -1623,15 +1623,16 @@ with tab4:
     
     # 模型选项列表
     MODEL_OPTIONS = [
-        "gemini-3-pro-preview",
-        "gemini-3-pro-preview-maxthinking",
-        "gemini-3-pro-preview-nothinking",
-        "gemini-3-pro-preview-search",
+        "gemini-3.1-pro-preview",
+        "gemini-3.1-pro-preview-high",
+        "gemini-3.1-pro-preview-maxthinking",
+        "gemini-3.1-pro-preview-nothinking",
+        "gemini-3.1-pro-preview-search",
         "gemini-pro-latest",
-        "claude-opus-4-5",
-        "claude-opus-4-5-thinking",
-        "claude-sonnet-4-5",
-        "claude-sonnet-4-5-thinking",
+        "claude-opus-4-6",
+        "claude-opus-4-6-thinking",
+        "claude-sonnet-4-6",
+        "claude-sonnet-4-6-thinking",
     ]
     
     api_url = st.text_input("API URL", value=st.session_state.user_config.get("api_url", DEFAULT_API_URL), key="api_url_input")
