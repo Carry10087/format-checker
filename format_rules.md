@@ -407,7 +407,7 @@
     - ❌ 错误：全部用无序列表 `- **Steaming**: preserves flavor... - **Pan-Frying**: creates crispy skin...`
     - ✅ 正确（方式一）：选一种做法展开
       ```
-      #### Recommended Recipe: Steamed Halibut
+      #### Recommended Recipe
       1. Prepare the fish by cleaning and scoring.
       2. Place ginger and scallions on top.
       3. Steam for 8-10 minutes.
@@ -415,7 +415,7 @@
       ```
     - ✅ 正确（方式二）：在烹饪方式下用二级有序
       ```
-      - **Steaming**:
+      - **Steaming**
         1. Clean and score the fish.
         2. Steam with ginger and scallions.
         3. Finish with soy sauce and hot oil.
@@ -434,7 +434,7 @@
     ```
   - ✅ 正确（用二级列表细分）：
     ```
-    - **Skincare Products**:
+    - **Skincare Products**
         - Cleansers and Facial Washes.
         - Toners and Essences.
         - Moisturizers and Serums.
@@ -524,6 +524,19 @@
 #### 其他引用规则
 - **强制移至段末**：无论引用源于段落中的哪一句话，必须移动到该段落的最后位置。
 - **组合机制**：如果一段有多个引用，在段末累加。
+- **父级列表引用下移规则**：当一级列表项后面跟着二级列表时，引用**不应放在父级列表项上**，而应放在每个二级列表子项上。
+  - ❌ 错误（引用在父级）：
+    ```
+    - **Top U.S. Universities** [Note 1](#)
+        - MIT: around $61,990 per year.
+        - Stanford: around $58,716 per year.
+    ```
+  - ✅ 正确（引用在每个子项）：
+    ```
+    - **Top U.S. Universities**
+        - MIT: around $61,990 per year [Note 1](#).
+        - Stanford: around $58,716 per year [Note 1](#).
+    ```
 - **原声引用**：可引用原文佐证观点，格式为 `"原文内容" [Note X](#).`。
 - **四级标题下列表必须有引用**：每个列表项都必须包含至少一个引用标注。
   - 正确示例：

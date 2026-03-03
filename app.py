@@ -1633,6 +1633,7 @@ with tab4:
         "claude-opus-4-6-thinking",
         "claude-sonnet-4-6",
         "claude-sonnet-4-6-thinking",
+        "gpt-5.3"
     ]
     
     api_url = st.text_input("API URL", value=st.session_state.user_config.get("api_url", DEFAULT_API_URL), key="api_url_input")

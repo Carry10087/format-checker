@@ -177,7 +177,7 @@ def fix_title_case_in_parentheses(text: str) -> str:
         """修复括号内容"""
         prefix = match.group(1)  # 括号前的内容
         content = match.group(2)  # 括号内的内容
-        suffix = match.group(3)  # 括号后的内容（如 **: 或 **:）
+        suffix = match.group(3) if match.lastindex >= 3 else ''  # 括号后的内容（如 **: 或 **:），四级标题无此分组
         
         # 将括号内容按空格分割，逐词处理Title Case
         words = content.split()
@@ -485,22 +485,30 @@ def fix_list_item_colon(text: str) -> str:
     result = []
     
     for i, line in enumerate(lines):
-        # 情况1：一级列表项后跟二级列表（以 - **xxx**: 结尾，有冒号）
-        # 这种情况应该删除冒号
-        match1 = re.match(r'^(-\s+\*\*[^*]+\*\*):\s*$', line)
-        if match1:
-            # 检查下一行是否是二级列表（有前导空格 + -）
-            if i + 1 < len(lines) and re.match(r'^\s+-', lines[i + 1]):
-                # 后面跟着二级列表，删除冒号
+        # 检查下一行是否是二级列表（有前导空格 + - 或数字列表）
+        next_is_sublist = (i + 1 < len(lines) and re.match(r'^\s+[-\d]', lines[i + 1]))
+        
+        # 情况1：一级列表项后跟二级列表，有冒号 → 删除冒号
+        # 包括 - **xxx**: 和 - **xxx**: [Note 1](#) 等情况
+        match1 = re.match(r'^(-\s+\*\*[^*]+\*\*):\s*(.*)$', line)
+        if match1 and next_is_sublist:
+            # 后面跟着二级列表，删除冒号
+            trailing = match1.group(2).strip()
+            if trailing:
+                # 冒号后有内容（如 [Note 1](#)），保留内容但去掉冒号
+                line = match1.group(1) + ' ' + trailing
+            else:
                 line = match1.group(1)
         
         # 情况2：一级列表项小标题后直接跟内容但缺少冒号
         # 错误格式：- **Sizing Advice** Some users report...
         # 正确格式：- **Sizing Advice**: Some users report...
-        match2 = re.match(r'^(-\s+\*\*[^*]+\*\*)(\s+)([^:\s].*)$', line)
-        if match2:
-            # 在 ** 后添加冒号
-            line = match2.group(1) + ':' + match2.group(2) + match2.group(3)
+        # 注意：如果后面跟着二级列表，则不应加冒号
+        elif not next_is_sublist:
+            match2 = re.match(r'^(-\s+\*\*[^*]+\*\*)(\s+)([^:\s].*)$', line)
+            if match2:
+                # 在 ** 后添加冒号
+                line = match2.group(1) + ':' + match2.group(2) + match2.group(3)
         
         result.append(line)
     
@@ -612,6 +620,65 @@ def fix_paragraph_spacing(text: str) -> str:
     return '\n'.join(final_lines)
 
 
+def fix_note_on_parent_with_sublist(text: str) -> str:
+    """当一级列表项后面跟着二级列表时，将一级列表项上的引用移到每个二级列表项上。
+    例如：
+    - **Top U.S. Universities** [Note 1](#)
+        - MIT: around $61,990 per year.
+    →
+    - **Top U.S. Universities**
+        - MIT: around $61,990 per year [Note 1](#).
+    """
+    lines = text.split('\n')
+    result = []
+    i = 0
+    
+    while i < len(lines):
+        line = lines[i]
+        
+        # 匹配一级列表项（以 - 开头，无前导空格）上带有 Note 引用的行
+        # 例如：- **Title** [Note 1](#)  或  - **Title** [Note 1](#)[Note 2](#)
+        parent_match = re.match(
+            r'^(-\s+\*\*[^*]+\*\*)\s*((?:\[Note\s*\d+\]\(#\))+)\s*$', line
+        )
+        
+        if parent_match:
+            # 检查下一行是否是二级列表
+            if i + 1 < len(lines) and re.match(r'^\s+[-\d]', lines[i + 1]):
+                parent_content = parent_match.group(1).rstrip()
+                notes = parent_match.group(2)  # 如 [Note 1](#) 或 [Note 1](#)[Note 2](#)
+                
+                # 父级行去掉引用
+                result.append(parent_content)
+                i += 1
+                
+                # 将引用添加到每个二级列表项上
+                while i < len(lines) and re.match(r'^\s+[-\d]', lines[i]):
+                    sub_line = lines[i].rstrip()
+                    
+                    # 检查子项是否已有这些引用，避免重复
+                    existing_notes = set(re.findall(r'\[Note\s*(\d+)\]\(#\)', sub_line))
+                    new_notes = re.findall(r'\[Note\s*(\d+)\]\(#\)', notes)
+                    notes_to_add = [n for n in new_notes if n not in existing_notes]
+                    
+                    if notes_to_add:
+                        notes_str = ''.join(f'[Note {n}](#)' for n in notes_to_add)
+                        # 在句号前插入引用
+                        if sub_line.endswith('.'):
+                            sub_line = sub_line[:-1] + ' ' + notes_str + '.'
+                        else:
+                            sub_line = sub_line + ' ' + notes_str
+                    
+                    result.append(sub_line)
+                    i += 1
+                continue
+        
+        result.append(line)
+        i += 1
+    
+    return '\n'.join(result)
+
+
 # ==================== 主修复函数 ====================
 
 def fix_all_format(text: str) -> str:
@@ -634,6 +701,7 @@ def fix_all_format(text: str) -> str:
     text = fix_taiwan_reference(text)
     text = fix_colon_after_no_content(text)
     text = fix_list_item_colon(text)  # 修复一级列表项缺少冒号
+    text = fix_note_on_parent_with_sublist(text)  # 将父级列表的引用移到子项
     text = fix_paragraph_spacing(text)  # 修复大段落间距
     return text
 
