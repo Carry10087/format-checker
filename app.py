@@ -1467,49 +1467,78 @@ video_html = '''
 '''
 st.markdown(video_html, unsafe_allow_html=True)
 
-# 播放提示音的函数（使用 Web Audio API 生成简单提示音）
+# 播放提示音的函数（使用内联 WAV + Web Audio API 双重方案）
 def play_notification_sound():
     """播放处理完成的提示音"""
     sound_js = """
     <script>
     (function() {
+        // 方案1：在父页面(Streamlit主页面)中播放，绕过 iframe 限制
         try {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
+            const parentDoc = window.parent.document;
             
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
+            // 移除之前的提示音元素（避免堆积）
+            const oldAudio = parentDoc.getElementById('notif-sound-element');
+            if (oldAudio) oldAudio.remove();
             
-            oscillator.frequency.value = 800;  // 音调
-            oscillator.type = 'sine';
+            // 使用 Web Audio API 在父页面上下文中播放
+            const parentWindow = window.parent;
+            const AudioCtx = parentWindow.AudioContext || parentWindow.webkitAudioContext;
+            const ctx = new AudioCtx();
             
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-            
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.3);
-            
-            // 第二个音（更高）
-            setTimeout(() => {
-                const osc2 = audioContext.createOscillator();
-                const gain2 = audioContext.createGain();
-                osc2.connect(gain2);
-                gain2.connect(audioContext.destination);
-                osc2.frequency.value = 1000;
-                osc2.type = 'sine';
-                gain2.gain.setValueAtTime(0.3, audioContext.currentTime);
-                gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-                osc2.start(audioContext.currentTime);
-                osc2.stop(audioContext.currentTime + 0.3);
-            }, 150);
+            // 必须 resume，否则浏览器自动播放策略会阻止
+            ctx.resume().then(() => {
+                // 第一个音：800Hz
+                const osc1 = ctx.createOscillator();
+                const gain1 = ctx.createGain();
+                osc1.connect(gain1);
+                gain1.connect(ctx.destination);
+                osc1.frequency.value = 800;
+                osc1.type = 'sine';
+                gain1.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                osc1.start(ctx.currentTime);
+                osc1.stop(ctx.currentTime + 0.3);
+                
+                // 第二个音：1000Hz（延迟150ms）
+                setTimeout(() => {
+                    const osc2 = ctx.createOscillator();
+                    const gain2 = ctx.createGain();
+                    osc2.connect(gain2);
+                    gain2.connect(ctx.destination);
+                    osc2.frequency.value = 1000;
+                    osc2.type = 'sine';
+                    gain2.gain.setValueAtTime(0.3, ctx.currentTime);
+                    gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                    osc2.start(ctx.currentTime);
+                    osc2.stop(ctx.currentTime + 0.3);
+                }, 150);
+            });
         } catch(e) {
-            console.log('Audio not supported');
+            console.log('Parent audio failed, trying fallback:', e);
+            // 方案2：在 iframe 内直接播放
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                ctx.resume().then(() => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.frequency.value = 800;
+                    osc.type = 'sine';
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                    osc.start(ctx.currentTime);
+                    osc.stop(ctx.currentTime + 0.3);
+                });
+            } catch(e2) {
+                console.log('All audio methods failed:', e2);
+            }
         }
     })();
     </script>
     """
-    st.components.v1.html(sound_js, height=0)
+    st.components.v1.html(sound_js, height=1)
 
 
 # 确保用户目录存在
@@ -2256,6 +2285,7 @@ with tab1:
                         if st.session_state.history and st.session_state.current_history_idx >= 0:
                             st.session_state.history[st.session_state.current_history_idx]["translated"] = result
                             save_history(st.session_state.history)
+                        st.session_state.play_sound = True  # 翻译完成也播放提示音
                         st.rerun()
                     else:
                         st.error(result)
@@ -2637,6 +2667,7 @@ with tab2:
                     result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
                     if success:
                         st.session_state.qc_translated = result
+                        st.session_state.play_sound = True  # 翻译完成播放提示音
                     else:
                         st.session_state.qc_translated = f"翻译失败: {result}"
                 else:
@@ -2821,6 +2852,7 @@ with tab5:
                     result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
                     if success:
                         st.session_state.chat_translated = result
+                        st.session_state.play_sound = True  # 翻译完成播放提示音
                     else:
                         st.session_state.chat_translated = f"翻译失败: {result}"
                 else:

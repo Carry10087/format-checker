@@ -16,6 +16,13 @@
 - **去人机感/拒绝废话**：
   - **禁止**使用 "Based on the search results" 或 "According to the documents" 等开场白。
   - **禁止**车轱辘话和空洞形容词（如 "tastes good", "beautiful scenery"）。需改为具体参数或具象化描述（如 "spicy", "500ml"）。
+  - **禁止引用信息源的措辞（重要）**：全文禁止出现任何暗示"信息来自笔记/搜索/文档"的措辞，必须直接陈述事实。
+    - ❌ 禁止的措辞：`is repeatedly described as`、`multiple notes describe`、`is often highlighted for`、`according to references`、`sources indicate`、`is widely noted for`、`reviews suggest`
+    - ✅ 改为直接陈述：`features`、`is`、`offers`、`provides`、`includes`
+    - **示例**：
+      - ❌ `Aurate is repeatedly described as minimalist` → ✅ `Aurate features a minimalist aesthetic`
+      - ❌ `Multiple notes describe the pieces as small` → ✅ `The pieces are small and versatile`
+      - ❌ `The brand is often highlighted for its layering` → ✅ `The brand emphasizes layering`
   - **禁止**整篇针对一个点来回说（车轱辘话）。
 - **风格定调**：定位是搜索解决问题，非必要场景不要过于活泼。
 - **不要套模版**：即使是同一类场景，不同query的回答方法也不一样，要根据具体问题调整结构。
@@ -24,31 +31,26 @@
 ## 2. 结构与格式规范
 
 ### 2.1 首段规范（Core Answer）
-- **长度限制**：首段应精简，优先用一句话概括核心定义。
+- **长度限制**：首段应极为精简，只需一句话说明“它是什么”，**绝对不要**去解释它、说明它或补充细节。
   - **单义词格式**：首段 = 主语 + is/are + `***核心定义***` + 句号，第二句及之后下沉到正文。
-  - **核心定义原则（重要）**：核心定义需要**精简但有概括性**，让用户快速了解主题的核心信息。
-    - **必须包含**：身份/分类 + **最具辨识度的代表性信息**（1-2个即可）
-    - **禁止堆砌**：不要在首段罗列多项成就、多个特征、详细描述
-    - **目的**：用户搜索一个词时，首段应该能回答"这是什么/谁，为什么值得了解"
+  - **核心定义原则（重要）**：核心定义只需要回答分类/身份，**不要**带从句解释。
+    - **必须包含**：身份/分类
+    - **禁止包含**：描述性定语、作用解释、代表作列举等。
+    - **目的**：告诉用户最基础的类别即可。
   - **示例对比**：
-    - ❌ 太精简（无信息量）：`Owen Painter is ***an actor***.`
-    - ❌ 太冗长（堆砌信息）：`Owen Painter is ***an American actor, social media personality, and model, best known for portraying "Slurp" in Wednesday, who also appeared in multiple TV shows***.`
-    - ✅ 精简且有效：`Owen Painter is ***an American actor known for portraying "Slurp" in the series "Wednesday"***.`
-    - ❌ 太精简：`Olaplex is ***a haircare brand***.`
-    - ✅ 精简且有效：`Olaplex is ***a haircare brand known for its bond-building hair repair technology***.`
-  - **人物定义规则**：
-    - **演员/歌手等**：职业 + 代表作品（最知名的1个）
-      - ✅ `Owen Painter is ***an actor known for portraying "Slurp" in "Wednesday"***.`
-    - **运动员**：国籍 + 职业 + 项目（荣誉可简述1个最重要的）
-      - ✅ `Sun Yingsha is ***a Chinese professional table tennis player and Olympic champion***.`
-    - **企业家/名人**：核心成就/职位
-      - ✅ `Steve Jobs was ***the co-founder of Apple Inc.***.`
-      - ✅ `Karl Lagerfeld was ***the creative director of Chanel and Fendi***.`
-  - **产品/品牌定义规则**：品类 + 核心特色/定位
-    - ✅ `Olaplex is ***a haircare brand known for its bond-building technology***.`
-    - ✅ `The Chloé Woody is ***a product line from Chloé, featuring signature canvas tote bags***.`
-  - **地点定义规则**：类型 + 显著特征/地位
-    - ✅ `Toulouse is ***a major historic city in Southern France***.`（地理位置属于核心信息，保留国家级定位）
+    - ❌ 错误（带解释）：`Owen Painter is ***an American actor known for portraying "Slurp" in the series "Wednesday"***.`
+    - ✅ 正确（仅说明是什么）：`Owen Painter is ***an American actor***.`
+    - ❌ 错误（带解释）：`Olaplex is ***a haircare brand known for its bond-building hair repair technology***.`
+    - ✅ 正确（仅说明是什么）：`Olaplex is ***a haircare brand***.`
+  - **人物定义规则**：仅国籍+职业
+      - ✅ `Owen Painter is ***an American actor***.`
+      - ✅ `Sun Yingsha is ***a Chinese professional table tennis player***.`
+      - ✅ `Steve Jobs was ***an American entrepreneur***.`
+  - **产品/品牌定义规则**：仅说明品类
+    - ✅ `Olaplex is ***a haircare brand***.`
+    - ✅ `The Chloé Woody is ***a product line from Chloé***.`
+  - **地点定义规则**：仅说明地理名词分类
+    - ✅ `Toulouse is ***a major city in Southern France***.`
 - **首段禁止第二句（铁律）**：首段只能有一句话，`***` 闭合后的句号就是首段结尾，句号后不能再有任何内容。
     - ❌ 错误：`Juanmi refers to ***Juan Miguel Jiménez López, a Spanish footballer***. Born in Coín, Spain, he is known for his agility.`（有第二句）
     - ❌ 错误：`SDG refers to ***the Sustainable Development Goals...to ensure prosperity for all by 2030***. Also known as...`（定义太长+有第二句）
@@ -84,7 +86,7 @@
   - ❌ 错误：`the movie *Super Family*` / `the movie **Super Family**` / `` the file `.frm` ``
   - ✅ 正确：`the movie "Super Family"` / `the file ".frm"`
   - 注意：列表小标题的加粗（`- **Title**:`）不受此规则影响，必须保留
-- **首段主语引号规则**：首段的主语（用户查询的核心词）通常不加引号。只有作品名（歌名、书名、电影名、专辑名等）才加引号。人名、地名、品牌名、普通名词等不加引号。
+- **全文实体引号规则（重要）**：该规则**适用于全文**，不仅限于首段的主语：全文中只有**作品名**（如歌名、书名、电影名、游戏名、专辑名等）才加双引号；对于人名、地名、品牌名、公司名、普通名词等，**在全文任何地方都绝对不加**引号。
 - **Query大小写规则**：
   - 如果Query是首段的第一个单词，需要首字母大写
   - 如果Query不是首段第一个单词，按Query原本的大小写书写
@@ -153,7 +155,6 @@
     - **Exceptions**: Not recommended for...
     ```
 - **逻辑分组**：相关性强的内容必须归入同一标题下，禁止按产品参数或属性机械拆分成多个标题。
-- **四级标题内聚性（重要）**：每个列表项必须与所属四级标题的主题直接相关，不相关的内容必须移至合适的标题下
 - **内容归属准确（重要）**：每个列表项必须与其所属四级标题的主题**直接相关**。不相关的内容必须处理：
   - **处理方式一（合并）**：如果内容可以补充说明同一标题下的其他列表项，应**合并到相关列表项中**
   - **处理方式二（移动）**：如果内容与其他列表项也无关，应**移至更合适的四级标题下**
@@ -184,17 +185,8 @@
   - **处理方式**：
     - 如果主观声称有独立价值 → 移到合适的标题下（如 `#### Potential Benefits`，需加免责声明）
     - 如果主观声称无独立价值 → 直接删除
-- **标题层级对应**：列表项的加粗小标题必须是四级标题的具体实例或子类。例如四级标题是 `Notable Village Examples`，列表小标题应为 `Historic Villages`、`Alpine Villages` 等（村庄类型），而非 `Historic Preservation`、`Alpine Landscape`（抽象特征）。
-- **上下级标题一致性（重要）**：
-  - **性质一致**：上级标题与下级标题的性质必须匹配
-    - ❌ 错误：四级标题为 `Groups`（指人群），但下方小标题是对身体状况的描述（性质不匹配）
-    - ✅ 正确：四级标题为 `Groups`，下方小标题为具体人群类型（如 `Pregnant Women`、`Children`）
-  - **逻辑归属**：下级标题必须属于上级标题的范畴
-    - ❌ 错误：四级标题不属于段落标题，也不与其他四级标题平行
-    - ✅ 正确：所有四级标题在同一逻辑层面，互相平行
-- **Query不应在标题中反复出现**：Query不需要在段落标题、一级标题、二级标题中反复出现，这是冗余信息。
-  - ❌ 错误：Query为"iPhone"，标题写成 `#### iPhone Features`、`#### iPhone Design`、`#### iPhone Price`
-  - ✅ 正确：直接写 `#### Features`、`#### Design`、`#### Price`
+
+
 - **四级标题与首段对应（铁律）**：
   - 四级标题必须围绕首段核心答案展开，首段提到的要点正文必须有对应标题
   - 首段未提及的主题不能在正文中出现新的四级标题
@@ -248,97 +240,32 @@
   - ✅ 正确：内容是关于"实习机会"的，小标题应叫 `**Internship**` 或 `**Internship Opportunities**`
   - ❌ 错误：内容是关于"薪资水平"的，小标题却叫 `**Career Returns**`
   - ✅ 正确：小标题应叫 `**Salary Potential**` 或 `**Starting Salary**`
-- **避免使用平台/技术术语**：小标题应使用用户熟悉的自然语言，而非平台术语、运营术语或技术性词汇。
 - **小标题措辞规范（重要）**：
-  - **避免中式英语**：名词并不是每次都能直接修饰另一个名词，需使用正确的英语表达
-    - ❌ 错误：`Material Selection`（直译）
-    - ✅ 正确：`Choice of Materials`（符合英语习惯）
-  - **注意复数形式**：标题中的可数名词在表示类别时通常需要复数
-    - ❌ 错误：`Material`、`Feature`、`Benefit`
-    - ✅ 正确：`Materials`、`Features`、`Benefits`
-  - **判断标准**：问自己"普通用户会用这个词搜索吗？"
-  - **常见平台/技术术语**（禁止）：Content Themes、Engagement Metrics、User Demographics、Brand Positioning、Target Audience、Value Proposition
-  - **对应自然语言**：Creative Interests、Popularity、Audience、Market Position、Who It's For、Key Benefits
-  - **示例**：
-    - ❌ 错误：`**Content Themes**: Focuses on fashion, beauty, and poetry.`
-    - ✅ 正确：`**Creative Interests**: Focuses on fashion, beauty, and poetry.`
-    - ❌ 错误：`**Engagement Metrics**: Has 1M followers.`
-    - ✅ 正确：`**Popularity**: Has 1M followers.`
+  - **避免中式英语**：`Material Selection` → `Choice of Materials`
+  - **注意复数形式**：`Material` → `Materials`、`Feature` → `Features`
+  - **避免平台/技术术语**：使用用户熟悉的自然语言。如 `Content Themes` → `Creative Interests`、`Engagement Metrics` → `Popularity`、`Brand Positioning` → `Market Position`
 - **四级标题精简原则**：四级标题应按用户决策逻辑组织，围绕用户核心关注点划分，而非罗列产品规格。相关性强的信息必须合并。
-- **产品类内容顺序规范**：产品类文本的信息应按以下顺序呈现：
-  1. **客观信息优先**：规格、设计、功能特点等官方呈现的客观信息放在前几段
-  2. **主观信息靠后**：用户体验与评价放在末段
-  - 具体情况可酌情调整，但总体遵循「客观→主观」的顺序
-- **分类细致化原则**：当内容可以进一步细分时，应建立层级结构而非扁平罗列
-  - ❌ 错误：直接罗列6种啤酒类型作为平级小标题
-  - ✅ 正确：将啤酒分为 `#### Ale` 和 `#### Lager` 两个四级标题，再在各标题下分别列出3种子类型
-- **层级限制**：分点层级不宜过多，逻辑需前后对应。
+  - **示例4（凑数塞入）**：
+    - ❌ 错误：`#### Materials and Price Range` 下面写 `**Rider Popularity**: It is commonly recognized as a high-end choice...`（骑手认知度与材料和价格无关，是随意塞进来的）
+    - ✅ 正确：将 `**Rider Popularity**` 移到 `#### Brand Reputation` 或其他适合的四级标题下
+- **禁止列出泛用信息**：不要将所有人都知道的、不具有区分度的泛用信息单独列为一项。这类信息如果重要可以融入其他列表项中一句带过，否则直接删除。
+  - **判断标准**：问自己"这个信息是这个品牌/主题的特色，还是同类事物都一样的？"
+  - ❌ 错误：`**Frame Materials**: The lineup emphasizes carbon fiber, with additional aluminum, titanium, and steel options`（几乎所有自行车品牌都有这些材料，不具区分度）
+  - ✅ 正确：删除该项，或在价格相关列表项中简要提及（如`...carbon framesets starting from CNY 14,800`）
+  - **常见泛用信息**：材料种类（碳纤维/铝/钢）、颜色选择（多种颜色可选）、购买渠道（线上线下均可购买）等
 - **禁止重复与冗余**：
   - 同一回答中禁止出现重复信息
-  - **正文禁止重复首段信息（重要）**：首段已经给出的定义/信息，正文**不应再重复**。
-    - **判断标准**：问自己"这个信息在首段已经说过了吗？"
+  - **正文禁止重复首段信息（重要）**：首段已给出的定义/信息，正文**不应再重复**。
     - ❌ 错误：首段写"Nicojoo is the pairing of Nicholas and EJ"，正文又写 `**Members**: Nicholas and EJ`
-    - ✅ 正确：删除与首段重复的列表项，正文应**展开新信息**，而非复述旧信息
-    - **常见重复类型**：
-      - 成员组成（首段已定义） → 删除
-      - 名字来源（首段已说明） → 删除
-      - 核心定义再解释 → 删除
-  - **单薄四级标题应合并**：如果某个四级标题下只有1-2个简短列表项，且内容与另一个四级标题相关，应该合并。
-    - **判断标准**：问自己"这个四级标题的内容能否作为另一个标题的子项？"
-    - ❌ 错误：`#### Pairing Overview` 只有3项且其中2项重复首段，`#### Fan Culture` 有丰富内容
-    - ✅ 正确：将有价值的内容（如 Relationship）合并到 Fan Culture 作为小标题
-    - **示例**：
-      - 原结构：`#### Pairing Overview` → `**Relationship**: close friendship`
-      - 合并后：`#### Fan Culture` → `**Relationship Perception**: characterized as a close friendship or "bromance"`
-  - **正文内禁止先概括后展开**：在正文的同一板块内，不要先用一个列表项概括罗列所有子项名称，再逐个展开详述。应直接逐项展开。
-    - ❌ 错误：先写 `**Core Offerings**: includes A, B, C`，再分别展开 `**A**: ...`、`**B**: ...`
-    - ✅ 正确：直接写 `**A**: ...`、`**B**: ...`，无需先概括
-    - 注意：此规则仅针对正文内部，不影响首段是结论、正文是论据的总分结构
-  - **信息合并原则**：可自然合并的信息应合并为一项，避免重复拆分
-    - **同一对象不同属性合并**：描述同一对象的多个属性（如名称、身份、特征）应合并为一项。
-      - ❌ 错误：分开写 `**Character Identity**: portrays "Slurp"...` 和 `**Character Name**: actual name is Isaac...`
-      - ✅ 正确：合并为 `**Character Details**: Portrays the zombie character "Slurp" (real name Isaac) in "Wednesday," depicted as Taylor's uncle and a genius artist.`
-    - **叙事细节合并**：同一事件或主题的不同侧面（如起因、经过、结果、相关举动）应合并。
-      - ❌ 错误：分开写 `**Resilience**`（祖母去世）和 `**Tribute**`（看天纪念祖母）
-      - ✅ 正确：合并为 `**Grandmother's Influence**: Experienced the loss... often looks up at the sky as a tribute...`
-    - **同类特质合并**：属于同一维度的个人特质（如座右铭、愿望、爱好）应合并。
-      - ❌ 错误：分开写 `**Motto**` 和 `**Aspirations**`
-      - ✅ 正确：合并为 `**Personal Beliefs**: Adopts the motto... and dreams of achieving...`
-    - **基础信息合并**：
-      - ❌ 错误：分开写 `**Demographics**: 9 members` 和 `**Member List**: K, FUMA...`
-      - ✅ 正确：合并为 `**Members**: 9 members including K, FUMA...`
-  - **小标题合并原则**：概念相近或属于同一维度的小标题必须合并，避免拆分过细
-    - **同一主题不同方面合并**：当两个小标题描述的是同一主题的不同方面时，应合并为一个小标题。
-      - **判断标准**：问自己"这两个小标题能否用一个更高层次的概念统一？"
-      - ❌ 错误：分开写 `**Transportation**: airport and railway...` 和 `**Getting Around**: self-driving recommended...`
-      - ✅ 正确：合并为 `**Transportation**: Served by Ningbo Lishe International Airport and railway stations; self-driving or hiring a car is recommended for distant attractions.`
-      - **常见可合并的组合**：
-        - Transportation + Getting Around → `**Transportation and Getting Around**` 或 `**Transportation**`
-        - Features + Specifications → `**Features and Specifications**`
-        - Pros + Advantages → 选一个即可
-    - ❌ 错误：分开写 `**Texture Types**`、`**Visuals and Feel**`、`**Issues**`、`**Service**`
-    - ✅ 正确：合并为 `**Texture and Appearance**`、`**Quality and Service**`
-- **大段落间距规则**：主要内容板块之间必须空**两行**（即有一个空白行分隔）。主要内容板块包括：
-  - 首段（Core Answer）
-  - 正文（各四级标题及其内容）
-  - 免责声明（Disclaimer）
-  - Tips 区块
-  - 示例：
-    ```
-    Subject is ***the Core Definition***.
-    
-    
-    #### First Section
-    - Content...
-    
-    
-    #### Second Section
-    - Content...
-    
-    
-    The above content is for reference only...
-    ```
-  - 注意：四级标题下的列表项之间**不需要**空两行，只有大板块之间需要
+    - ✅ 正确：删除与首段重复的列表项，正文应**展开新信息**
+  - **单薄四级标题应合并**：四级标题下只有1-2个简短列表项且与另一个标题相关时，应合并到该标题下。
+  - **正文内禁止先概括后展开**：不要先写 `**Core Offerings**: includes A, B, C` 再分别展开，应直接逐项展开。
+  - **信息合并原则**：可自然合并的信息应合并为一项，避免拆得太细。
+    - 同一对象的不同属性 → 合并为一项（如 `**Character Identity**` + `**Character Name**` → `**Character Details**`）
+    - 同一事件的不同侧面 → 合并（如 `**Resilience**` + `**Tribute**` → `**Grandmother's Influence**`）
+    - 同类特质 → 合并（如 `**Motto**` + `**Aspirations**` → `**Personal Beliefs**`）
+  - **小标题合并原则**：概念相近的小标题必须合并（如 `**Transportation**` + `**Getting Around**` → `**Transportation**`）
+- **大段落间距规则**：主要内容板块（首段、正文各四级标题、免责声明、Tips）之间必须**严格空两行**（必须要且只能有两个纯空行，多一行或少一行皆为错误）。列表项之间不需要空两行。
 
 #### 小标题格式规范（粗体与大小写）
 - **小标题必须加粗**：列表开头的 **Title/Key** 必须加粗。
@@ -358,12 +285,7 @@
   - **对称性调整**：如果因此修改了一个小标题，相关的对应小标题也应一起调整（如 Pros → Advantages）
 - **复合词大小写规则**：复合词的每一部分都要首字母大写。
   - ❌ 错误：`Well-being`、`Self-esteem`、`Long-term`
-  - ✅ 正确：`Well-Being`、`Self-Esteem`、`Long-Term`
-- **小标题必须与内容匹配**：如果内容实际上不包含某个概念，小标题就不应该提到。
-  - **示例**：如果内容只有"建议/提示"而没有"缺点"，就不应该叫 "Cons and Tips"
-  - ❌ 错误：`**Cons and Tips**`（但内容没有 Cons）
-  - ✅ 正确：`**Tips**`（准确反映内容）
-  - **对称性调整**：如果因此修改了一个小标题，相关的对应小标题也应一起调整（如 Pros → Advantages）
+
 
 #### 引用规范 (Crucial - AI修改时必须遵守)
 
@@ -396,98 +318,23 @@
     2. **Cooking**: Heat oil and scramble the eggs.
     3. **Finishing**: Add tomatoes and stir-fry.
     ```
-- **烹饪/菜谱类内容强制有序（重要）**：当内容涉及烹饪方法时，**必须至少有一组有序列表**来展示操作步骤。
-  - **判断标准**：问自己"Notes中是否有任何具体的烹饪步骤描述？"
-    - 有 → 必须提取至少一种做法的完整步骤，用有序列表展示
-    - 没有 → 可以只列举烹饪方式概述，但需标注"Notes中无详细步骤"
-  - **实施方式**：
-    - **方式一**：从Notes中选择一种最详细的做法，展开成有序步骤
-    - **方式二**：在每种烹饪方式下用二级有序列表展示具体步骤
-  - **示例（食材类主题如Halibut）**：
-    - ❌ 错误：全部用无序列表 `- **Steaming**: preserves flavor... - **Pan-Frying**: creates crispy skin...`
-    - ✅ 正确（方式一）：选一种做法展开
-      ```
-      #### Recommended Recipe
-      1. Prepare the fish by cleaning and scoring.
-      2. Place ginger and scallions on top.
-      3. Steam for 8-10 minutes.
-      4. Drizzle with soy sauce and hot oil.
-      ```
-    - ✅ 正确（方式二）：在烹饪方式下用二级有序
-      ```
-      - **Steaming**
-        1. Clean and score the fish.
-        2. Steam with ginger and scallions.
-        3. Finish with soy sauce and hot oil.
-      ```
-- **并列内容强制列表**：正文中3个及以上的并列内容须改为列表，不能用逗号或顿号连接成一句话。
+- **烹饪/菜谱类内容强制有序（重要）**：涉及烹饪方法时，**必须至少有一组有序列表**展示操作步骤。可从 Notes 中选择最详细的做法展开，或在每种方式下用二级有序列表。
+- **并列内容强制列表**：正文中3个及以上的并列内容须改为列表，不能用逗号连接成一句话。
 
 #### 二级列表使用场景
-- **何时使用二级列表**：当一级列表项下存在需要进一步细分的子项时，**必须**使用二级列表展开，不能把所有内容都堆在一级。以下场景需要用二级列表：
-  - **分类下有子分类**：如 `**Skincare**:` 下细分 `Cleansers`、`Toners`、`Moisturizers`
-  - **主项下有多个子要点**：如 `**Advantages**:` 下列举3个具体优点
-  - **步骤下有子步骤**：如 `1. **Preparation**:` 下有多个准备事项
-  - ❌ 错误（全部堆在一级）：
-    ```
-    - **Skincare Products**: Cleansers, toners, moisturizers, serums.
-    - **Makeup Products**: Foundation, lipstick, eyeshadow.
-    ```
-  - ✅ 正确（用二级列表细分）：
-    ```
-    - **Skincare Products**
-        - Cleansers and Facial Washes.
-        - Toners and Essences.
-        - Moisturizers and Serums.
-    ```
-- **二级列表格式规则（重要）**：当一级列表后面直接跟二级列表时，一级列表的小标题后**不应有冒号**。
-  - **判断标准**：一级列表项后面如果是二级列表（缩进的子列表），则一级小标题后不加冒号；如果是同行的描述内容，则加冒号。
-  - ❌ 错误：
-    ```
-    - **Programming References**:
-        - **C++**: A reference acts as an alias...
-    ```
-  - ✅ 正确：
-    ```
-    - **Programming References**
-        - **C++**: A reference acts as an alias...
-    ```
-  - ✅ 对比（后面跟内容时需要冒号）：`- **Programming References**: In programming, aliases are used...`
+- **何时使用二级列表**：当一级列表项下有需要细分的子项时，**必须**使用二级列表展开。
+  - ❌ 错误：`- **Skincare Products**: Cleansers, toners, moisturizers, serums.`
+  - ✅ 正确：拆为二级列表分别列出各子项
+- **二级列表格式规则（重要）**：一级列表后面直接跟二级列表时，一级小标题后**不加冒号**；后面跟同行描述内容时才加冒号。
+  - ❌ 错误：`- **Programming References**:` + 缩进子列表
+  - ✅ 正确：`- **Programming References**` + 缩进子列表
 - **二级列表缩进**：二级列表前必须缩进4个空格。
 
 #### 列表层级与格式
-- **小标题强制规则 (Mandatory Keys)**：所有列表项（无论是无序 `-` 还是有序 `1.`），只要内容包含描述性文字，**必须**以加粗小标题开头 (`**Title**: ...`)。
-  - ❌ 错误（无标题）：`1. First, wash the ingredients.`
-  - ✅ 正确（有标题）：`1. **Preparation**: First, wash the ingredients.`
-- **句号规则 (Period Required)**：**列表项末尾必须加句号**。
-  - 所有列表项末尾都需要加句号，保持格式统一。
-  - ✅ `- **Birth**: May 23, 2000.` (有句号)
-  - ❌ `- **Birth**: May 23, 2000` (错误，缺少句号)
-- **短信息合并（例外）**：对于“社交媒体 (Social Media)”、“基本参数”等极其简短的键值对信息，**无需分点罗列**，建议合并为一段，用逗号或竖线分隔。
-  - ❌ 错误：
-    ```
-    - **INS**: @a
-    - **Twitter**: @b
-    ```
-  - ✅ 正确：`**INS**: @a, **Twitter**: @b`
-- **禁止单※号**：禁止使用单个 `※` 符号。
-- **层级共存规则**：
-  - **允许**：1级数字+2级圆点、1级圆点+2级圆点、1级圆点+2级数字
-  - **禁止**：1级数字+2级数字、任何层级使用emoji作为列表符号
-- **分点上限**：一般分点/分步骤不超过6个（特殊情况除外）。
-- **单项内容处理（铁律）**：**任何**四级标题下只有1项内容时，**必须**写成段落形式，**禁止**使用列表符号 `-` 和加粗小标题 `**xxx**:`
-  1. **优先合并**：将该项内容合并到其他相关的四级标题下
-  2. **无法合并时**：保留四级标题，但内容写成段落形式
-  - ❌ 错误（单项却用了列表）：
-    ```
-    #### Companies
-    - **AKASA**: A company that develops generative AI solutions...
-    ```
-  - ✅ 正确（单项用段落）：
-    ```
-    #### Companies
-    AKASA develops generative AI solutions for the healthcare revenue cycle, assisting with tasks such as prior authorization and claim management.
-    ```
-  - **判断方法**：数一数四级标题下有几个独立的信息点。如果只有1个，就用段落；如果有2个及以上，才用列表
+- **小标题强制规则**：所有列表项只要包含描述性文字，**必须**以加粗小标题开头 (`**Title**: ...`)。
+- **句号规则**：**列表项末尾必须加句号**。
+- **短信息合并**：社交媒体账号等极短键值对信息，合并为一行（如 `**INS**: @a, **Twitter**: @b`）。
+- **单项内容处理（铁律）**：四级标题下只有1项内容时，**必须**写成段落形式，**禁止**使用列表和加粗小标题。优先合并到其他标题下；无法合并时保留标题但用段落。
 
 ### 2.4 引用规范 (Crucial - AI修改时必须遵守)
 
@@ -619,56 +466,26 @@
 - **引导话术**：必须添加引导内容，提醒用户"仅供娱乐、保持正向思考、相信科学"。
   - **模板**：`(Content)... This information is for entertainment purposes only; please think positively and believe in science.`
 
-### 3.5 情感共鸣
-- **策略**：解决问题优先，然后辅以经历引用或二轮交互引导。
+### 3.5 其他场景规则
+- **情感共鸣**：解决问题优先，辅以经历引用或二轮交互引导。
+- **模糊Case**：事实性问题以 Google 搜索为准；意图模糊时罗列多种可能意图供选择。
+- **禁止平台关联称呼**：禁止使用"薯宝"、"薯友"、"家人们"等平台关联称呼。
+- **禁止跨平台引流**：回答中不得包含社交媒体账号信息（Instagram、Twitter 等账号ID）。
 
-### 3.6 地理位置
-- **查证补充**：如果用户询问具体小区/地点，而笔记未提供所属行政区，人工可查证后补充在答案中。
-
-### 3.7 模糊Case处理
-- **事实性问题**：优先以 Google 搜索结果为准。
-- **意图模糊**：当 Google 也无法明确时，罗列多种可能意图供用户选择。
-- **非事实性问题**：按召回信息互相印证判断。
-
-### 3.8 称呼禁忌
-- **禁止平台关联称呼**：禁止使用与特定平台关联的称呼（如"薯宝"、"薯友"、"家人们"等）。
-
-### 3.9 内容质量补充规则
-
-#### 3.9.1 内容准确性
-- **同名独立实体处理**：当参考笔记中出现多个同名但相互独立的实体（如多个同名店铺、多个同名人物）时，不能将它们合并描述为一个整体，应准确说明是"多个同名的XX"，并在正文中分别列举。
-- **避免歧义话术**：避免有歧义的观点表达，事实类需明确说出是事实或大部分人观点。
-  - 错误：`"Mo Mo Mo Mo" was a flop` → 正确：`"Mo Mo Mo Mo" was considered a flop by many viewers`
-- **搜索词匹配优先级**：当参考笔记中存在多个候选实体时，按以下优先级选择：
-  - **精确匹配优先**：必须优先选择与搜索词拼写完全一致的实体。
-  - **排除部分重合**：仅部分单词相同但整体名称不同的实体视为无关内容，必须排除（如搜索词为 "A B" 时，"A C" 不应被采纳）。
-  - **弱匹配降级**：拼写相近但不完全一致的实体视为弱匹配，若存在精确匹配的实体则排除弱匹配内容。
-- **答案必须围绕召回笔记**：所有回答必须围绕召回笔记内容撰写，不做额外延展；若召回信息过少，可说明"目前可提供参考信息过少"。
-- **信息来源筛选**：优先采用官方来源、正式出版物、权威媒体的信息。以下内容不具有参考价值，必须排除：
-  - 普通网友的个人命名（如给宠物、物品起的名字）
-  - 无法验证或明显拼写错误的品牌/实体名称
-  - 仅在单个非权威笔记中出现且无其他佐证的信息
-  - 网友个人创作、非正式出版物、无明确出处的内容
-  - 个人经历/感受类分享（如"我家猫也叫这个"、"我觉得很好用"）
-  - 过时/失效信息（如已关闭的店铺、已下架的产品、过期的活动）
-
-#### 3.9.2 内容完整性
-- **多版本答案需写全**：如果答案存在多种可能版本（如多平台操作方法、多种称呼），需要分别列出。
-- **重要内容需展开说明**：虽然1-2句话能回答问题，但需让用户对各对象有清晰认知时，必须展开说明。
-- **点面结合**：当参考材料包含多个 tutorial/方案时，需选一个详细展开步骤，同时列举其他方案供参考。
-
-#### 3.9.3 内容风格
-- **术语一致性 (Consistency)**：全文中专有名词、缩写（如 `U.S.` vs `US`）必须保持严格一致。标题中的核心词写法应与正文（特别是首段定义）保持统一。
-  - 示例：若正文使用 `U.S. Navy`，标题中也应优先使用 `U.S. Navy` 而非 `US Navy`，确保全篇风格如一。
-- **禁止过度关联**：不能将某个概念与它不固有的象征意义、文化隐喻或情感联想进行绑定。只能描述该概念本身的客观属性、用途或事实，不能添加主观延伸的象征解读。
-- **时效内容可写**：可以写涉及时间相关的内容（如"春光明媚""国庆节就要到了""东北正值冬日"等），不属于高度时效性丢弃范围。
-- **二次引导话术**：情感共鸣、心理咨询类问题，可在句末增加二轮交互引导，如 `If you'd like more specific advice, feel free to share your situation.`
-- **温馨提示增加惊喜**：可添加让人耳目一新的小提醒，如隐藏玩法、省钱技巧等，提升回答质量。
-
-#### 3.9.4 内容限制
-- **营销信息限制**：仅当品牌/app名称可直接回答问题时方可提及，其余情况禁止出现品牌/app相关营销内容。客观描述商品购买渠道是允许的，但禁止营销性话术。
-- **Tips格式要求**：Tips 必须有正确格式（段落或列表），不能无格式直接放在内容下方；如果 Tips 内容是免责性质（如 "for scientific research only"），应合并到免责声明中。
-- **禁止跨平台引流**：回答中不得包含其他社交媒体平台的账号信息（如 Instagram、Twitter、Weibo、YouTube、TikTok 等账号ID），此类内容有引流嫌疑，必须从回答中删除该部分信息，保留其他有效内容。
+### 3.6 内容质量补充规则
+- **同名独立实体处理**：多个同名实体不能合并描述，应分别列举。
+- **避免歧义话术**：事实类需明确说出是事实或大部分人观点。
+  - ❌ `"Mo Mo Mo Mo" was a flop` → ✅ `"Mo Mo Mo Mo" was considered a flop by many viewers`
+- **搜索词匹配优先级**：精确匹配优先 → 排除部分重合 → 弱匹配降级。
+- **答案必须围绕召回笔记**：不做额外延展；召回信息过少时可说明。
+- **信息来源筛选**：优先官方来源、权威媒体。排除：个人命名、个人经历/感受、无法验证的信息、过时/失效信息。
+- **独立义项收录门槛（重要）**：正文或 `#### Other Meanings` 中收录的每个同名义项，必须是**有独立知名度的实体**（如公开人物、正式品牌、已发布的作品等）。仅在单条社交帖子或营销帖中出现的"同名者"不构成有效义项，必须删除。
+  - ❌ 错误：`**Internet Personality Mention**: Tian Tian appears as the name of an internet personality in a travel-related social post`（仅一条帖子提到，不构成独立义项）
+  - ❌ 错误：`**Tea Commerce Identity**: Tian Tian is also used as a tea seller name in a promotional post`（营销帖中的卖家名，不构成独立义项）
+  - ✅ 正确：收录的义项应有多条 Notes 佐证，或为公认的独立实体
+- **术语一致性**：全文中专有名词、缩写（如 `U.S.` vs `US`）必须保持一致。
+- **禁止过度关联**：不能将概念与不固有的象征意义或文化隐喻绑定，只描述客观属性。
+- **营销信息限制**：仅当品牌名可直接回答问题时方可提及，禁止营销性话术。
 
 ## 4. 内容安全红线 (0容忍)
 

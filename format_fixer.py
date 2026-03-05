@@ -1311,12 +1311,12 @@ def analyze_format_issues(text: str) -> list:
         if '***' in current_line and current_line.endswith('.'):
             # 查找下一个非空内容
             empty_count = 0
-            for j in range(next_idx, min(next_idx + 5, len(lines))):
+            for j in range(next_idx, len(lines)):
                 if not lines[j].strip():
                     empty_count += 1
                 elif lines[j].strip().startswith('####'):
-                    if empty_count < 2:
-                        issues.append(f"第{i+1}行：首段与正文之间应空两行（当前只有{empty_count}个空行）")
+                    if empty_count != 2:
+                        issues.append(f"第{i+1}行：首段与正文之间必须严格空两行（当前有{empty_count}个空行）")
                     break
                 else:
                     break
@@ -1335,17 +1335,17 @@ def analyze_format_issues(text: str) -> list:
             # 检查 content_end 到下一个四级标题/免责声明之间的空行数
             if content_end < len(lines) - 1:
                 empty_count = 0
-                for j in range(content_end + 1, min(content_end + 5, len(lines))):
+                for j in range(content_end + 1, len(lines)):
                     line_j = lines[j].strip()
                     if not line_j:
                         empty_count += 1
                     elif line_j.startswith('####'):
-                        if empty_count < 2:
-                            issues.append(f"第{content_end + 1}行：四级标题之间应空两行（当前只有{empty_count}个空行）")
+                        if empty_count != 2:
+                            issues.append(f"第{content_end + 1}行：四级标题之间必须严格空两行（当前有{empty_count}个空行）")
                         break
                     elif any(re.match(p, line_j, re.IGNORECASE) for p in disclaimer_patterns):
-                        if empty_count < 2:
-                            issues.append(f"第{j + 1}行：正文与免责声明之间应空两行（当前只有{empty_count}个空行）")
+                        if empty_count != 2:
+                            issues.append(f"第{j + 1}行：正文与免责声明之间必须严格空两行（当前有{empty_count}个空行）")
                         break
                     else:
                         break
