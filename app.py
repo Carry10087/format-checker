@@ -34,10 +34,14 @@ from api import (
 # 粘贴按钮组件已移除（会导致弹窗问题）
 HAS_PASTE_BUTTON = False
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # 用户数据目录
 USERS_DIR = "users"
 USERS_FILE = "users.json"
 DEFAULT_RULES_FILE = "format_rules.md"
+FORMAT_ONLY_RULES_FILE = os.path.join(BASE_DIR, "format_only_rules.md")
+FORMAT_WITH_NOTES_RULES_FILE = os.path.join(BASE_DIR, "format_with_notes_rules.md")
 
 # ==================== 用户管理系统 ====================
 
@@ -57,6 +61,15 @@ def save_users(users):
     """保存用户列表"""
     with open(USERS_FILE, "w", encoding="utf-8") as f:
         json.dump(users, f, ensure_ascii=False, indent=2)
+
+
+def read_utf8_file(path, default=None):
+    """读取 UTF-8 文本文件，失败时返回默认值。"""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read()
+    except:
+        return default
 
 def create_user_dir(username):
     """创建用户目录并初始化文件"""
@@ -1662,7 +1675,7 @@ with tab4:
         "claude-opus-4-6-thinking",
         "claude-sonnet-4-6",
         "claude-sonnet-4-6-thinking",
-        "gpt-5.3"
+        "gpt-5.4"
     ]
     
     api_url = st.text_input("API URL", value=st.session_state.user_config.get("api_url", DEFAULT_API_URL), key="api_url_input")
@@ -2404,20 +2417,12 @@ with tab2:
                 st.error("请先在 API 配置中设置 API Key")
             else:
                 # 读取规则文件
-                try:
-                    with open("format_only_rules.md", "r", encoding="utf-8") as f:
-                        format_rules = f.read()
-                except:
-                    format_rules = None
+                format_rules = read_utf8_file(FORMAT_ONLY_RULES_FILE)
                 
                 # 如果有参考笔记，额外读取 format_with_notes_rules.md
                 notes_rules = ""
                 if qc_notes.strip():
-                    try:
-                        with open("format_with_notes_rules.md", "r", encoding="utf-8") as f:
-                            notes_rules = f.read()
-                    except:
-                        notes_rules = ""
+                    notes_rules = read_utf8_file(FORMAT_WITH_NOTES_RULES_FILE, "")
                 
                 if not format_rules:
                     st.error("无法读取格式规则文件 (format_only_rules.md)")
@@ -2752,8 +2757,15 @@ with tab5:
                 st.error("请先在 API 配置中设置 API Key")
             else:
                 with st.spinner("AI 正在处理..."):
-                    # 构建 prompt
-                    full_prompt = f"""## 任务：按用户指令修改 Markdown
+                    format_only_rules = read_utf8_file(FORMAT_ONLY_RULES_FILE)
+                    if not format_only_rules:
+                        st.error("无法读取格式规则文件 (format_only_rules.md)")
+                    else:
+                        # 构建 prompt
+                        full_prompt = f"""## 任务：按用户指令修改 Markdown，并严格遵守格式规则
+
+## 格式规则（必须遵守）
+{format_only_rules}
 
 ## 用户指令
 {chat_prompt}
@@ -2768,23 +2780,23 @@ with tab5:
 2. 直接输出修改后的完整 Markdown
 3. 不要任何解释、注释、说明
 4. 不要用代码块包裹"""
-                    
-                    result, success, token_info = call_single_step(full_prompt, api_url, api_key, model)
-                    if success:
-                        st.session_state.chat_result = result
-                        st.session_state.chat_translated = ""  # 清空翻译
-                        st.session_state.play_sound = True  # 播放提示音
-                        log_operation("AI对话", f"指令: {chat_prompt[:50]}", extra={
-                            "input_preview": chat_markdown[:100] if chat_markdown else "",
-                            "input_length": len(chat_markdown) if chat_markdown else 0,
-                            "output_length": len(result),
-                            "model": model,
-                            "tokens": {"input": token_info.get("prompt_tokens", 0), "output": token_info.get("completion_tokens", 0)},
-                            "instruction": chat_prompt[:100]
-                        })
-                        st.rerun()
-                    else:
-                        st.error(f"AI 处理失败: {result}")
+
+                        result, success, token_info = call_single_step(full_prompt, api_url, api_key, model)
+                        if success:
+                            st.session_state.chat_result = result
+                            st.session_state.chat_translated = ""  # 清空翻译
+                            st.session_state.play_sound = True  # 播放提示音
+                            log_operation("AI对话", f"指令: {chat_prompt[:50]}", extra={
+                                "input_preview": chat_markdown[:100] if chat_markdown else "",
+                                "input_length": len(chat_markdown) if chat_markdown else 0,
+                                "output_length": len(result),
+                                "model": model,
+                                "tokens": {"input": token_info.get("prompt_tokens", 0), "output": token_info.get("completion_tokens", 0)},
+                                "instruction": chat_prompt[:100]
+                            })
+                            st.rerun()
+                        else:
+                            st.error(f"AI 处理失败: {result}")
     
     st.divider()
     
