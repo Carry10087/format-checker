@@ -7,8 +7,8 @@ import requests
 import time
 
 # 默认 API 配置
-DEFAULT_API_URL = "http://204.194.50.12:9000/v1/chat/completions"
-DEFAULT_API_KEY = "ck-f2aeebfa2d0b26dfa8c431f05f47b27d"
+DEFAULT_API_URL = "https://nvewvip.preview.tencent-zeabur.cn/v1/chat/completions"
+DEFAULT_API_KEY = "sk-k49cdbsNHxIfMZgUTQJl7TAZaNx4ZTakbAYh5yMVj8OhOact"
 
 # 默认模型配置
 DEFAULT_MODEL = "gpt-5.4"  # 通用默认
