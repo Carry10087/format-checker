@@ -1665,10 +1665,10 @@ with tab4:
     
     # 模型选项列表
     MODEL_OPTIONS = [
-        "gemini-3.1-pro-preview",
-        "gemini-3.1-pro-preview-high",
-        "gemini-3.1-pro-preview-maxthinking",
-        "gemini-3.1-pro-preview-nothinking",
+        "流式抗截断/gemini-3.1-pro-high",
+        "流式抗截断/gemini-3.1-pro-preview-high",
+        "流式抗截断/gemini-3.1-pro-preview",
+        "流式抗截断/gemini-3.1-pro-preview-search",
         "gemini-3.1-pro-preview-search",
         "gemini-pro-latest",
         "claude-opus-4-6",
