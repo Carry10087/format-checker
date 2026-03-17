@@ -1675,6 +1675,7 @@ with tab4:
         "claude-opus-4-6-thinking",
         "claude-sonnet-4-6",
         "claude-sonnet-4-6-thinking",
+        "gpt-5.2"
         "gpt-5.4"
     ]
     
