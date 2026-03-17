@@ -7,7 +7,7 @@ import requests
 import time
 
 # 默认 API 配置
-DEFAULT_API_URL = "http://204.194.50.12:9000/v1"
+DEFAULT_API_URL = "http://204.194.50.12:9000/v1/chat/completions"
 DEFAULT_API_KEY = "ck-f0379ca5f512bf6983fe494333f078f8"
 
 # 默认模型配置
