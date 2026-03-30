@@ -1,0 +1,12 @@
+{
+  "name": "codex-answer-desktop",
+  "version": "0.1.0",
+  "description": "Windows-first Codex desktop workbench for strict formatted answers",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^37.2.0"
+  }
+}

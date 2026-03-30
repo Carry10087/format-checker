@@ -1,0 +1,12 @@
+desktop/node_modules/
+desktop/.vite/
+desktop/dist/
+backend/.venv/
+backend/.pytest_cache/
+backend/__pycache__/
+backend/app/__pycache__/
+backend/app/agent/__pycache__/
+backend/app/retrieval/__pycache__/
+backend/app/storage/__pycache__/
+backend/.data/
+*.pyc

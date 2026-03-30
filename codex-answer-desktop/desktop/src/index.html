@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Codex Answer Desktop</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <h1>Codex Answer Desktop</h1>
+          <p>Strict-format answer workbench</p>
+        </div>
+
+        <section class="panel">
+          <h2>History</h2>
+          <div id="history" class="history-list">
+            <p class="muted">No runs yet.</p>
+          </div>
+        </section>
+      </aside>
+
+      <main class="workspace">
+        <section class="panel input-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Run Query</h2>
+              <p>Mixed retrieval + Codex orchestration + strict formatter</p>
+            </div>
+            <span id="healthBadge" class="badge badge-warn">Connecting…</span>
+          </div>
+
+          <label class="field">
+            <span>Query</span>
+            <textarea id="queryInput" placeholder="Enter a query, for example: nyu core"></textarea>
+          </label>
+
+          <div class="toggles">
+            <label><input type="checkbox" id="webEnabled" checked /> Web retrieval</label>
+            <label><input type="checkbox" id="localKbEnabled" checked /> Local knowledge</label>
+            <label><input type="checkbox" id="debugEnabled" /> Debug trace</label>
+          </div>
+
+          <div class="actions">
+            <button id="runButton">Run</button>
+          </div>
+        </section>
+
+        <section class="panel result-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Final Answer</h2>
+              <p id="resultMeta">No result yet.</p>
+            </div>
+          </div>
+          <pre id="resultOutput" class="result-output">Run a query to generate an answer.</pre>
+        </section>
+
+        <section id="debugPanel" class="panel result-panel hidden">
+          <div class="panel-header">
+            <div>
+              <h2>Debug Trace</h2>
+              <p>Visible only when debug mode is enabled for a run.</p>
+            </div>
+          </div>
+          <pre id="debugOutput" class="result-output"></pre>
+        </section>
+      </main>
+    </div>
+
+    <script src="./renderer.js"></script>
+  </body>
+</html>

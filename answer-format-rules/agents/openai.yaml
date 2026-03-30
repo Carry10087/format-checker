@@ -1,0 +1,4 @@
+interface:
+  display_name: "Answer Format Rules"
+  short_description: "Apply strict answer structure, citations, and safety rules."
+  default_prompt: "Use $answer-format-rules to rewrite this answer so it follows the required response format."
