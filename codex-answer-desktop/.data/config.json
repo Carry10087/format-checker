@@ -1,0 +1,10 @@
+{
+  "api_url": "https://api.openai.com/v1/chat/completions",
+  "model": "gpt-5.4",
+  "reasoning_effort": "high",
+  "skill_path": "D:\\format-checker\\answer-format-rules\\SKILL.md",
+  "local_kb_roots": [
+    "D:\\format-checker\\answer-format-rules",
+    "D:\\format-checker\\codex-answer-desktop\\docs"
+  ]
+}

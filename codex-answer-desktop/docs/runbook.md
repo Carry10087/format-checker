@@ -16,9 +16,24 @@ The desktop app expects the backend on `http://127.0.0.1:8765`.
 
 ```powershell
 cd desktop
-npm install
-npm start
+npm.cmd install
+npm.cmd start
 ```
+
+## One-click Windows launcher
+
+From the project root:
+
+```powershell
+start.cmd
+```
+
+`start.cmd` will:
+
+- create `backend/.venv` if it does not exist
+- install backend and desktop dependencies if they are missing
+- auto-detect a formatter skill from `../answer-format-rules/SKILL.md` first
+- load overrides from `start.local.cmd` when present
 
 ## Environment Variables
 

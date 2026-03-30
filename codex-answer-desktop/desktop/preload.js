@@ -12,8 +12,25 @@ async function request(path, options = {}) {
   });
 
   if (!response.ok) {
+    let message = `请求失败：${response.status}`;
     const text = await response.text();
-    throw new Error(text || `Request failed: ${response.status}`);
+
+    try {
+      const data = JSON.parse(text);
+      if (typeof data?.detail === "string" && data.detail.trim()) {
+        message = data.detail.trim();
+      }
+    } catch {
+      if (text && text.trim()) {
+        message = text.trim();
+      }
+    }
+
+    throw new Error(message);
+  }
+
+  if (response.status === 204) {
+    return null;
   }
 
   return response.json();
@@ -26,7 +43,21 @@ contextBridge.exposeInMainWorld("codexDesktop", {
       method: "POST",
       body: JSON.stringify(payload)
     }),
+  translateText: (payload) =>
+    request("/api/translate", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
   getHistory: () => request("/api/history"),
+  updateHistory: (runId, payload) =>
+    request(`/api/history/${runId}`, {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    }),
+  deleteHistory: (runId) =>
+    request(`/api/history/${runId}`, {
+      method: "DELETE"
+    }),
   getConfig: () => request("/api/config"),
   saveConfig: (payload) =>
     request("/api/config", {

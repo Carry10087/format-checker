@@ -3,14 +3,15 @@ from __future__ import annotations
 import re
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 from app.agent.codex_client import CodexClient
 from app.agent.skill_loader import load_skill_bundle
-from app.config import settings
 from app.retrieval.local_kb import LocalKnowledgeRetriever
 from app.retrieval.merge import merge_sources
 from app.retrieval.web import WebRetriever
-from app.schemas import HistoryItem, RunRequest, RunResponse, SourceDocument
+from app.schemas import HistoryItem, RunRequest, RunResponse, SourceDocument, TranslateResponse
+from app.storage.config_repo import ConfigRepository
 from app.storage.history import HistoryRepository
 
 
@@ -19,32 +20,43 @@ class QueryOrchestrator:
         self.codex = CodexClient()
         self.web_retriever = WebRetriever()
         self.local_retriever = LocalKnowledgeRetriever()
+        self.config_repo = ConfigRepository()
         self.history_repo = HistoryRepository()
 
     def run(self, request: RunRequest) -> RunResponse:
         run_id = uuid.uuid4().hex[:12]
         query_type = self._classify_query(request.query)
+        config = self.config_repo.get()
+        selected_model = request.model or config.model
+        selected_reasoning_effort = request.reasoning_effort or config.reasoning_effort
 
         web_sources = self.web_retriever.retrieve(request.query) if request.web_enabled else []
-        local_sources = self.local_retriever.retrieve(request.query) if request.local_kb_enabled else []
+        local_sources = self.local_retriever.retrieve(request.query, config.local_kb_roots) if request.local_kb_enabled else []
         sources = merge_sources(web_sources, local_sources)
 
         if not sources:
             raise ValueError("No usable sources were collected. Enable more retrieval sources or add local knowledge.")
 
-        skill_bundle = load_skill_bundle(settings.skill_path)
+        skill_bundle = load_skill_bundle(Path(config.skill_path))
         prompt = self._build_prompt(request.query, query_type, sources, skill_bundle)
-        final_answer = self.codex.generate(prompt)
+        final_answer, token_usage, model, reasoning_effort = self.codex.generate(
+            prompt,
+            model=selected_model,
+            reasoning_effort=selected_reasoning_effort,
+            api_url=config.api_url,
+        )
         citations_present = bool(re.search(r"\[Note \d+\]\(#\)", final_answer))
 
         debug_trace = None
         if request.debug:
             debug_trace = {
                 "query_type": query_type,
+                "model": model,
+                "reasoning_effort": reasoning_effort,
                 "web_sources": [source.model_dump() for source in web_sources],
                 "local_sources": [source.model_dump() for source in local_sources],
                 "merged_sources": [source.model_dump() for source in sources],
-                "skill_path": str(settings.skill_path),
+                "skill_path": config.skill_path,
             }
 
         response = RunResponse(
@@ -53,6 +65,9 @@ class QueryOrchestrator:
             final_answer=final_answer,
             citations_present=citations_present,
             source_count=len(sources),
+            model=model,
+            reasoning_effort=reasoning_effort,
+            token_usage=token_usage,
             debug_trace=debug_trace,
         )
         self.history_repo.append(
@@ -63,10 +78,58 @@ class QueryOrchestrator:
                 final_answer=final_answer,
                 source_count=len(sources),
                 citations_present=citations_present,
+                model=model,
+                reasoning_effort=reasoning_effort,
+                token_usage=token_usage,
+                web_enabled=request.web_enabled,
+                local_kb_enabled=request.local_kb_enabled,
+                debug=request.debug,
                 debug_trace=debug_trace,
             )
         )
         return response
+
+    def translate_text(
+        self,
+        text: str,
+        run_id: str | None = None,
+        model: str | None = None,
+        reasoning_effort: str | None = None,
+    ) -> TranslateResponse:
+        config = self.config_repo.get()
+        selected_model = model or config.model
+        selected_reasoning_effort = reasoning_effort or config.reasoning_effort
+        prompt = f"""Please translate the following content into simplified Chinese.
+
+Requirements:
+1. Preserve the original Markdown structure and citation markers.
+2. Return the translated result only.
+3. Do not add explanations.
+
+Content:
+{text}
+"""
+
+        translated_text, token_usage, resolved_model, resolved_reasoning_effort = self.codex.generate(
+            prompt,
+            model=selected_model,
+            reasoning_effort=selected_reasoning_effort,
+            api_url=config.api_url,
+        )
+        if run_id:
+            self.history_repo.update(
+                run_id,
+                {
+                    "translated_answer": translated_text,
+                    "translated_token_usage": token_usage,
+                },
+            )
+        return TranslateResponse(
+            translated_text=translated_text,
+            model=resolved_model,
+            reasoning_effort=resolved_reasoning_effort,
+            token_usage=token_usage,
+        )
 
     def _classify_query(self, query: str) -> str:
         normalized = query.strip().lower()

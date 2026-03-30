@@ -12,6 +12,7 @@ class ConfigRepository:
             default=AppConfig(
                 api_url=settings.api_url,
                 model=settings.model,
+                reasoning_effort=settings.reasoning_effort,
                 skill_path=str(settings.skill_path),
                 local_kb_roots=settings.local_kb_roots,
             ).model_dump(),

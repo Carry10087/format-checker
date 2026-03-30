@@ -1,0 +1,9 @@
+@echo off
+rem Copy this file to start.local.cmd and edit the values only if you need
+rem to override the defaults used by start.cmd.
+
+rem set "CODEX_AGENT_API_URL=http://127.0.0.1:9000/v1/chat/completions"
+rem set "CODEX_AGENT_API_KEY=your-api-key"
+rem set "CODEX_AGENT_MODEL=gpt-5.2"
+rem set "CODEX_DESKTOP_BACKEND_PORT=8765"
+rem set "CODEX_SKILL_PATH=D:\format-checker\answer-format-rules\SKILL.md"

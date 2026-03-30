@@ -12,11 +12,12 @@ TEXT_SUFFIXES = {".md", ".txt", ".json", ".yaml", ".yml"}
 
 
 class LocalKnowledgeRetriever:
-    def retrieve(self, query: str) -> list[SourceDocument]:
+    def retrieve(self, query: str, roots: list[str] | None = None) -> list[SourceDocument]:
         tokens = self._tokenize(query)
         candidates: list[tuple[float, SourceDocument]] = []
+        search_roots = roots or settings.local_kb_roots
 
-        for root in settings.local_kb_roots:
+        for root in search_roots:
             root_path = Path(root)
             if not root_path.exists():
                 continue
