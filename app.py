@@ -42,6 +42,7 @@ USERS_FILE = "users.json"
 DEFAULT_RULES_FILE = "format_rules.md"
 FORMAT_ONLY_RULES_FILE = os.path.join(BASE_DIR, "format_only_rules.md")
 FORMAT_WITH_NOTES_RULES_FILE = os.path.join(BASE_DIR, "format_with_notes_rules.md")
+GENERATE_WITH_NOTES_RULES_FILE = os.path.join(BASE_DIR, "generate_with_notes_rules.md")
 
 # ==================== 用户管理系统 ====================
 
@@ -70,6 +71,145 @@ def read_utf8_file(path, default=None):
             return f.read()
     except:
         return default
+
+
+def normalize_note_citations(text):
+    """统一 Note 引用格式，修复逗号合并、缺少空格和缺少 (#) 的情况。"""
+    if not text:
+        return text
+
+    text = text.replace("\r\n", "\n")
+
+    def expand_comma_notes(match):
+        content = match.group(1)
+        notes = re.findall(r'\d+', content)
+        return ''.join(f'[Note {n}](#)' for n in notes)
+
+    # [Note 4, Note 8] / [Note 4, 8] / [Note4,8](#) -> [Note 4](#)[Note 8](#)
+    text = re.sub(
+        r'\[(Note\s*\d+(?:\s*,\s*(?:Note\s*)?\d+)+)\](?:\(#\))?',
+        expand_comma_notes,
+        text
+    )
+
+    # [Note4] / [Note 4] -> [Note 4](#)
+    text = re.sub(r'\[Note\s*(\d+)\](?!\(#\))', r'[Note \1](#)', text)
+
+    # [Note4](#) -> [Note 4](#)
+    text = re.sub(r'\[Note(\d+)\]\(#\)', r'[Note \1](#)', text)
+
+    # [Note 12](#)(#) / [Note 12](#) (#) -> [Note 12](#)
+    text = re.sub(r'(\[Note\s*\d+\]\(#\))(?:\s*\(#\))+', r'\1', text)
+
+    # [Note 12](#)# 或其他尾随重复片段的保守清理
+    text = re.sub(r'(\[Note\s*\d+\]\(#\))(?:(?:\s*\(#\))|(?:\s*#\))|(?:\s*\(#))+', r'\1', text)
+
+    # 连续引用之间不保留空格
+    text = re.sub(r'(\[Note\s*\d+\]\(#\))\s+(?=\[Note\s*\d+\]\(#\))', r'\1', text)
+
+    return text
+
+
+def normalize_quoted_commas(text):
+    """将英文内容中紧跟在双引号后的逗号移到引号内。"""
+    if not text:
+        return text
+
+    return re.sub(r'"([^"\n]+)"\s*,', r'"\1,"', text)
+
+
+def normalize_notes_generation_output(text):
+    """对参考笔记生成结果做轻量格式兜底，避免常见的结构性错误。"""
+    if not text:
+        return text
+
+    text = text.replace("\r\n", "\n")
+    text = normalize_note_citations(text)
+    text = normalize_quoted_commas(text)
+
+    def fix_hyphenated_compounds(value):
+        def repl(match):
+            left, right = match.group(1), match.group(2)
+
+            def normalize_part(part):
+                if part.isupper():
+                    return part
+                return part[:1].upper() + part[1:].lower()
+
+            return f"{normalize_part(left)}-{normalize_part(right)}"
+
+        return re.sub(r'\b([A-Za-z]+)-([A-Za-z]+)\b', repl, value)
+
+    normalized_lines = []
+    for line in text.split("\n"):
+        if line.startswith("#### "):
+            normalized_lines.append("#### " + fix_hyphenated_compounds(line[5:]))
+            continue
+
+        list_title_match = re.match(r'^(\s*-\s+\*\*)([^*]+)(\*\*)(:?.*)$', line)
+        if list_title_match:
+            prefix, title, suffix, rest = list_title_match.groups()
+            normalized_lines.append(f"{prefix}{fix_hyphenated_compounds(title)}{suffix}{rest}")
+            continue
+
+        normalized_lines.append(line)
+
+    text = "\n".join(normalized_lines)
+
+    text = normalize_markdown_spacing(text)
+
+    return text.strip()
+
+
+def normalize_markdown_spacing(text):
+    """统一 Markdown 间距，按空白行语义规范主要板块的间距。"""
+    if not text:
+        return text
+
+    text = text.replace("\r\n", "\n")
+    text = normalize_note_citations(text)
+    raw_lines = text.split("\n")
+    normalized = []
+    i = 0
+
+    def is_heading(line):
+        return bool(re.match(r'^#{1,6} ', line))
+
+    def is_list_item(line):
+        return bool(re.match(r'^\s*(?:- |\d+\. )', line))
+
+    while i < len(raw_lines):
+        line = raw_lines[i].rstrip()
+
+        if line.strip() == "":
+            j = i
+            while j < len(raw_lines) and raw_lines[j].strip() == "":
+                j += 1
+
+            prev_line = normalized[-1] if normalized else None
+            next_line = raw_lines[j].rstrip() if j < len(raw_lines) else None
+
+            if prev_line is not None and next_line is not None:
+                # 标题与其下正文/列表之间不留空行
+                if is_heading(prev_line):
+                    pass
+                # 列表与同级下一标题之间、首段与正文之间统一保留两个空白行
+                else:
+                    normalized.extend(["", ""])
+
+            i = j
+            continue
+
+        normalized.append(line)
+        i += 1
+
+    # 去掉首尾空白行
+    while normalized and normalized[0] == "":
+        normalized.pop(0)
+    while normalized and normalized[-1] == "":
+        normalized.pop()
+
+    return "\n".join(normalized)
 
 def create_user_dir(username):
     """创建用户目录并初始化文件"""
@@ -134,7 +274,16 @@ def get_user_config_file(username):
 def load_user_config():
     """读取当前用户的 API 配置"""
     if "current_user" not in st.session_state or not st.session_state.current_user:
-        return {"api_url": DEFAULT_API_URL, "api_key": DEFAULT_API_KEY, "model": DEFAULT_MODEL}
+        return {
+            "api_url": DEFAULT_API_URL,
+            "api_key": DEFAULT_API_KEY,
+            "model": DEFAULT_MODEL,
+            "model_edit": DEFAULT_MODEL_EDIT,
+            "model_translate": DEFAULT_MODEL_TRANSLATE,
+            "model_qc": DEFAULT_MODEL_QC,
+            "model_chat": DEFAULT_MODEL_CHAT,
+            "model_qc_fast": DEFAULT_MODEL_QC,
+        }
     try:
         config_file = get_user_config_file(st.session_state.current_user)
         with open(config_file, "r", encoding="utf-8") as f:
@@ -142,10 +291,24 @@ def load_user_config():
             return {
                 "api_url": config.get("api_url", DEFAULT_API_URL),
                 "api_key": config.get("api_key", DEFAULT_API_KEY),
-                "model": config.get("model", DEFAULT_MODEL)
+                "model": config.get("model", DEFAULT_MODEL),
+                "model_edit": config.get("model_edit", config.get("model", DEFAULT_MODEL_EDIT)),
+                "model_translate": config.get("model_translate", DEFAULT_MODEL_TRANSLATE),
+                "model_qc": config.get("model_qc", DEFAULT_MODEL_QC),
+                "model_chat": config.get("model_chat", DEFAULT_MODEL_CHAT),
+                "model_qc_fast": config.get("model_qc_fast", config.get("model_qc", DEFAULT_MODEL_QC)),
             }
     except:
-        return {"api_url": DEFAULT_API_URL, "api_key": DEFAULT_API_KEY, "model": DEFAULT_MODEL}
+        return {
+            "api_url": DEFAULT_API_URL,
+            "api_key": DEFAULT_API_KEY,
+            "model": DEFAULT_MODEL,
+            "model_edit": DEFAULT_MODEL_EDIT,
+            "model_translate": DEFAULT_MODEL_TRANSLATE,
+            "model_qc": DEFAULT_MODEL_QC,
+            "model_chat": DEFAULT_MODEL_CHAT,
+            "model_qc_fast": DEFAULT_MODEL_QC,
+        }
 
 def save_user_config(api_url, api_key, model):
     """保存当前用户的 API 配置"""
@@ -383,6 +546,35 @@ TRANSLATE_PROMPT = """你是一个专业翻译。请将以下英文内容翻译�
 {text}
 
 ## 请输出中文翻译"""
+
+NOTES_ONLY_GENERATE_PROMPT = """## 任务：仅根据参考笔记生成全新答案
+
+这是一个“只看参考笔记”的测试任务。
+当前**没有**待修改答案，你必须从零开始生成，不要假设、复用或模仿任何未提供的旧答案。
+参考笔记中已经包含用户问题或搜索词，你需要先从参考笔记中识别用户真正的问题与意图，再生成答案。
+
+## 英文参考笔记
+{ref_notes}
+
+## 独立生成规则
+{rules}
+
+---
+
+## 要求
+1. 只根据参考笔记直接生成一份**全新的英文 Markdown 答案**
+2. 所有事实点都必须能在参考笔记中找到直接依据
+3. 禁止补充参考笔记之外的新事实、新数字、新实体、新日期或主观猜测
+4. 用户问题或搜索词已包含在参考笔记中，不依赖任何额外输入框
+5. 如果参考笔记存在多个义项，只保留与用户真实意图最匹配的内容；只有在搜索词本身就是明显多义词时，才按规则生成多义项答案
+6. 严格遵守上方规则中的结构、引用、无答案终止、安全、过滤、措辞和内容筛选要求
+7. 禁止出现 “according to the notes / based on the documents / the references show” 等暴露来源的表述
+8. 所有引用必须保持为精确的 `[Note X](#)` 格式，并放在正确位置
+9. 除作品名外，禁止对任何单词示例、风格词、概念词、学习词汇、普通名词使用双引号
+10. 本页面只输出英文终稿；忽略规则中的默认双语输出要求，中文由页面上的“翻译”按钮单独生成
+11. 如果参考笔记不足以支持答案，按规则执行无答案终止或信息不足处理
+12. 只输出最终英文 Markdown，不要解释、分析、检查过程，也不要用代码块包裹
+"""
 
 # 2 步名称
 STEP_NAMES = [
@@ -1650,7 +1842,7 @@ with col_user:
         st.rerun()
 
 # 创建标签页（使用原生 st.tabs + CSS 美化）
-tab1, tab2, tab5, tab4 = st.tabs(['AI 修改', '独立质检', 'AI 对话', 'API 配置'])
+tab3, tab2, tab5, tab4 = st.tabs(['参考笔记生成', '独立质检', 'AI 对话', 'API 配置'])
 
 # 用 session_state 追踪当前 tab（st.tabs 不返回索引，需要在各 tab 内处理）
 
@@ -1685,16 +1877,16 @@ with tab4:
     st.markdown("---")
     st.markdown("**模型配置**")
     
-    # 深度修改模型
+    # 参考笔记生成模型
     def get_model_index(key, default_model):
         current = st.session_state.user_config.get(key, default_model)
         return MODEL_OPTIONS.index(current) if current in MODEL_OPTIONS else 0
     
     col_m1, col_m2 = st.columns(2)
     with col_m1:
-        model_edit = st.selectbox("深度修改", options=MODEL_OPTIONS, 
+        model_edit = st.selectbox("参考笔记生成", options=MODEL_OPTIONS, 
                                    index=get_model_index("model_edit", DEFAULT_MODEL_EDIT),
-                                   key="model_edit_select", help="AI修改功能使用")
+                                   key="model_edit_select", help="参考笔记生成功能使用")
         model_translate = st.selectbox("翻译", options=MODEL_OPTIONS,
                                         index=get_model_index("model_translate", DEFAULT_MODEL_TRANSLATE),
                                         key="model_translate_select", help="翻译功能使用")
@@ -1734,7 +1926,7 @@ with tab4:
             with col_filter1:
                 filter_user = st.selectbox("筛选用户", ["全部"] + list(set(log["user"] for log in logs)), key="log_filter_user")
             with col_filter2:
-                filter_action = st.selectbox("筛选操作", ["全部", "登录", "AI修改", "自动修复", "AI质检", "AI对话", "保存配置"], key="log_filter_action")
+                filter_action = st.selectbox("筛选操作", ["全部", "登录", "AI修改", "笔记生成", "自动修复", "AI质检", "AI对话", "保存配置"], key="log_filter_action")
             
             # 应用筛选
             filtered_logs = logs
@@ -1750,7 +1942,7 @@ with tab4:
                 # 操作图标
                 action_icons = {
                     "登录": "🟢", "AI修改": "🔵", "自动修复": "🟡", 
-                    "AI质检": "🟣", "AI对话": "🟠", "保存配置": "⚙️"
+                    "笔记生成": "🧠", "AI质检": "🟣", "AI对话": "🟠", "保存配置": "⚙️"
                 }
                 icon = action_icons.get(log['action'], '⚪')
                 
@@ -1789,6 +1981,14 @@ if "final_result" not in st.session_state:
     st.session_state.final_result = ""
 if "translated_result" not in st.session_state:
     st.session_state.translated_result = ""
+if "notes_query" not in st.session_state:
+    st.session_state.notes_query = ""
+if "notes_ref" not in st.session_state:
+    st.session_state.notes_ref = ""
+if "notes_result" not in st.session_state:
+    st.session_state.notes_result = ""
+if "notes_translated_result" not in st.session_state:
+    st.session_state.notes_translated_result = ""
 if "history" not in st.session_state or st.session_state.history is None:
     st.session_state.history = load_history()
 if "current_input" not in st.session_state:
@@ -1808,7 +2008,7 @@ if st.session_state.play_sound:
     st.session_state.play_sound = False
 
 # ==================== AI 修改功能 ====================
-with tab1:
+if False:
     st.subheader("AI 自动修改")
     
     # 历史记录切换
@@ -2295,11 +2495,146 @@ with tab1:
                     prompt = TRANSLATE_PROMPT.format(text=st.session_state.final_result)
                     result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
                     if success:
-                        st.session_state.translated_result = result
+                        st.session_state.translated_result = normalize_markdown_spacing(result)
                         if st.session_state.history and st.session_state.current_history_idx >= 0:
-                            st.session_state.history[st.session_state.current_history_idx]["translated"] = result
+                            st.session_state.history[st.session_state.current_history_idx]["translated"] = st.session_state.translated_result
                             save_history(st.session_state.history)
                         st.session_state.play_sound = True  # 翻译完成也播放提示音
+                        st.rerun()
+                    else:
+                        st.error(result)
+
+# ==================== 参考笔记生成功能 ====================
+with tab3:
+    st.subheader("参考笔记生成")
+    notes_ref = st.text_area(
+        "参考笔记",
+        height=360,
+        value=st.session_state.notes_ref,
+        placeholder="粘贴英文参考笔记（其中已包含用户问题或搜索词）...",
+        key="notes_ref_input"
+    )
+    if notes_ref != st.session_state.notes_ref:
+        st.session_state.notes_ref = notes_ref
+
+    col_generate, col_clear = st.columns([3, 1])
+    with col_generate:
+        notes_generate_clicked = st.button("🚀 开始生成", type="primary", use_container_width=True, key="notes_generate_btn")
+    with col_clear:
+        notes_clear_clicked = st.button("清空结果", use_container_width=True, key="notes_clear_btn")
+
+    if notes_clear_clicked:
+        st.session_state.notes_result = ""
+        st.session_state.notes_translated_result = ""
+        st.rerun()
+
+    if notes_generate_clicked:
+        if not notes_ref.strip():
+            st.warning("请输入参考笔记")
+        else:
+            user_cfg = st.session_state.user_config
+            api_url = user_cfg.get("api_url", DEFAULT_API_URL)
+            api_key = user_cfg.get("api_key", DEFAULT_API_KEY)
+            model = user_cfg.get("model_edit", user_cfg.get("model", DEFAULT_MODEL))
+
+            if not api_key:
+                st.error("请先在 API 配置中设置 API Key")
+            else:
+                rules = read_utf8_file(GENERATE_WITH_NOTES_RULES_FILE, "")
+                if not rules:
+                    st.error("无法读取 generate_with_notes_rules.md 文件")
+                else:
+                    with st.spinner("正在根据参考笔记生成答案，请勿切换页面..."):
+                        prompt = NOTES_ONLY_GENERATE_PROMPT.format(
+                            ref_notes=notes_ref,
+                            rules=rules
+                        )
+                        result, success, token_info = call_single_step(prompt, api_url, api_key, model)
+                        if success:
+                            st.session_state.notes_result = normalize_notes_generation_output(result)
+                            st.session_state.notes_translated_result = ""
+                            st.session_state.play_sound = True
+                            log_operation("笔记生成", f"参考笔记输入: {len(notes_ref)} 字符", extra={
+                                "input_preview": notes_ref[:100],
+                                "input_length": len(notes_ref),
+                                "output_length": len(st.session_state.notes_result),
+                                "model": model,
+                                "tokens": {"input": token_info.get("prompt_tokens", 0), "output": token_info.get("completion_tokens", 0)}
+                            })
+                            st.rerun()
+                        else:
+                            st.error(f"生成失败: {result}")
+
+    if st.session_state.notes_result:
+        st.divider()
+        col_result, col_translate = st.columns(2)
+        html_style = "<style>body{margin:0;padding:0;overflow:hidden;}button{width:100%;height:40px;padding:0;margin:0;display:block;font-size:14px;color:white;border:none;border-radius:5px;cursor:pointer;line-height:40px;font-family:'Source Sans Pro',sans-serif;transition:0.3s;}button:hover{opacity:0.9;}button:active{transform:scale(0.98);}</style>"
+
+        with col_result:
+            h_en1, h_en2 = st.columns([3, 1])
+            with h_en1:
+                st.subheader("生成结果（英文）")
+            with h_en2:
+                notes_view_mode = st.toggle("预览模式", value=True, key="notes_view_mode")
+
+            if notes_view_mode:
+                with st.container(height=320):
+                    st.markdown(st.session_state.notes_result)
+
+                st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
+                encoded_notes_en = base64.b64encode(st.session_state.notes_result.encode('utf-8')).decode('utf-8')
+                copy_js_notes_en = f'''{html_style}<script>function copyNotesEn(){{const b='{encoded_notes_en}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnNotesEn').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnNotesEn').innerText='复制英文',1500);}});}}</script><button id="btnNotesEn" onclick="copyNotesEn()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
+                components.html(copy_js_notes_en, height=60)
+            else:
+                def save_notes_edit():
+                    st.session_state.notes_result = st.session_state.notes_result_edit
+
+                st.text_area(
+                    "英文结果",
+                    value=st.session_state.notes_result,
+                    height=320,
+                    key="notes_result_edit",
+                    label_visibility="collapsed",
+                    on_change=save_notes_edit
+                )
+
+                st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
+                copy_js_notes_en = f'''{html_style}<script>function copyNotesEn(){{const iframes=window.parent.document.querySelectorAll('iframe');let thisIframe=null;for(const f of iframes){{if(f.contentWindow===window){{thisIframe=f;break;}}}}if(thisIframe){{const iRect=thisIframe.getBoundingClientRect();const tas=window.parent.document.querySelectorAll('textarea');let closest=null;let minDist=Infinity;for(const ta of tas){{const tRect=ta.getBoundingClientRect();const dist=Math.abs(tRect.bottom-iRect.top)+Math.abs(tRect.left-iRect.left);if(dist<minDist){{minDist=dist;closest=ta;}}}}if(closest&&closest.value){{navigator.clipboard.writeText(closest.value).then(()=>{{document.getElementById('btnNotesEn').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnNotesEn').innerText='复制英文',1500);}});return;}}}}alert('找不到编辑框');}}</script><button id="btnNotesEn" onclick="copyNotesEn()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
+                components.html(copy_js_notes_en, height=60)
+
+        with col_translate:
+            h_c1, h_c2 = st.columns([3, 1])
+            with h_c1:
+                st.subheader("中文翻译")
+            with h_c2:
+                notes_translate_clicked = st.button("翻译", use_container_width=True, type="primary", key="notes_translate_btn")
+
+            with st.container(height=320):
+                if st.session_state.notes_translated_result:
+                    st.markdown(st.session_state.notes_translated_result)
+                else:
+                    st.caption("点击「翻译」按钮生成中文翻译...")
+
+            st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
+            if st.session_state.notes_translated_result:
+                encoded_notes_cn = base64.b64encode(st.session_state.notes_translated_result.encode('utf-8')).decode('utf-8')
+                copy_js_notes_cn = f'''{html_style}<script>function copyNotesCn(){{const b='{encoded_notes_cn}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnNotesCn').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnNotesCn').innerText='复制中文',1500);}});}}</script><button id="btnNotesCn" onclick="copyNotesCn()" style="background:linear-gradient(135deg,#8b5cf6 0%,#00d4ff 100%);box-shadow:0 0 15px rgba(139,92,246,0.3);">复制中文</button>'''
+                components.html(copy_js_notes_cn, height=60)
+            else:
+                st.empty()
+
+            if notes_translate_clicked:
+                user_cfg = st.session_state.user_config
+                api_url_t = user_cfg.get("api_url", DEFAULT_API_URL)
+                api_key_t = user_cfg.get("api_key", DEFAULT_API_KEY)
+                model_t = user_cfg.get("model_translate", user_cfg.get("model", DEFAULT_MODEL))
+
+                with st.spinner("翻译中，请勿切换页面..."):
+                    prompt = TRANSLATE_PROMPT.format(text=st.session_state.notes_result)
+                    result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
+                    if success:
+                        st.session_state.notes_translated_result = normalize_markdown_spacing(result)
+                        st.session_state.play_sound = True
                         st.rerun()
                     else:
                         st.error(result)
@@ -2666,13 +3001,13 @@ with tab2:
                 user_cfg = st.session_state.user_config
                 api_url_t = user_cfg.get("api_url", DEFAULT_API_URL)
                 api_key_t = user_cfg.get("api_key", DEFAULT_API_KEY)
-                model_t = user_cfg.get("model_translate", "gemini-3-flash-preview-nothinking")
+                model_t = user_cfg.get("model_translate", user_cfg.get("model", DEFAULT_MODEL_TRANSLATE))
                 
                 if api_key_t:
-                    prompt = f"请将以下英文内容翻译成中文，保持原有格式（Markdown），直接输出翻译结果，不要任何解释：\n\n{st.session_state.qc_result}"
+                    prompt = TRANSLATE_PROMPT.format(text=st.session_state.qc_result)
                     result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
                     if success:
-                        st.session_state.qc_translated = result
+                        st.session_state.qc_translated = normalize_markdown_spacing(result)
                         st.session_state.play_sound = True  # 翻译完成播放提示音
                     else:
                         st.session_state.qc_translated = f"翻译失败: {result}"
@@ -2858,13 +3193,13 @@ with tab5:
                 user_cfg = st.session_state.user_config
                 api_url_t = user_cfg.get("api_url", DEFAULT_API_URL)
                 api_key_t = user_cfg.get("api_key", DEFAULT_API_KEY)
-                model_t = user_cfg.get("model_translate", "gemini-3-flash-preview-nothinking")
+                model_t = user_cfg.get("model_translate", user_cfg.get("model", DEFAULT_MODEL_TRANSLATE))
                 
                 if api_key_t:
-                    prompt = f"请将以下英文内容翻译成中文，保持原有格式（Markdown），直接输出翻译结果，不要任何解释：\n\n{st.session_state.chat_result}"
+                    prompt = TRANSLATE_PROMPT.format(text=st.session_state.chat_result)
                     result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
                     if success:
-                        st.session_state.chat_translated = result
+                        st.session_state.chat_translated = normalize_markdown_spacing(result)
                         st.session_state.play_sound = True  # 翻译完成播放提示音
                     else:
                         st.session_state.chat_translated = f"翻译失败: {result}"

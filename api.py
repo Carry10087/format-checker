@@ -7,15 +7,15 @@ import requests
 import time
 
 # 默认 API 配置
-DEFAULT_API_URL = "http://204.194.50.12:9000/v1/chat/completions"
-DEFAULT_API_KEY = "ck-f0379ca5f512bf6983fe494333f078f8"
+DEFAULT_API_URL = "https://nvewvip.preview.tencent-zeabur.cn/v1/chat/completions"
+DEFAULT_API_KEY = "sk-oMUkR5UM2edysc1wYl7aB7qulUpSwXjdIhqGl1vaV1MrcOue"
 
 # 默认模型配置
-DEFAULT_MODEL = "gpt-5.2"  # 通用默认
-DEFAULT_MODEL_EDIT = "gpt-5.2"  # 深度修改
-DEFAULT_MODEL_TRANSLATE = "gpt-5.2"  # 翻译
-DEFAULT_MODEL_QC = "gpt-5.2"  # AI质检
-DEFAULT_MODEL_CHAT = "gpt-5.2"  # AI对话
+DEFAULT_MODEL = "流式抗截断/gemini-3.1-pro-high"  # 通用默认
+DEFAULT_MODEL_EDIT = "流式抗截断/gemini-3.1-pro-high"  # 深度修改
+DEFAULT_MODEL_TRANSLATE = "流式抗截断/gemini-3.1-pro-high"  # 翻译
+DEFAULT_MODEL_QC = "流式抗截断/gemini-3.1-pro-high"  # AI质检
+DEFAULT_MODEL_CHAT = "流式抗截断/gemini-3.1-pro-high"  # AI对话
 
 
 def call_single_step(prompt, api_url, api_key, model, image_base64=None, max_retries=3):

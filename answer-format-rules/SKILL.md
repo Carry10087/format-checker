@@ -1,6 +1,6 @@
 ---
 name: answer-format-rules
-description: Enforce a strict house style for factual or retrieval-based answers. Use when Codex needs to write or rewrite a final answer to match fixed response rules such as English-only output, a one-sentence core definition, structured headings and lists, preserved `[Note X](#)` citations, citation placement constraints, YMYL disclaimers, ambiguity handling, or discard and refusal rules.
+description: Enforce a strict house style for factual or retrieval-based answers. Use when Codex needs to write or rewrite a final answer to match fixed response rules such as default bilingual English-Chinese output, a one-sentence core definition, structured headings and lists, preserved `[Note X](#)` citations, citation placement constraints, YMYL disclaimers, ambiguity handling, or discard and refusal rules.
 ---
 
 # Answer Format Rules
@@ -13,16 +13,24 @@ Keep this file lean; read [references/format_rules.md](references/format_rules.m
 ## Workflow
 
 1. Classify the request.
-2. Lock the core answer.
-3. Build the body.
-4. Preserve citations.
-5. Apply safety and discard rules.
-6. Run a final compliance check.
+2. Verify note accuracy and scope.
+3. Lock the core answer.
+4. Build the body.
+5. Preserve citations.
+6. Apply safety and discard rules.
+7. Run a final compliance check.
 
 ## Classify The Request
 
 - Decide whether the answer should be a short answer, a standard factual explanation, a multi-meaning disambiguation, a how-to answer, a YMYL answer with a disclaimer, or a refusal or discard.
 - If the query is non-English, depends primarily on images or video, is purely promotional, is highly time-sensitive, or maps to prohibited or unsupported content, follow the discard or refusal rules in [references/format_rules.md](references/format_rules.md).
+
+## Verify Note Accuracy And Scope
+
+- For time-sensitive, political, legal, medical, or otherwise unstable facts, browse or otherwise verify before finalizing.
+- Treat online verification as a consistency check on note content, not as permission to expand beyond the notes.
+- Every factual claim in the final answer must be supported by the notes. Do not add web-only facts, dates, numbers, entities, or developments that are absent from the notes.
+- If a note cannot be verified confidently or conflicts with stronger evidence, remove or qualify that note-supported point instead of replacing it with new external facts.
 
 ## Lock The Core Answer
 
@@ -35,6 +43,8 @@ Keep this file lean; read [references/format_rules.md](references/format_rules.m
 ## Build The Body
 
 - Expand only the meanings promised by the opening sentence.
+- For note-based tasks, keep every factual point traceable to the notes; online verification may filter claims but must not add new ones.
+- Draft the English answer first, then produce a Chinese version that mirrors the same meaning, structure, and citation coverage.
 - Use `####` headings only when multiple thematic blocks are needed. If the body has a single theme, go straight into lists.
 - Put content under `####` headings into bullets or numbered steps rather than freeform paragraphs, unless the rules explicitly require a single paragraph for a single-item section.
 - Use numbered lists for procedures, time order, rankings, and staged workflows.
@@ -58,7 +68,9 @@ Keep this file lean; read [references/format_rules.md](references/format_rules.m
 
 ## Final Compliance Check
 
-- Use English only unless the task explicitly requires Chinese.
+- Output both `English Version` and `中文版本` by default unless the task explicitly requests a single language.
+- Put the English answer and the Chinese answer in separate code blocks with mirrored structure and citation coverage.
+- Do not introduce facts in Chinese that are not present in English, or vice versa.
 - Avoid meta phrasing such as "Based on the search results" or "According to the documents."
 - Use quotation marks only for works or titles, not for people, brands, places, or ordinary nouns.
 - Replace body-text markdown emphasis or backticks with straight double quotes when the rules require quoted titles or file names.
