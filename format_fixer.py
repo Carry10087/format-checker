@@ -6,6 +6,22 @@
 import re
 
 
+def find_broken_note_link(line: str):
+    """查找常见的 Note 链接括号错误，例如 [Note 4](#]。"""
+    patterns = [
+        r'(\[Note\s*(\d+)\]\(#\])',
+        r'(\[Note\s*(\d+)\]\(\])',
+        r'(\[Note\s*(\d+)\]\(#(?=(?:\s|$|[.,!?;:])))',
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, line)
+        if match:
+            broken = match.group(1)
+            note_number = next((group for group in match.groups()[1:] if group), None)
+            return broken, note_number
+    return None, None
+
+
 # ==================== 基础修复函数 ====================
 
 def fix_note_format(text: str) -> str:
@@ -24,6 +40,12 @@ def fix_note_format(text: str) -> str:
         notes = re.findall(r'Note\s*(\d+)', content)
         return ''.join(f'[Note {n}](#)' for n in notes)
     text = re.sub(r'\[(Note\s*\d+(?:\s*,\s*Note\s*\d+)+)\]', expand_comma_notes, text)
+
+    # 步骤0.5：修复常见的 Note 链接括号错误
+    # 例如：[Note 4](#] / [Note 4](] / [Note 4](#.
+    text = re.sub(r'\[Note\s*(\d+)\]\(#\]', r'[Note \1](#)', text)
+    text = re.sub(r'\[Note\s*(\d+)\]\(\]', r'[Note \1](#)', text)
+    text = re.sub(r'\[Note\s*(\d+)\]\(#(?=(?:\s|$|[.,!?;:]))', r'[Note \1](#)', text)
     
     # 步骤1：修复 [Note1] → [Note 1]
     text = re.sub(r'\[Note(\d+)\]', r'[Note \1]', text)
@@ -720,6 +742,14 @@ def analyze_format_issues(text: str) -> list:
         matches = re.findall(r'\[Note\d+\]', line)
         if matches:
             issues.append(f"第{i}行：引用格式错误 {matches} → 应为 [Note X]")
+            break
+
+    # 检查 Note 链接括号错误（如 [Note 4](#]）
+    for i, line in enumerate(lines, 1):
+        broken_note, note_number = find_broken_note_link(line)
+        if broken_note:
+            expected = f"[Note {note_number}](#)" if note_number else "[Note X](#)"
+            issues.append(f"第{i}行：Note 引用链接格式错误「{broken_note}」→ 应为「{expected}」")
             break
     
     # 检查引用位置（应在句号前，而非句号后）

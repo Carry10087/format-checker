@@ -19,6 +19,7 @@ import streamlit.components.v1 as components
 # from streamlit_option_menu import option_menu  # 已改用 st.tabs
 import re
 import json
+import html
 import requests
 import shutil
 import base64
@@ -212,9 +213,10 @@ def normalize_markdown_spacing(text):
     return "\n".join(normalized)
 
 
-COPY_BUTTON_HTML_STYLE = "<style>body{margin:0;padding:0;overflow:hidden;}button{width:100%;height:40px;padding:0;margin:0;display:block;font-size:14px;color:white;border:none;border-radius:5px;cursor:pointer;line-height:40px;font-family:'Source Sans Pro',sans-serif;transition:0.3s;}button:hover{opacity:0.9;}button:active{transform:scale(0.98);}</style>"
-EN_COPY_BUTTON_STYLE = "background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);"
-CN_COPY_BUTTON_STYLE = "background:linear-gradient(135deg,#8b5cf6 0%,#00d4ff 100%);box-shadow:0 0 15px rgba(139,92,246,0.3);"
+COPY_BUTTON_HTML_STYLE = "<style>body{margin:0;padding:4px 0 2px;overflow:hidden;box-sizing:border-box;}button{width:100%;height:40px;padding:0 14px;margin:0;display:block;font-size:14px;font-weight:600;color:#00d4ff;border:1px solid rgba(0,212,255,0.3);border-radius:10px;cursor:pointer;line-height:40px;font-family:'Source Sans Pro',sans-serif;transition:background-color .25s ease,border-color .25s ease,box-shadow .25s ease,transform .25s ease;box-sizing:border-box;}button:hover{background:rgba(0,212,255,0.2)!important;border-color:#00d4ff!important;box-shadow:0 0 20px rgba(0,212,255,0.3)!important;transform:translateY(-2px)!important;}button:active{transform:scale(.97) translateY(-1px)!important;}button:focus{outline:none;}</style>"
+EN_COPY_BUTTON_STYLE = "background:rgba(0,212,255,0.1);"
+CN_COPY_BUTTON_STYLE = "background:rgba(0,212,255,0.1);"
+RESULT_PANEL_HEIGHT = 360
 COPY_JS_HELPERS = """
 <script>
 function copyWithFallback(text, onSuccess, onFail) {
@@ -260,20 +262,110 @@ def render_section_title(title, style="subheader"):
         st.subheader(title)
 
 
-def render_copy_button(text, button_id, label, copied_label="✅ 已复制", button_style=EN_COPY_BUTTON_STYLE):
+def render_soft_notice(message, tone="neutral"):
+    palettes = {
+        "neutral": ("rgba(255,255,255,0.05)", "rgba(255,255,255,0.10)", "#dce4f2"),
+        "info": ("rgba(0,212,255,0.08)", "rgba(0,212,255,0.22)", "#d9f8ff"),
+        "success": ("rgba(0,255,136,0.08)", "rgba(0,255,136,0.22)", "#dcfff0"),
+    }
+    background, border, color = palettes.get(tone, palettes["neutral"])
+    content = html.escape(message).replace("\n", "<br>")
+    st.markdown(
+        f"""
+        <div style="
+            margin: 0.35rem 0 1rem 0;
+            padding: 0.75rem 0.95rem;
+            border-radius: 12px;
+            background: {background};
+            border: 1px solid {border};
+            color: {color};
+            font-size: 0.95rem;
+            line-height: 1.65;
+        ">{content}</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_loading_banner(title, detail=""):
+    safe_title = html.escape(title)
+    safe_detail = html.escape(detail).replace("\n", "<br>") if detail else ""
+    detail_html = f'<div class="processing-card__detail">{safe_detail}</div>' if safe_detail else ""
+    st.markdown(
+        f"""
+        <div class="processing-card">
+            <div class="processing-card__sheen"></div>
+            <div class="processing-card__header">
+                <span class="processing-card__pulse"></span>
+                <span class="processing-card__title">{safe_title}</span>
+            </div>
+            {detail_html}
+            <div class="processing-card__bar"><span></span></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_result_motion_anchor(anchor_id, delay_ms=0):
+    safe_anchor = re.sub(r"\W+", "_", anchor_id)
+    components.html(
+        f"""
+        <script>
+        (() => {{
+            const iframe = Array.from(window.parent.document.querySelectorAll('iframe'))
+                .find((node) => node.contentWindow === window);
+            if (!iframe) return;
+            const host =
+                iframe.closest('[data-testid="column"]') ||
+                iframe.parentElement?.closest('[data-testid="stVerticalBlock"]');
+            if (!host) return;
+
+            const marker = 'result_motion_{safe_anchor}';
+            host.classList.add('result-panel-shell');
+            host.style.setProperty('--result-enter-delay', '{delay_ms}ms');
+            host.dataset.resultMotion = marker;
+            host.classList.remove('result-panel-enter');
+            void host.offsetWidth;
+            host.classList.add('result-panel-enter');
+            window.setTimeout(() => {{
+                if (host.dataset.resultMotion === marker) {{
+                    host.classList.remove('result-panel-enter');
+                }}
+            }}, {delay_ms + 900});
+        }})();
+        </script>
+        """,
+        height=0,
+    )
+
+
+def should_play_result_motion(state_key, content):
+    motion_key = f"{state_key}__motion_signature"
+    if not content:
+        st.session_state.pop(motion_key, None)
+        return False
+
+    signature = hashlib.sha256(content.encode("utf-8")).hexdigest()
+    previous_signature = st.session_state.get(motion_key)
+    st.session_state[motion_key] = signature
+    return previous_signature != signature
+
+
+def render_copy_button(text, button_id, label, copied_label="已复制", button_style=EN_COPY_BUTTON_STYLE):
     if not text:
         return
 
     encoded = base64.b64encode(text.encode("utf-8")).decode("utf-8")
     js_name = re.sub(r"\W+", "_", button_id)
     copy_js = f"""{COPY_BUTTON_HTML_STYLE}{COPY_JS_HELPERS}<script>function copy_{js_name}(){{const b='{encoded}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);copyWithFallback(t, ()=>{{const btn=document.getElementById('{button_id}');if(btn){{btn.innerText='{copied_label}';setTimeout(()=>btn.innerText='{label}',1500);}}}}, ()=>alert('复制失败'));}}</script><button id="{button_id}" onclick="copy_{js_name}()" style="{button_style}">{label}</button>"""
-    components.html(copy_js, height=60)
+    components.html(copy_js, height=70)
 
 
-def render_copy_nearest_textarea_button(button_id, label, copied_label="✅ 已复制", button_style=EN_COPY_BUTTON_STYLE):
+def render_copy_nearest_textarea_button(button_id, label, copied_label="已复制", button_style=EN_COPY_BUTTON_STYLE):
     js_name = re.sub(r"\W+", "_", button_id)
     copy_js = f"""{COPY_BUTTON_HTML_STYLE}{COPY_JS_HELPERS}<script>function copy_{js_name}(){{const iframes=window.parent.document.querySelectorAll('iframe');let thisIframe=null;for(const f of iframes){{if(f.contentWindow===window){{thisIframe=f;break;}}}}let closest=null;if(thisIframe){{const iRect=thisIframe.getBoundingClientRect();const tas=window.parent.document.querySelectorAll('textarea');let minDist=Infinity;for(const ta of tas){{const tRect=ta.getBoundingClientRect();const dist=Math.abs(tRect.bottom-iRect.top)+Math.abs(tRect.left-iRect.left);if(dist<minDist){{minDist=dist;closest=ta;}}}}}}if(closest&&closest.value!=null){{copyWithFallback(closest.value, ()=>{{const btn=document.getElementById('{button_id}');if(btn){{btn.innerText='{copied_label}';setTimeout(()=>btn.innerText='{label}',1500);}}}}, ()=>alert('复制失败'));return;}}alert('找不到编辑框');}}</script><button id="{button_id}" onclick="copy_{js_name}()" style="{button_style}">{label}</button>"""
-    components.html(copy_js, height=60)
+    components.html(copy_js, height=70)
 
 
 def render_markdown_result_column(
@@ -289,13 +381,23 @@ def render_markdown_result_column(
     copy_label="复制英文",
     on_save=None,
 ):
+    content = st.session_state.get(content_key, "")
     h1, h2 = st.columns([3, 1])
     with h1:
         render_section_title(title, title_style)
     with h2:
-        view_mode = st.toggle("预览模式", value=True, key=view_key)
+        view_mode = st.toggle("预览模式", value=st.session_state.get(view_key, True), key=view_key)
 
-    content = st.session_state.get(content_key, "")
+    motion_slot = st.empty()
+    content_slot = st.empty()
+    copy_slot = st.empty()
+
+    if should_play_result_motion(content_key, content):
+        with motion_slot.container():
+            render_result_motion_anchor(f"{copy_prefix}_result", delay_ms=0)
+    else:
+        motion_slot.empty()
+
     edit_source_key = f"{edit_key}__source"
     edit_widget_key = f"{edit_key}__widget"
     last_view_mode_key = f"{view_key}__last"
@@ -317,10 +419,12 @@ def render_markdown_result_column(
         st.session_state[edit_widget_key] = content
 
     if view_mode:
-        with st.container(height=height):
-            st.markdown(content)
-        st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
-        render_copy_button(content, f"{copy_prefix}_preview", copy_label, button_style=EN_COPY_BUTTON_STYLE)
+        with content_slot.container():
+            with st.container(height=height):
+                st.markdown(content)
+        with copy_slot.container():
+            st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
+            render_copy_button(content, f"{copy_prefix}_preview", copy_label, button_style=EN_COPY_BUTTON_STYLE)
     else:
         if edit_widget_key not in st.session_state:
             st.session_state[edit_widget_key] = content
@@ -332,15 +436,17 @@ def render_markdown_result_column(
             if on_save:
                 on_save(new_value)
 
-        st.text_area(
-            textarea_label,
-            height=height,
-            key=edit_widget_key,
-            label_visibility="collapsed",
-            on_change=handle_edit_save
-        )
-        st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
-        render_copy_nearest_textarea_button(f"{copy_prefix}_edit", copy_label, button_style=EN_COPY_BUTTON_STYLE)
+        with content_slot.container():
+            st.text_area(
+                textarea_label,
+                height=height,
+                key=edit_widget_key,
+                label_visibility="collapsed",
+                on_change=handle_edit_save
+            )
+        with copy_slot.container():
+            st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
+            render_copy_nearest_textarea_button(f"{copy_prefix}_edit", copy_label, button_style=EN_COPY_BUTTON_STYLE)
 
     st.session_state[last_view_mode_key] = view_mode
 
@@ -358,11 +464,16 @@ def render_translation_column(
     copy_label="复制中文",
     on_save=None,
 ):
+    translated_text = st.session_state.get(translated_key, "")
     h1, h2 = st.columns([3, 1])
     with h1:
         render_section_title(title, title_style)
     with h2:
         translate_clicked = st.button("翻译", use_container_width=True, type="primary", key=button_key)
+
+    content_slot = st.empty()
+    copy_slot = st.empty()
+    translation_updated = False
 
     if translate_clicked:
         user_cfg = st.session_state.user_config
@@ -373,29 +484,51 @@ def render_translation_column(
         if not api_key_t:
             st.error("请先在 API 配置中设置 API Key")
         else:
-            with st.spinner("翻译中，请勿切换页面..."):
+            previous_translated_text = translated_text
+            translated_text = ""
+            with content_slot.container():
+                with st.container(height=height):
+                    render_loading_banner("正在翻译中文", "请保持当前页面不变，完成后会直接显示结果。")
+            copy_slot.empty()
+
+            call_error = ""
+            result = ""
+            success = False
+            try:
                 prompt = TRANSLATE_PROMPT.format(text=source_text)
                 result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
-                if success:
-                    translated = normalize_markdown_spacing(result)
-                    st.session_state[translated_key] = translated
-                    if on_save:
-                        on_save(translated)
-                    st.session_state.play_sound = True
-                    st.rerun()
-                else:
-                    st.error(result)
+            except Exception as exc:
+                call_error = str(exc)
 
-    translated_text = st.session_state.get(translated_key, "")
-    with st.container(height=height):
+            if call_error:
+                translated_text = previous_translated_text
+                st.error(call_error)
+            elif success:
+                translated = normalize_markdown_spacing(result)
+                st.session_state[translated_key] = translated
+                translated_text = translated
+                translation_updated = True
+                if on_save:
+                    on_save(translated)
+                play_notification_sound()
+            else:
+                translated_text = previous_translated_text
+                st.error(result)
+
+    if should_play_result_motion(translated_key, translated_text):
+        render_result_motion_anchor(f"{copy_prefix}_translation", delay_ms=80 if not translation_updated else 20)
+
+    with content_slot.container():
+        with st.container(height=height):
+            if translated_text:
+                st.markdown(translated_text)
+            else:
+                st.caption(empty_caption)
+
+    with copy_slot.container():
+        st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
         if translated_text:
-            st.markdown(translated_text)
-        else:
-            st.caption(empty_caption)
-
-    st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
-    if translated_text:
-        render_copy_button(translated_text, f"{copy_prefix}_copy", copy_label, button_style=CN_COPY_BUTTON_STYLE)
+            render_copy_button(translated_text, f"{copy_prefix}_copy", copy_label, button_style=CN_COPY_BUTTON_STYLE)
 
 
 def render_dual_result_panels(
@@ -921,11 +1054,6 @@ h1, h2, h3, .stSubheader {
     background-clip: text;
     text-shadow: none;
     filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.4));
-    animation: titleGlow 3s ease-in-out infinite alternate;
-}
-@keyframes titleGlow {
-    from { filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.4)); }
-    to { filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.6)); }
 }
 
 /* 渐变分隔线 */
@@ -953,6 +1081,131 @@ hr, .stDivider {
     background: rgba(10, 12, 20, 0.85) !important;
     border: 1px solid rgba(0, 212, 255, 0.25) !important;
     border-radius: 10px !important;
+}
+
+/* 结果区入场动效 */
+[data-testid="column"].result-panel-shell,
+[data-testid="stVerticalBlock"].result-panel-shell {
+    transform-origin: top center;
+    will-change: transform, opacity;
+}
+[data-testid="column"].result-panel-shell [data-testid="stVerticalBlockBorderWrapper"],
+[data-testid="stVerticalBlock"].result-panel-shell [data-testid="stVerticalBlockBorderWrapper"] {
+    box-shadow: 0 10px 28px rgba(7, 14, 30, 0.22), 0 0 0 1px rgba(0, 212, 255, 0.06) !important;
+}
+[data-testid="column"].result-panel-enter,
+[data-testid="stVerticalBlock"].result-panel-enter {
+    animation: resultPanelLift 0.48s cubic-bezier(0.22, 1, 0.36, 1);
+    animation-delay: var(--result-enter-delay, 0ms);
+    animation-fill-mode: both;
+}
+@keyframes resultPanelLift {
+    from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.985);
+        filter: saturate(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: saturate(1);
+    }
+}
+
+/* 加载态卡片 */
+.processing-card {
+    position: relative;
+    overflow: hidden;
+    margin: 0.25rem 0 1rem 0;
+    padding: 0.9rem 1rem 1rem;
+    border-radius: 14px;
+    background:
+        linear-gradient(180deg, rgba(18, 28, 48, 0.94) 0%, rgba(12, 18, 32, 0.92) 100%);
+    border: 1px solid rgba(74, 190, 220, 0.22);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22), 0 0 24px rgba(52, 120, 198, 0.08);
+}
+.processing-card__sheen {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.08) 22%, transparent 46%);
+    transform: translateX(-140%);
+    animation: processingSheen 2.6s ease-in-out infinite;
+    pointer-events: none;
+}
+.processing-card__header {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 0.45rem;
+}
+.processing-card__pulse {
+    width: 9px;
+    height: 9px;
+    border-radius: 999px;
+    background: #4acfe1;
+    box-shadow: 0 0 0 rgba(74, 207, 225, 0.4);
+    animation: processingPulse 1.8s ease-out infinite;
+    flex-shrink: 0;
+}
+.processing-card__title {
+    color: #effbff;
+    font-size: 0.98rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+.processing-card__detail {
+    color: rgba(230, 242, 255, 0.78);
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+.processing-card__bar {
+    margin-top: 0.8rem;
+    height: 3px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+.processing-card__bar span {
+    display: block;
+    width: 38%;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, rgba(74, 207, 225, 0.2), rgba(104, 164, 230, 0.95), rgba(74, 207, 225, 0.2));
+    animation: processingBar 1.6s ease-in-out infinite;
+}
+@keyframes processingSheen {
+    0% { transform: translateX(-140%); opacity: 0; }
+    18% { opacity: 1; }
+    60% { opacity: 1; }
+    100% { transform: translateX(160%); opacity: 0; }
+}
+@keyframes processingPulse {
+    0% {
+        transform: scale(0.92);
+        box-shadow: 0 0 0 0 rgba(74, 207, 225, 0.42);
+    }
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 10px rgba(74, 207, 225, 0);
+    }
+    100% {
+        transform: scale(0.92);
+        box-shadow: 0 0 0 0 rgba(74, 207, 225, 0);
+    }
+}
+@keyframes processingBar {
+    0% { transform: translateX(-110%); }
+    100% { transform: translateX(240%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-testid="column"].result-panel-enter,
+    [data-testid="stVerticalBlock"].result-panel-enter,
+    .processing-card__sheen,
+    .processing-card__pulse,
+    .processing-card__bar span {
+        animation: none !important;
+    }
 }
 
 
@@ -992,11 +1245,12 @@ hr, .stDivider {
 
 /* Primary 按钮特殊样式 */
 .stButton > button[kind="primary"] {
-    background: linear-gradient(135deg, #00ff88 0%, #00d4ff 100%);
-    box-shadow: 0 4px 20px rgba(0, 255, 136, 0.4);
+    background: linear-gradient(135deg, #20a3b8 0%, #3478c6 100%);
+    color: #f4fbff !important;
+    box-shadow: 0 4px 18px rgba(32, 163, 184, 0.30), 0 0 28px rgba(52, 120, 198, 0.16);
 }
 .stButton > button[kind="primary"]:hover {
-    box-shadow: 0 8px 30px rgba(0, 255, 136, 0.6), 0 0 60px rgba(0, 212, 255, 0.3);
+    box-shadow: 0 8px 26px rgba(32, 163, 184, 0.36), 0 0 38px rgba(52, 120, 198, 0.20);
 }
 
 /* 按钮组样式 - 相邻按钮 */
@@ -1026,13 +1280,12 @@ hr, .stDivider {
     box-sizing: border-box !important;
 }
 
-.stTextInput > div > div > input,
 .stTextArea > div > div > textarea,
 .stSelectbox > div > div > div {
-    background-color: rgba(15, 15, 26, 0.6) !important;
-    backdrop-filter: blur(10px) !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
     border: none !important;
-    box-shadow: inset 0 0 0 1px rgba(0, 212, 255, 0.2) !important;
+    box-shadow: none !important;
     border-radius: 10px !important;
     color: #ffffff !important;
     transition: border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
@@ -1040,10 +1293,9 @@ hr, .stDivider {
                 background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
                 color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.stTextInput > div > div > input:focus,
 .stTextArea > div > div > textarea:focus {
-    box-shadow: inset 0 0 0 1px #00d4ff, 0 0 20px rgba(0, 212, 255, 0.4), inset 0 0 20px rgba(0, 212, 255, 0.05) !important;
-    animation: inputGlow 1.5s ease-in-out infinite alternate;
+    box-shadow: none !important;
+    animation: none !important;
 }
 @keyframes inputGlow {
     from { box-shadow: 0 0 15px rgba(0, 212, 255, 0.3), inset 0 0 15px rgba(0, 212, 255, 0.03); }
@@ -1060,17 +1312,18 @@ hr, .stDivider {
     color: rgba(160, 160, 160, 0.7) !important;
 }
 
-/* 移除 stTextInput 外层白色边框 */
+/* text input - 只保留最外层一层边框 */
 .stTextInput > div {
     border: none !important;
     box-shadow: none !important;
+    background: transparent !important;
 }
 .stTextInput > div > div {
     border: none !important;
-    border-radius: 8px !important;
-    background-color: rgba(15, 15, 26, 0.8) !important;
-    overflow: hidden !important;
-    box-shadow: inset 0 0 0 1px rgba(0, 212, 255, 0.3) !important;
+    border-radius: 10px !important;
+    background: transparent !important;
+    overflow: visible !important;
+    box-shadow: none !important;
 }
 
 /* 强制隐藏输入框内部的滚动条 */
@@ -1079,12 +1332,13 @@ hr, .stDivider {
     width: 0 !important;
 }
 .stTextInput > div > div:focus-within {
-    box-shadow: inset 0 0 0 1px #00d4ff, 0 0 15px rgba(0, 212, 255, 0.3) !important;
+    box-shadow: none !important;
 }
 .stTextInput [data-baseweb="input"],
 .stTextInput [data-baseweb="base-input"] {
-    background-color: rgba(15, 15, 26, 0.8) !important;
-    border-color: rgba(0, 212, 255, 0.3) !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
 /* textarea - 单层边框 */
@@ -1176,6 +1430,7 @@ hr, .stDivider {
 .stSelectbox > div > div {
     background: transparent !important;
     border: none !important;
+    box-shadow: none !important;
 }
 
 /* 移除输入框内部所有多余边框 */
@@ -1278,14 +1533,15 @@ border-color: #00d4ff !important;
 
 /* 密码输入框 - 完全扁平化，只保留最外层边框 */
 .stTextInput [data-testid="stTextInputRootElement"] {
-border: 1px solid rgba(0, 212, 255, 0.3) !important;
-border-radius: 8px !important;
+border: 1px solid rgba(0, 212, 255, 0.35) !important;
+border-radius: 10px !important;
 background-color: rgba(15, 15, 26, 0.8) !important;
 overflow: hidden;
+box-shadow: none !important;
 }
 .stTextInput [data-testid="stTextInputRootElement"]:focus-within {
 border-color: #00d4ff !important;
-box-shadow: 0 0 15px rgba(0, 212, 255, 0.3) !important;
+box-shadow: none !important;
 }
 /* 核弹级清理：移除所有内层边框和背景 */
 .stTextInput [data-testid="stTextInputRootElement"] *,
@@ -1301,6 +1557,23 @@ outline: none !important;
 border: none !important;
 background: transparent !important;
 padding-left: 12px !important;
+box-shadow: none !important;
+outline: none !important;
+border-radius: 10px !important;
+color: #ffffff !important;
+caret-color: #00d4ff !important;
+-webkit-text-fill-color: #ffffff !important;
+}
+.stTextInput > div > div > input,
+.stTextInput > div > div > input:focus {
+background: transparent !important;
+border: none !important;
+box-shadow: none !important;
+outline: none !important;
+animation: none !important;
+color: #ffffff !important;
+caret-color: #00d4ff !important;
+-webkit-text-fill-color: #ffffff !important;
 }
 /* 眼睛按钮 - 贴边 */
 .stTextInput button,
@@ -1677,15 +1950,7 @@ pre code,
 
 /* 登录卡片发光效果 */
 .stForm, [data-testid="stForm"] {
-    animation: cardGlow 2s ease-in-out infinite alternate;
-}
-@keyframes cardGlow {
-    from {
-        box-shadow: 0 0 20px rgba(0, 212, 255, 0.1);
-    }
-    to {
-        box-shadow: 0 0 30px rgba(0, 212, 255, 0.2), 0 0 60px rgba(139, 92, 246, 0.1);
-    }
+    animation: none !important;
 }
 
 /* 登录/注册按钮特效 */
@@ -1694,18 +1959,7 @@ pre code,
     overflow: hidden;
 }
 .stButton > button[kind="primary"]::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-    animation: btnShine 2s infinite;
-}
-@keyframes btnShine {
-    0% { left: -100%; }
-    50%, 100% { left: 100%; }
+    display: none !important;
 }
 
 /* 成功提示动画 */
@@ -1725,17 +1979,7 @@ pre code,
 
 /* 用户名显示动画 */
 .stMarkdown h1, .stMarkdown h2, .stTitle {
-    animation: titleFadeIn 0.6s ease-out;
-}
-@keyframes titleFadeIn {
-    from {
-        opacity: 0;
-        transform: translateX(-20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
+    animation: none !important;
 }
 
 /* 退出按钮悬停效果 */
@@ -1929,10 +2173,32 @@ div[data-testid="stNotification"] {
 }
 
 /* 让 columns 中的按钮高度与 Toggle 对齐 */
+[data-testid="stHorizontalBlock"] [data-testid="stButton"],
+[data-testid="stHorizontalBlock"] [data-testid="stCheckbox"] {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+[data-testid="stHorizontalBlock"] [data-testid="stButton"] > div,
+[data-testid="stHorizontalBlock"] [data-testid="stCheckbox"] > div,
+[data-testid="stHorizontalBlock"] [data-testid="stCheckbox"] label[data-baseweb="checkbox"] {
+    margin: 0 !important;
+    min-height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+}
 [data-testid="stHorizontalBlock"] [data-testid="stButton"] button {
     padding-top: 0.15rem !important;
     padding-bottom: 0.15rem !important;
     min-height: 32px !important;
+}
+
+/* Toggle - 保持标签文字区域透明，轨道颜色由脚本精确控制 */
+[data-testid="stCheckbox"] [data-testid="stWidgetLabel"],
+[data-testid="stCheckbox"] [data-testid="stWidgetLabel"] *,
+[data-testid="stCheckbox"] label[data-baseweb="checkbox"] > div:last-child,
+[data-testid="stCheckbox"] label[data-baseweb="checkbox"] > div:last-child * {
+    background: transparent !important;
+    box-shadow: none !important;
 }
 </style>
 """
@@ -1953,6 +2219,93 @@ components.html("""
     requestAnimationFrame(() => {
         requestAnimationFrame(markReady);
     });
+})();
+</script>
+""", height=0)
+
+components.html("""
+<script>
+(function() {
+    const applyToggleColors = () => {
+        try {
+            const parentDoc = window.parent && window.parent.document;
+            if (!parentDoc) return;
+
+            const labels = parentDoc.querySelectorAll('[data-testid="stCheckbox"] label[data-baseweb="checkbox"]');
+            labels.forEach((label) => {
+                const input = label.querySelector('input[type="checkbox"]');
+                if (!input) return;
+
+                const allDivs = Array.from(label.querySelectorAll('div'));
+                const directDivs = Array.from(label.children).filter((child) => child.tagName === 'DIV');
+                const track = allDivs.find((child) => {
+                    const rect = child.getBoundingClientRect();
+                    const text = (child.textContent || '').trim();
+                    return !text && rect.width >= 24 && rect.width <= 64 && rect.height >= 14 && rect.height <= 34 && rect.width > rect.height * 1.5;
+                });
+                if (!track) return;
+
+                const knob = Array.from(track.querySelectorAll('div, span')).find((child) => {
+                    const rect = child.getBoundingClientRect();
+                    const text = (child.textContent || '').trim();
+                    return !text && rect.width >= 10 && rect.width <= 28 && rect.height >= 10 && rect.height <= 28 && Math.abs(rect.width - rect.height) <= 10;
+                });
+                const checked = input.checked || label.getAttribute('aria-checked') === 'true';
+
+                track.style.background = checked
+                    ? 'linear-gradient(135deg, #239bb0 0%, #3478c6 100%)'
+                    : 'rgba(255, 255, 255, 0.18)';
+                track.style.borderColor = checked
+                    ? 'rgba(52, 120, 198, 0.48)'
+                    : 'rgba(42, 157, 178, 0.28)';
+                track.style.boxShadow = checked
+                    ? '0 0 14px rgba(35, 155, 176, 0.22)'
+                    : 'none';
+                track.style.transition = 'background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease';
+
+                if (knob) {
+                    knob.style.background = '#f7fbff';
+                    knob.style.boxShadow = 'none';
+                }
+
+                const labelContent = label.querySelector('[data-testid="stWidgetLabel"]');
+                if (labelContent) {
+                    labelContent.style.background = 'transparent';
+                    labelContent.style.boxShadow = 'none';
+                }
+
+                directDivs.forEach((child) => {
+                    if (child !== track) {
+                        child.style.background = 'transparent';
+                        child.style.boxShadow = 'none';
+                    }
+                });
+            });
+        } catch (e) {}
+    };
+
+    const scheduleApply = () => {
+        requestAnimationFrame(() => {
+            applyToggleColors();
+        });
+    };
+
+    scheduleApply();
+    setTimeout(scheduleApply, 300);
+    setTimeout(scheduleApply, 1200);
+
+    try {
+        const parentDoc = window.parent && window.parent.document;
+        if (parentDoc && parentDoc.body) {
+            const observer = new MutationObserver(scheduleApply);
+            observer.observe(parentDoc.body, {
+                subtree: true,
+                childList: true,
+                attributes: true,
+                attributeFilter: ['class', 'style', 'aria-checked', 'checked']
+            });
+        }
+    } catch (e) {}
 })();
 </script>
 """, height=0)
@@ -2167,7 +2520,7 @@ if "user_config" not in st.session_state or st.session_state.user_config is None
 # API 配置
 with tab4:
     st.subheader("API 配置")
-    st.caption("配置会自动保存到您的账户")
+    st.caption("这里统一管理接口和模型配置，修改后点击「保存配置」生效")
     
     # 模型选项列表
     MODEL_OPTIONS = [
@@ -2184,12 +2537,37 @@ with tab4:
         "gpt-5.2",
         "gpt-5.4"
     ]
+
+    LOG_ACTION_FILTERS = {
+        "全部": None,
+        "登录": {"登录"},
+        "参考笔记生成": {"笔记生成"},
+        "一键修复": {"自动修复"},
+        "独立质检": {"AI质检"},
+        "AI 对话": {"AI对话"},
+        "保存配置": {"保存配置"},
+    }
+
+    LOG_ACTION_LABELS = {
+        "登录": "登录",
+        "笔记生成": "参考笔记生成",
+        "自动修复": "一键修复",
+        "AI质检": "独立质检",
+        "AI对话": "AI 对话",
+        "保存配置": "保存配置",
+        "AI修改": "历史修改",
+        "历史修改": "历史修改",
+    }
     
-    api_url = st.text_input("API URL", value=st.session_state.user_config.get("api_url", DEFAULT_API_URL), key="api_url_input")
-    api_key = st.text_input("API Key", value=st.session_state.user_config.get("api_key", DEFAULT_API_KEY), type="password", key="api_key_input")
+    st.divider()
+    st.markdown("**接口配置**")
+    st.caption("当前账户共用同一套接口信息")
+    api_url = st.text_input("API 地址", value=st.session_state.user_config.get("api_url", DEFAULT_API_URL), key="api_url_input")
+    api_key = st.text_input("API 密钥", value=st.session_state.user_config.get("api_key", DEFAULT_API_KEY), type="password", key="api_key_input")
     
-    st.markdown("---")
+    st.divider()
     st.markdown("**模型配置**")
+    st.caption("为参考笔记生成、中文翻译、独立质检和 AI 对话分别选择模型")
     
     # 参考笔记生成模型
     def get_model_index(key, default_model):
@@ -2201,16 +2579,16 @@ with tab4:
         model_edit = st.selectbox("参考笔记生成", options=MODEL_OPTIONS, 
                                    index=get_model_index("model_edit", DEFAULT_MODEL_EDIT),
                                    key="model_edit_select", help="参考笔记生成功能使用")
-        model_translate = st.selectbox("翻译", options=MODEL_OPTIONS,
+        model_translate = st.selectbox("中文翻译", options=MODEL_OPTIONS,
                                         index=get_model_index("model_translate", DEFAULT_MODEL_TRANSLATE),
                                         key="model_translate_select", help="翻译功能使用")
     with col_m2:
-        model_qc = st.selectbox("AI质检", options=MODEL_OPTIONS,
+        model_qc = st.selectbox("独立质检", options=MODEL_OPTIONS,
                                  index=get_model_index("model_qc", DEFAULT_MODEL_QC),
-                                 key="model_qc_select", help="AI质检功能使用")
-        model_chat = st.selectbox("AI对话", options=MODEL_OPTIONS,
+                                 key="model_qc_select", help="独立质检功能使用")
+        model_chat = st.selectbox("AI 对话", options=MODEL_OPTIONS,
                                    index=get_model_index("model_chat", DEFAULT_MODEL_CHAT),
-                                   key="model_chat_select", help="AI对话功能使用")
+                                   key="model_chat_select", help="AI 对话功能使用")
     
     if st.button("保存配置", type="primary"):
         config = {
@@ -2226,68 +2604,68 @@ with tab4:
         if save_user_config_full(config):
             st.session_state.user_config = config
             log_operation("保存配置", "更新了 API 配置")
-            st.success("✅ 配置已保存")
+            render_soft_notice("配置已保存", tone="success")
         else:
-            st.error("❌ 保存失败")
+            st.error("保存失败")
     
     # 操作日志查看
     st.divider()
-    with st.expander("操作日志", expanded=False):
+    st.markdown("**最近操作**")
+    st.caption("最近 50 条记录，可按用户和操作筛选")
+    with st.expander("查看操作日志", expanded=False):
         logs = load_logs(limit=50)
         if logs:
             # 日志筛选
             col_filter1, col_filter2 = st.columns(2)
             with col_filter1:
-                filter_user = st.selectbox("筛选用户", ["全部"] + list(set(log["user"] for log in logs)), key="log_filter_user")
+                user_options = ["全部"] + sorted({log["user"] for log in logs})
+                filter_user = st.selectbox("筛选用户", user_options, key="log_filter_user")
             with col_filter2:
-                filter_action = st.selectbox("筛选操作", ["全部", "登录", "笔记生成", "自动修复", "AI质检", "AI对话", "保存配置"], key="log_filter_action")
+                filter_action = st.selectbox("筛选操作", list(LOG_ACTION_FILTERS.keys()), key="log_filter_action")
             
             # 应用筛选
             filtered_logs = logs
             if filter_user != "全部":
                 filtered_logs = [log for log in filtered_logs if log["user"] == filter_user]
-            if filter_action != "全部":
-                filtered_logs = [log for log in filtered_logs if log["action"] == filter_action]
+            allowed_actions = LOG_ACTION_FILTERS.get(filter_action)
+            if allowed_actions:
+                filtered_logs = [log for log in filtered_logs if log["action"] in allowed_actions]
             
-            # 显示日志
-            st.caption(f"共 {len(filtered_logs)} 条记录")
-            
-            for log in filtered_logs[:30]:  # 只显示最多 30 条
-                # 操作图标
-                action_icons = {
-                    "登录": "🟢", "AI修改": "⚪", "历史修改": "⚪", "自动修复": "🟡", 
-                    "笔记生成": "🧠", "AI质检": "🟣", "AI对话": "🟠", "保存配置": "⚙️"
-                }
-                icon = action_icons.get(log['action'], '⚪')
-                display_action = "历史修改" if log["action"] == "AI修改" else log["action"]
-                
-                # 构建详情信息
-                detail_parts = [log.get("details", "")]
-                if "input_length" in log:
-                    detail_parts.append(f"输入: {log['input_length']}字符")
-                if "output_length" in log:
-                    detail_parts.append(f"输出: {log['output_length']}字符")
-                if "model" in log:
-                    # 只显示模型名的简短版本
-                    model_short = log['model'].replace("gemini-3-", "g3-").replace("-preview", "")
-                    detail_parts.append(f"模型: {model_short}")
-                if "tokens" in log:
-                    tokens = log['tokens']
-                    if isinstance(tokens, dict):
-                        detail_parts.append(f"Token: {tokens.get('input', 0)}→{tokens.get('output', 0)}")
-                
-                detail_str = " | ".join([p for p in detail_parts if p])
-                
-                # 使用 expander 显示日志（可展开/收起）
-                if "input_preview" in log and log["input_preview"]:
-                    with st.expander(f"**{log['timestamp']}** | {icon} **{display_action}** | {log['user']} | {detail_str[:60]}", expanded=False):
-                        st.markdown(f"**输入摘要:** {log['input_preview']}...")
+            if filtered_logs:
+                st.caption(f"共 {len(filtered_logs)} 条记录，最多显示最近 30 条")
+
+                for log in filtered_logs[:30]:
+                    display_action = LOG_ACTION_LABELS.get(log["action"], log["action"])
+
+                    detail_parts = [log.get("details", "")]
+                    if "input_length" in log:
+                        detail_parts.append(f"输入: {log['input_length']}字符")
+                    if "output_length" in log:
+                        detail_parts.append(f"输出: {log['output_length']}字符")
+                    if "model" in log:
+                        model_short = log["model"].replace("gemini-3-", "g3-").replace("-preview", "")
+                        detail_parts.append(f"模型: {model_short}")
+                    if "tokens" in log:
+                        tokens = log["tokens"]
+                        if isinstance(tokens, dict):
+                            detail_parts.append(f"Token: {tokens.get('input', 0)}→{tokens.get('output', 0)}")
+
+                    detail_str = " · ".join([part for part in detail_parts if part])
+                    header_parts = [log["timestamp"], display_action, log["user"]]
+                    if detail_str:
+                        header_parts.append(detail_str[:60])
+
+                    with st.expander(" · ".join(header_parts), expanded=False):
+                        if detail_str:
+                            st.caption(detail_str)
+                        if log.get("input_preview"):
+                            st.markdown(f"**输入摘要：** {log['input_preview']}...")
                         if "instruction" in log:
-                            st.markdown(f"**指令:** {log['instruction']}")
-                else:
-                    st.markdown(f"**{log['timestamp']}** | {icon} **{display_action}** | {log['user']} | {detail_str[:80]}")
+                            st.markdown(f"**指令：** {log['instruction']}")
+            else:
+                st.info("当前筛选条件下还没有记录")
         else:
-            st.info("暂无操作日志")
+            st.info("还没有操作日志")
 
 # 初始化 session state
 if "ai_results" not in st.session_state:
@@ -2822,19 +3200,20 @@ if False:
 # ==================== 参考笔记生成功能 ====================
 with tab3:
     st.subheader("参考笔记生成")
+    st.caption("只需要粘贴参考笔记，笔记中已包含用户问题或搜索词")
     notes_ref = st.text_area(
         "参考笔记",
         height=360,
         value=st.session_state.notes_ref,
-        placeholder="粘贴英文参考笔记（其中已包含用户问题或搜索词）...",
+        placeholder="粘贴参考笔记...",
         key="notes_ref_input"
     )
     if notes_ref != st.session_state.notes_ref:
         st.session_state.notes_ref = notes_ref
 
-    col_generate, col_clear = st.columns([3, 1])
+    col_generate, col_clear = st.columns([2.2, 1], gap="small")
     with col_generate:
-        notes_generate_clicked = st.button("🚀 开始生成", type="primary", use_container_width=True, key="notes_generate_btn")
+        notes_generate_clicked = st.button("开始生成", type="primary", use_container_width=True, key="notes_generate_btn")
     with col_clear:
         notes_clear_clicked = st.button("清空结果", use_container_width=True, key="notes_clear_btn")
 
@@ -2859,40 +3238,57 @@ with tab3:
                 if not rules:
                     st.error("无法读取 generate_with_notes_rules.md 文件")
                 else:
-                    with st.spinner("正在根据参考笔记生成答案，请勿切换页面..."):
+                    loading_placeholder = st.empty()
+                    with loading_placeholder.container():
+                        render_loading_banner(
+                            "正在根据参考笔记生成英文结果",
+                            "只会使用当前粘贴的参考笔记，请稍候片刻。"
+                        )
+
+                    call_error = ""
+                    result = ""
+                    success = False
+                    token_info = {}
+                    try:
                         prompt = NOTES_ONLY_GENERATE_PROMPT.format(
                             ref_notes=notes_ref,
                             rules=rules
                         )
                         result, success, token_info = call_single_step(prompt, api_url, api_key, model)
-                        if success:
-                            st.session_state.notes_result = normalize_notes_generation_output(result)
-                            st.session_state.notes_translated_result = ""
-                            st.session_state.play_sound = True
-                            log_operation("笔记生成", f"参考笔记输入: {len(notes_ref)} 字符", extra={
-                                "input_preview": notes_ref[:100],
-                                "input_length": len(notes_ref),
-                                "output_length": len(st.session_state.notes_result),
-                                "model": model,
-                                "tokens": {"input": token_info.get("prompt_tokens", 0), "output": token_info.get("completion_tokens", 0)}
-                            })
-                            st.rerun()
-                        else:
-                            st.error(f"生成失败: {result}")
+                    except Exception as exc:
+                        call_error = str(exc)
+                    loading_placeholder.empty()
+
+                    if call_error:
+                        st.error(f"生成失败: {call_error}")
+                    elif success:
+                        st.session_state.notes_result = normalize_notes_generation_output(result)
+                        st.session_state.notes_translated_result = ""
+                        st.session_state.play_sound = True
+                        log_operation("笔记生成", f"参考笔记输入: {len(notes_ref)} 字符", extra={
+                            "input_preview": notes_ref[:100],
+                            "input_length": len(notes_ref),
+                            "output_length": len(st.session_state.notes_result),
+                            "model": model,
+                            "tokens": {"input": token_info.get("prompt_tokens", 0), "output": token_info.get("completion_tokens", 0)}
+                        })
+                        st.rerun()
+                    else:
+                        st.error(f"生成失败: {result}")
 
     if st.session_state.notes_result:
         st.divider()
         render_dual_result_panels(
             result_key="notes_result",
             translated_key="notes_translated_result",
-            result_title="生成结果（英文）",
+            result_title="英文结果",
             result_title_style="subheader",
             result_view_key="notes_view_mode",
             result_edit_key="notes_result_edit",
             result_copy_prefix="notes_result",
             translate_button_key="notes_translate_btn",
             translate_copy_prefix="notes_translate",
-            height=320,
+            height=RESULT_PANEL_HEIGHT,
             result_textarea_label="英文结果",
             result_copy_label="复制英文",
             translation_title="中文翻译",
@@ -2900,6 +3296,10 @@ with tab3:
             translation_empty_caption="点击「翻译」按钮生成中文翻译...",
             translation_copy_label="复制中文",
         )
+        if st.button("清空结果", key="notes_clear_result_btn", use_container_width=True):
+            st.session_state.notes_result = ""
+            st.session_state.notes_translated_result = ""
+            st.rerun()
 
 # ==================== 格式质检功能 ====================
 # 导入格式修复工具
@@ -2914,13 +3314,14 @@ with tab2:
         ["程序自动修复", "AI 质检"],
         horizontal=True,
         key="qc_mode_radio",
-        help="程序自动修复：秒级修复格式问题；AI质检：检查格式逻辑+内容准确性"
+        help="程序自动修复：秒级修复格式问题；AI质检：检查格式逻辑+内容准确性",
+        label_visibility="collapsed"
     )
     
     if qc_mode == "程序自动修复":
-        st.caption(" 秒级自动修复：引用格式、空格、句号位置、列表缩进等")
+        st.caption("秒级自动修复：引用格式、空格、句号位置、列表缩进等")
     else:
-        st.caption(" AI 检查格式逻辑，有参考笔记时同时检查内容准确性")
+        st.caption("AI 检查格式逻辑，有参考笔记时也检查内容准确性")
     
     # AI质检时在输入框上方显示"只看问题"开关
     qc_issues_only = False  # 默认输出问题+修改结果
@@ -2939,9 +3340,9 @@ with tab2:
             st.session_state.qc_issues_only_preference = qc_issues_only
         with col_help:
             if qc_issues_only:
-                st.caption("📋 模式：只输出问题清单，方便快速审阅")
+                st.caption("只输出问题清单，方便快速审阅")
             else:
-                st.caption("📝 模式：输出问题清单 + 修改后的 Markdown")
+                st.caption("输出问题清单和修改后的 Markdown")
     
     # 输入区域
     qc_input = st.text_area("待检查的回答", height=300, 
@@ -2959,9 +3360,9 @@ with tab2:
     if qc_mode == "程序自动修复":
         col_fix, col_analyze = st.columns(2)
         with col_fix:
-            fix_clicked = st.button("一键修复格式", type="primary", use_container_width=True, key="auto_fix_btn")
+            fix_clicked = st.button("一键修复", type="primary", use_container_width=True, key="auto_fix_btn")
         with col_analyze:
-            analyze_clicked = st.button("分析问题（不修复）", use_container_width=True, key="analyze_btn")
+            analyze_clicked = st.button("分析问题", use_container_width=True, key="analyze_btn")
         
         if fix_clicked:
             if qc_input.strip():
@@ -2998,12 +3399,12 @@ with tab2:
                         else:
                             st.info(issue)
                 else:
-                    st.success("未发现格式问题")
+                    render_soft_notice("未发现格式问题", tone="success")
             else:
                 st.warning("请输入待检查的回答")
     
     # AI 质检模式
-    elif st.button("开始AI质检", type="primary", use_container_width=True, key="qc_start_btn"):
+    elif st.button("开始质检", type="primary", use_container_width=True, key="qc_start_btn"):
         if qc_input.strip():
             # 从 session_state 获取 API 配置
             user_cfg = st.session_state.user_config
@@ -3178,9 +3579,9 @@ with tab2:
         
         # 显示修复来源标识
         if st.session_state.get("qc_auto_fixed", False):
-            st.success("程序自动修复完成")
+            render_soft_notice("程序自动修复完成", tone="success")
         elif st.session_state.get("qc_issues_only_mode", False):
-            st.info("📋 只看问题模式 - 仅显示问题清单")
+            render_soft_notice("当前是只看问题模式，仅显示问题清单。", tone="info")
         
         # 显示 Token 用量（仅AI质检）
         if "qc_tokens" in st.session_state and st.session_state.qc_tokens.get("total_tokens", 0) > 0:
@@ -3198,7 +3599,7 @@ with tab2:
         if "qc_issues" in st.session_state and st.session_state.qc_issues:
             # 在"只看问题"模式下，问题清单默认展开且不放在 expander 里
             if st.session_state.get("qc_issues_only_mode", False):
-                st.markdown("### 📋 问题清单")
+                st.markdown("**问题清单**")
                 st.markdown(st.session_state.qc_issues)
             else:
                 with st.expander("发现的问题", expanded=True):
@@ -3210,17 +3611,17 @@ with tab2:
             result_key="qc_result",
             translated_key="qc_translated",
             result_title="英文结果",
-            result_title_style="markdown",
+            result_title_style="subheader",
             result_view_key="qc_view_mode",
             result_edit_key="qc_edit_area",
             result_copy_prefix="qc_result",
             translate_button_key="qc_translate_btn",
             translate_copy_prefix="qc_translate",
-            height=400,
+            height=RESULT_PANEL_HEIGHT,
             result_textarea_label="编辑结果",
             result_copy_label="复制英文",
             translation_title="中文翻译",
-            translation_title_style="markdown",
+            translation_title_style="subheader",
             translation_empty_caption="点击「翻译」按钮生成中文翻译...",
             translation_copy_label="复制中文",
         )
@@ -3235,8 +3636,8 @@ with tab2:
 
 # ==================== AI 对话功能 ====================
 with tab5:
-    st.subheader("AI 对话修改")
-    st.caption("💬 输入自定义提示词，让 AI 按你的要求修改 Markdown")
+    st.subheader("AI 对话")
+    st.caption("输入自定义提示词，让 AI 按你的要求修改 Markdown")
     
     # 初始化 session state
     if "chat_input" not in st.session_state:
@@ -3250,7 +3651,7 @@ with tab5:
     col_input, col_prompt = st.columns([1, 1])
     
     with col_input:
-        st.markdown("**待修改的 Markdown**")
+        st.markdown("**待修改内容**")
         # 使用动态 key 来允许更新值
         if "chat_input_version" not in st.session_state:
             st.session_state.chat_input_version = 0
@@ -3266,7 +3667,7 @@ with tab5:
             st.session_state.chat_input = chat_markdown
     
     with col_prompt:
-        st.markdown("**修改指令**")
+        st.markdown("**修改要求**")
         chat_prompt = st.text_area(
             "输入提示词",
             height=200,
@@ -3276,7 +3677,7 @@ with tab5:
         )
     
     # 发送按钮
-    if st.button("🚀 发送给 AI", type="primary", use_container_width=True, key="chat_send_btn"):
+    if st.button("发送给 AI", type="primary", use_container_width=True, key="chat_send_btn"):
         if not chat_markdown.strip():
             st.warning("请输入待修改的 Markdown")
         elif not chat_prompt.strip():
@@ -3339,18 +3740,18 @@ with tab5:
         render_dual_result_panels(
             result_key="chat_result",
             translated_key="chat_translated",
-            result_title="修改结果",
-            result_title_style="markdown",
+            result_title="英文结果",
+            result_title_style="subheader",
             result_view_key="chat_view_toggle",
             result_edit_key="chat_edit_area",
             result_copy_prefix="chat_result",
             translate_button_key="chat_translate_btn",
             translate_copy_prefix="chat_translate",
-            height=400,
+            height=RESULT_PANEL_HEIGHT,
             result_textarea_label="编辑结果",
             result_copy_label="复制英文",
             translation_title="中文翻译",
-            translation_title_style="markdown",
+            translation_title_style="subheader",
             translation_empty_caption="点击「翻译」按钮生成中文翻译...",
             translation_copy_label="复制中文",
         )
