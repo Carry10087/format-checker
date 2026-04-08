@@ -211,6 +211,244 @@ def normalize_markdown_spacing(text):
 
     return "\n".join(normalized)
 
+
+COPY_BUTTON_HTML_STYLE = "<style>body{margin:0;padding:0;overflow:hidden;}button{width:100%;height:40px;padding:0;margin:0;display:block;font-size:14px;color:white;border:none;border-radius:5px;cursor:pointer;line-height:40px;font-family:'Source Sans Pro',sans-serif;transition:0.3s;}button:hover{opacity:0.9;}button:active{transform:scale(0.98);}</style>"
+EN_COPY_BUTTON_STYLE = "background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);"
+CN_COPY_BUTTON_STYLE = "background:linear-gradient(135deg,#8b5cf6 0%,#00d4ff 100%);box-shadow:0 0 15px rgba(139,92,246,0.3);"
+COPY_JS_HELPERS = """
+<script>
+function copyWithFallback(text, onSuccess, onFail) {
+    const fallback = () => {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try {
+            const ok = document.execCommand('copy');
+            if (ok) {
+                onSuccess();
+            } else if (onFail) {
+                onFail();
+            }
+        } catch (e) {
+            if (onFail) {
+                onFail();
+            }
+        } finally {
+            document.body.removeChild(ta);
+        }
+    };
+
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(onSuccess).catch(fallback);
+    } else {
+        fallback();
+    }
+}
+</script>
+"""
+
+
+def render_section_title(title, style="subheader"):
+    if style == "markdown":
+        st.markdown(f"**{title}**")
+    else:
+        st.subheader(title)
+
+
+def render_copy_button(text, button_id, label, copied_label="✅ 已复制", button_style=EN_COPY_BUTTON_STYLE):
+    if not text:
+        return
+
+    encoded = base64.b64encode(text.encode("utf-8")).decode("utf-8")
+    js_name = re.sub(r"\W+", "_", button_id)
+    copy_js = f"""{COPY_BUTTON_HTML_STYLE}{COPY_JS_HELPERS}<script>function copy_{js_name}(){{const b='{encoded}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);copyWithFallback(t, ()=>{{const btn=document.getElementById('{button_id}');if(btn){{btn.innerText='{copied_label}';setTimeout(()=>btn.innerText='{label}',1500);}}}}, ()=>alert('复制失败'));}}</script><button id="{button_id}" onclick="copy_{js_name}()" style="{button_style}">{label}</button>"""
+    components.html(copy_js, height=60)
+
+
+def render_copy_nearest_textarea_button(button_id, label, copied_label="✅ 已复制", button_style=EN_COPY_BUTTON_STYLE):
+    js_name = re.sub(r"\W+", "_", button_id)
+    copy_js = f"""{COPY_BUTTON_HTML_STYLE}{COPY_JS_HELPERS}<script>function copy_{js_name}(){{const iframes=window.parent.document.querySelectorAll('iframe');let thisIframe=null;for(const f of iframes){{if(f.contentWindow===window){{thisIframe=f;break;}}}}let closest=null;if(thisIframe){{const iRect=thisIframe.getBoundingClientRect();const tas=window.parent.document.querySelectorAll('textarea');let minDist=Infinity;for(const ta of tas){{const tRect=ta.getBoundingClientRect();const dist=Math.abs(tRect.bottom-iRect.top)+Math.abs(tRect.left-iRect.left);if(dist<minDist){{minDist=dist;closest=ta;}}}}}}if(closest&&closest.value!=null){{copyWithFallback(closest.value, ()=>{{const btn=document.getElementById('{button_id}');if(btn){{btn.innerText='{copied_label}';setTimeout(()=>btn.innerText='{label}',1500);}}}}, ()=>alert('复制失败'));return;}}alert('找不到编辑框');}}</script><button id="{button_id}" onclick="copy_{js_name}()" style="{button_style}">{label}</button>"""
+    components.html(copy_js, height=60)
+
+
+def render_markdown_result_column(
+    *,
+    title,
+    content_key,
+    view_key,
+    edit_key,
+    copy_prefix,
+    height=320,
+    title_style="subheader",
+    textarea_label="英文结果",
+    copy_label="复制英文",
+    on_save=None,
+):
+    h1, h2 = st.columns([3, 1])
+    with h1:
+        render_section_title(title, title_style)
+    with h2:
+        view_mode = st.toggle("预览模式", value=True, key=view_key)
+
+    content = st.session_state.get(content_key, "")
+    edit_source_key = f"{edit_key}__source"
+    edit_widget_key = f"{edit_key}__widget"
+    last_view_mode_key = f"{view_key}__last"
+    previous_view_mode = st.session_state.get(last_view_mode_key, True)
+
+    if st.session_state.get(edit_source_key) != content:
+        st.session_state[edit_widget_key] = content
+        st.session_state[edit_source_key] = content
+
+    if previous_view_mode is False and view_mode is True and edit_widget_key in st.session_state:
+        latest_value = st.session_state.get(edit_widget_key, "")
+        st.session_state[content_key] = latest_value
+        st.session_state[edit_source_key] = latest_value
+        content = latest_value
+        if on_save:
+            on_save(latest_value)
+
+    if previous_view_mode is True and view_mode is False:
+        st.session_state[edit_widget_key] = content
+
+    if view_mode:
+        with st.container(height=height):
+            st.markdown(content)
+        st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
+        render_copy_button(content, f"{copy_prefix}_preview", copy_label, button_style=EN_COPY_BUTTON_STYLE)
+    else:
+        if edit_widget_key not in st.session_state:
+            st.session_state[edit_widget_key] = content
+
+        def handle_edit_save():
+            new_value = st.session_state.get(edit_widget_key, "")
+            st.session_state[content_key] = new_value
+            st.session_state[edit_source_key] = new_value
+            if on_save:
+                on_save(new_value)
+
+        st.text_area(
+            textarea_label,
+            height=height,
+            key=edit_widget_key,
+            label_visibility="collapsed",
+            on_change=handle_edit_save
+        )
+        st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
+        render_copy_nearest_textarea_button(f"{copy_prefix}_edit", copy_label, button_style=EN_COPY_BUTTON_STYLE)
+
+    st.session_state[last_view_mode_key] = view_mode
+
+
+def render_translation_column(
+    *,
+    source_text,
+    translated_key,
+    button_key,
+    copy_prefix,
+    height=320,
+    title="中文翻译",
+    title_style="subheader",
+    empty_caption="点击「翻译」按钮生成中文翻译...",
+    copy_label="复制中文",
+    on_save=None,
+):
+    h1, h2 = st.columns([3, 1])
+    with h1:
+        render_section_title(title, title_style)
+    with h2:
+        translate_clicked = st.button("翻译", use_container_width=True, type="primary", key=button_key)
+
+    if translate_clicked:
+        user_cfg = st.session_state.user_config
+        api_url_t = user_cfg.get("api_url", DEFAULT_API_URL)
+        api_key_t = user_cfg.get("api_key", DEFAULT_API_KEY)
+        model_t = user_cfg.get("model_translate", user_cfg.get("model", DEFAULT_MODEL_TRANSLATE))
+
+        if not api_key_t:
+            st.error("请先在 API 配置中设置 API Key")
+        else:
+            with st.spinner("翻译中，请勿切换页面..."):
+                prompt = TRANSLATE_PROMPT.format(text=source_text)
+                result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
+                if success:
+                    translated = normalize_markdown_spacing(result)
+                    st.session_state[translated_key] = translated
+                    if on_save:
+                        on_save(translated)
+                    st.session_state.play_sound = True
+                    st.rerun()
+                else:
+                    st.error(result)
+
+    translated_text = st.session_state.get(translated_key, "")
+    with st.container(height=height):
+        if translated_text:
+            st.markdown(translated_text)
+        else:
+            st.caption(empty_caption)
+
+    st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
+    if translated_text:
+        render_copy_button(translated_text, f"{copy_prefix}_copy", copy_label, button_style=CN_COPY_BUTTON_STYLE)
+
+
+def render_dual_result_panels(
+    *,
+    result_key,
+    translated_key,
+    result_title,
+    result_title_style="subheader",
+    result_view_key,
+    result_edit_key,
+    result_copy_prefix,
+    translate_button_key,
+    translate_copy_prefix,
+    height=320,
+    result_textarea_label="英文结果",
+    result_copy_label="复制英文",
+    translation_title="中文翻译",
+    translation_title_style="subheader",
+    translation_empty_caption="点击「翻译」按钮生成中文翻译...",
+    translation_copy_label="复制中文",
+    on_result_save=None,
+    on_translation_save=None,
+):
+    col_result, col_translate = st.columns(2)
+
+    with col_result:
+        render_markdown_result_column(
+            title=result_title,
+            title_style=result_title_style,
+            content_key=result_key,
+            view_key=result_view_key,
+            edit_key=result_edit_key,
+            copy_prefix=result_copy_prefix,
+            height=height,
+            textarea_label=result_textarea_label,
+            copy_label=result_copy_label,
+            on_save=on_result_save,
+        )
+
+    with col_translate:
+        render_translation_column(
+            source_text=st.session_state.get(result_key, ""),
+            translated_key=translated_key,
+            button_key=translate_button_key,
+            copy_prefix=translate_copy_prefix,
+            height=height,
+            title=translation_title,
+            title_style=translation_title_style,
+            empty_caption=translation_empty_caption,
+            copy_label=translation_copy_label,
+            on_save=on_translation_save,
+        )
+
 def create_user_dir(username):
     """创建用户目录并初始化文件"""
     user_dir = os.path.join(USERS_DIR, username)
@@ -363,7 +601,7 @@ def log_operation(action, details="", extra=None):
     """记录用户操作日志
     
     Args:
-        action: 操作类型（登录、AI修改、自动修复、AI质检、AI对话等）
+        action: 操作类型（登录、笔记生成、自动修复、AI质检、AI对话等）
         details: 操作详情描述
         extra: 额外信息字典，可包含 input_preview, output_length, model, tokens 等
     """
@@ -596,6 +834,7 @@ header {visibility: hidden;}
 section[data-testid="stMain"],
 .stMain {
     overflow-y: scroll !important;
+    scrollbar-gutter: stable both-edges !important;
 }
 
 /* 视频背景容器 */
@@ -635,6 +874,18 @@ section[data-testid="stMain"],
     background: transparent;
 }
 
+/* 页面样式就绪前先隐藏主内容，避免默认样式切到自定义样式时出现“变大一下” */
+body:not(.style-ready) .main .block-container,
+body:not(.style-ready) section[data-testid="stMain"] .block-container {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+body.style-ready .main .block-container,
+body.style-ready section[data-testid="stMain"] .block-container {
+    opacity: 1 !important;
+    transition: opacity 0.12s ease !important;
+}
+
 /* 主容器 - 毛玻璃卡片 */
 .main .block-container {
     background: rgba(22, 27, 45, 0.75);
@@ -645,7 +896,7 @@ section[data-testid="stMain"],
     margin-top: 1rem;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 40px rgba(0, 212, 255, 0.1);
     border: 1px solid rgba(0, 212, 255, 0.15);
-    transition: all 0.4s ease;
+    transition: border-color 0.4s ease, box-shadow 0.4s ease, transform 0.4s ease;
     /* 固定宽度，防止切换 tab 时宽度变化 */
     width: 100% !important;
     max-width: 1200px !important;
@@ -766,20 +1017,32 @@ hr, .stDivider {
 }
 
 /* 输入框 - 深色风格 + 聚焦动画 */
+.stTextArea,
+.stTextArea *,
+.stTextInput,
+.stTextInput *,
+.stSelectbox,
+.stSelectbox * {
+    box-sizing: border-box !important;
+}
+
 .stTextInput > div > div > input,
 .stTextArea > div > div > textarea,
 .stSelectbox > div > div > div {
     background-color: rgba(15, 15, 26, 0.6) !important;
     backdrop-filter: blur(10px) !important;
-    border: 1px solid rgba(0, 212, 255, 0.2) !important;
+    border: none !important;
+    box-shadow: inset 0 0 0 1px rgba(0, 212, 255, 0.2) !important;
     border-radius: 10px !important;
     color: #ffffff !important;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .stTextInput > div > div > input:focus,
 .stTextArea > div > div > textarea:focus {
-    border-color: #00d4ff !important;
-    box-shadow: 0 0 20px rgba(0, 212, 255, 0.4), inset 0 0 20px rgba(0, 212, 255, 0.05) !important;
+    box-shadow: inset 0 0 0 1px #00d4ff, 0 0 20px rgba(0, 212, 255, 0.4), inset 0 0 20px rgba(0, 212, 255, 0.05) !important;
     animation: inputGlow 1.5s ease-in-out infinite alternate;
 }
 @keyframes inputGlow {
@@ -803,10 +1066,11 @@ hr, .stDivider {
     box-shadow: none !important;
 }
 .stTextInput > div > div {
-    border: 1px solid rgba(0, 212, 255, 0.3) !important;
+    border: none !important;
     border-radius: 8px !important;
     background-color: rgba(15, 15, 26, 0.8) !important;
     overflow: hidden !important;
+    box-shadow: inset 0 0 0 1px rgba(0, 212, 255, 0.3) !important;
 }
 
 /* 强制隐藏输入框内部的滚动条 */
@@ -815,8 +1079,7 @@ hr, .stDivider {
     width: 0 !important;
 }
 .stTextInput > div > div:focus-within {
-    border-color: #00d4ff !important;
-    box-shadow: 0 0 15px rgba(0, 212, 255, 0.3) !important;
+    box-shadow: inset 0 0 0 1px #00d4ff, 0 0 15px rgba(0, 212, 255, 0.3) !important;
 }
 .stTextInput [data-baseweb="input"],
 .stTextInput [data-baseweb="base-input"] {
@@ -830,17 +1093,25 @@ hr, .stDivider {
     caret-color: #00d4ff !important;
     border: none !important;
     background: transparent !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-y: auto !important;
+    scrollbar-gutter: stable !important;
 }
 .stTextArea [data-baseweb="textarea"],
 .stTextArea [data-baseweb="base-input"] {
     background-color: transparent !important;
     border: none !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
 }
 .stTextArea > div,
 .stTextArea > div > div > div {
     border: none !important;
     box-shadow: none !important;
     background: transparent !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
 }
 /* 强制所有 textarea 内部元素透明 */
 .stTextArea * {
@@ -848,14 +1119,31 @@ hr, .stDivider {
 }
 /* 只在最外层容器加边框和背景 */
 .stTextArea > div > div {
-    border: 1px solid rgba(0, 212, 255, 0.3) !important;
+    border: none !important;
     border-radius: 8px !important;
     background-color: rgba(15, 15, 26, 0.8) !important;
     overflow: hidden !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    box-shadow: inset 0 0 0 1px rgba(0, 212, 255, 0.3) !important;
+    transition: box-shadow 0.25s ease, background-color 0.25s ease !important;
 }
 .stTextArea > div > div:focus-within {
-    border-color: #00d4ff !important;
-    box-shadow: 0 0 15px rgba(0, 212, 255, 0.3) !important;
+    box-shadow: inset 0 0 0 1px #00d4ff, 0 0 15px rgba(0, 212, 255, 0.3) !important;
+}
+
+.stTextInput input,
+.stTextInput > div,
+.stTextInput > div > div,
+.stTextInput [data-baseweb="input"],
+.stTextInput [data-baseweb="base-input"] {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease, color 0.25s ease !important;
+}
+
+.stTabs [data-baseweb="tab-panel"] {
+    scrollbar-gutter: stable both-edges !important;
 }
 
 /* ========== 下拉框样式 - 终极修复版 ========== */
@@ -864,18 +1152,17 @@ hr, .stDivider {
     background: rgba(15, 15, 26, 0.6) !important;
     backdrop-filter: blur(10px) !important;
     -webkit-backdrop-filter: blur(10px) !important;
-    border: 1px solid rgba(0, 212, 255, 0.3) !important;
+    border: none !important;
     border-radius: 10px !important;
     overflow: hidden !important;
-    transition: all 0.3s ease !important;
+    box-shadow: inset 0 0 0 1px rgba(0, 212, 255, 0.3) !important;
+    transition: border-color 0.25s ease !important, box-shadow 0.25s ease !important, background-color 0.25s ease !important;
 }
 .stSelectbox:hover {
-    border-color: rgba(0, 212, 255, 0.5) !important;
-    box-shadow: 0 0 15px rgba(0, 212, 255, 0.2) !important;
+    box-shadow: inset 0 0 0 1px rgba(0, 212, 255, 0.5), 0 0 15px rgba(0, 212, 255, 0.2) !important;
 }
 .stSelectbox:focus-within {
-    border-color: #00d4ff !important;
-    box-shadow: 0 0 20px rgba(0, 212, 255, 0.3) !important;
+    box-shadow: inset 0 0 0 1px #00d4ff, 0 0 20px rgba(0, 212, 255, 0.3) !important;
 }
 
 /* 1. 输入框主体（未展开时） */
@@ -1236,7 +1523,7 @@ pre code,
     font-size: 14px;
     padding: 12px 24px;
     border-radius: 10px;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: color 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
     position: relative;
     overflow: hidden;
 }
@@ -1269,13 +1556,13 @@ pre code,
     border-radius: 10px;
     font-weight: 600;
     box-shadow: 0 0 25px rgba(0, 212, 255, 0.6), 0 4px 15px rgba(139, 92, 246, 0.4);
-    transform: scale(1.03);
-    animation: tabGlow 0.4s ease-out, tabPulse 2s ease-in-out infinite;
-    transition: all 0.3s ease;
+    transform: none !important;
+    animation: none !important;
+    transition: color 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease !important;
 }
 /* 选中标签悬停效果 */
 .stTabs [aria-selected="true"]:hover {
-    transform: scale(1.08) !important;
+    transform: none !important;
     box-shadow: 0 0 40px rgba(0, 212, 255, 0.8), 0 8px 25px rgba(139, 92, 246, 0.6) !important;
     background: linear-gradient(135deg, #00ff88 0%, #00d4ff 50%, #8b5cf6 100%) !important;
 }
@@ -1309,7 +1596,7 @@ pre code,
 }
 /* 内容区域淡入 */
 .stTabs [data-baseweb="tab-panel"] {
-    animation: tabFadeIn 0.3s ease-out;
+    animation: none !important;
 }
 @keyframes tabFadeIn {
     from {
@@ -1330,7 +1617,7 @@ pre code,
 
 /* 登录页面动画 */
 .main .block-container {
-    animation: pageSlideIn 0.5s ease-out;
+    animation: none !important;
 }
 @keyframes pageSlideIn {
     from {
@@ -1346,9 +1633,6 @@ pre code,
 /* 内容区域变化过渡 */
 [data-testid="stVerticalBlock"],
 [data-testid="stHorizontalBlock"],
-.stTextArea,
-.stTextInput,
-.stSelectbox,
 .stMarkdown,
 .element-container {
     animation: contentFadeIn 0.4s ease-out;
@@ -1362,6 +1646,17 @@ pre code,
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+/* 输入类组件禁止入场动画，避免加载时出现“变宽 / 变大一下”的视觉抖动 */
+.stTextArea,
+.stTextInput,
+.stSelectbox,
+.stTextArea *,
+.stTextInput *,
+.stSelectbox * {
+    animation: none !important;
+    transform: none !important;
 }
 
 /* 按钮点击后内容刷新动画 */
@@ -1643,6 +1938,25 @@ div[data-testid="stNotification"] {
 """
 st.markdown(custom_style, unsafe_allow_html=True)
 
+components.html("""
+<script>
+(function() {
+    const markReady = () => {
+        try {
+            const parentBody = window.parent && window.parent.document && window.parent.document.body;
+            if (parentBody) {
+                parentBody.classList.add('style-ready');
+            }
+        } catch (e) {}
+    };
+
+    requestAnimationFrame(() => {
+        requestAnimationFrame(markReady);
+    });
+})();
+</script>
+""", height=0)
+
 # 用 JS 强制覆盖 Streamlit 的 scrollbar-width: thin
 st.markdown("""
 <script>
@@ -1896,7 +2210,7 @@ with tab4:
                                  key="model_qc_select", help="AI质检功能使用")
         model_chat = st.selectbox("AI对话", options=MODEL_OPTIONS,
                                    index=get_model_index("model_chat", DEFAULT_MODEL_CHAT),
-                                   key="model_chat_select", help="AI对话修改功能使用")
+                                   key="model_chat_select", help="AI对话功能使用")
     
     if st.button("保存配置", type="primary"):
         config = {
@@ -1926,7 +2240,7 @@ with tab4:
             with col_filter1:
                 filter_user = st.selectbox("筛选用户", ["全部"] + list(set(log["user"] for log in logs)), key="log_filter_user")
             with col_filter2:
-                filter_action = st.selectbox("筛选操作", ["全部", "登录", "AI修改", "笔记生成", "自动修复", "AI质检", "AI对话", "保存配置"], key="log_filter_action")
+                filter_action = st.selectbox("筛选操作", ["全部", "登录", "笔记生成", "自动修复", "AI质检", "AI对话", "保存配置"], key="log_filter_action")
             
             # 应用筛选
             filtered_logs = logs
@@ -1941,10 +2255,11 @@ with tab4:
             for log in filtered_logs[:30]:  # 只显示最多 30 条
                 # 操作图标
                 action_icons = {
-                    "登录": "🟢", "AI修改": "🔵", "自动修复": "🟡", 
+                    "登录": "🟢", "AI修改": "⚪", "历史修改": "⚪", "自动修复": "🟡", 
                     "笔记生成": "🧠", "AI质检": "🟣", "AI对话": "🟠", "保存配置": "⚙️"
                 }
                 icon = action_icons.get(log['action'], '⚪')
+                display_action = "历史修改" if log["action"] == "AI修改" else log["action"]
                 
                 # 构建详情信息
                 detail_parts = [log.get("details", "")]
@@ -1965,12 +2280,12 @@ with tab4:
                 
                 # 使用 expander 显示日志（可展开/收起）
                 if "input_preview" in log and log["input_preview"]:
-                    with st.expander(f"**{log['timestamp']}** | {icon} **{log['action']}** | {log['user']} | {detail_str[:60]}", expanded=False):
+                    with st.expander(f"**{log['timestamp']}** | {icon} **{display_action}** | {log['user']} | {detail_str[:60]}", expanded=False):
                         st.markdown(f"**输入摘要:** {log['input_preview']}...")
                         if "instruction" in log:
                             st.markdown(f"**指令:** {log['instruction']}")
                 else:
-                    st.markdown(f"**{log['timestamp']}** | {icon} **{log['action']}** | {log['user']} | {detail_str[:80]}")
+                    st.markdown(f"**{log['timestamp']}** | {icon} **{display_action}** | {log['user']} | {detail_str[:80]}")
         else:
             st.info("暂无操作日志")
 
@@ -2007,9 +2322,9 @@ if st.session_state.play_sound:
     play_notification_sound()
     st.session_state.play_sound = False
 
-# ==================== AI 修改功能 ====================
+# ==================== 旧版修改功能（已停用） ====================
 if False:
-    st.subheader("AI 自动修改")
+    st.subheader("旧版自动修改（已停用）")
     
     # 历史记录切换
     if st.session_state.history:
@@ -2382,7 +2697,7 @@ if False:
                     st.session_state.play_sound = True  # 标记播放提示音
                     # 记录详细日志
                     tokens = st.session_state.total_tokens
-                    log_operation("AI修改", f"输入: {len(ai_input)} 字符, 输出: {len(st.session_state.final_result)} 字符", extra={
+                    log_operation("历史修改", f"输入: {len(ai_input)} 字符, 输出: {len(st.session_state.final_result)} 字符", extra={
                         "input_preview": ai_input[:100],
                         "input_length": len(ai_input),
                         "output_length": len(st.session_state.final_result),
@@ -2567,77 +2882,24 @@ with tab3:
 
     if st.session_state.notes_result:
         st.divider()
-        col_result, col_translate = st.columns(2)
-        html_style = "<style>body{margin:0;padding:0;overflow:hidden;}button{width:100%;height:40px;padding:0;margin:0;display:block;font-size:14px;color:white;border:none;border-radius:5px;cursor:pointer;line-height:40px;font-family:'Source Sans Pro',sans-serif;transition:0.3s;}button:hover{opacity:0.9;}button:active{transform:scale(0.98);}</style>"
-
-        with col_result:
-            h_en1, h_en2 = st.columns([3, 1])
-            with h_en1:
-                st.subheader("生成结果（英文）")
-            with h_en2:
-                notes_view_mode = st.toggle("预览模式", value=True, key="notes_view_mode")
-
-            if notes_view_mode:
-                with st.container(height=320):
-                    st.markdown(st.session_state.notes_result)
-
-                st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
-                encoded_notes_en = base64.b64encode(st.session_state.notes_result.encode('utf-8')).decode('utf-8')
-                copy_js_notes_en = f'''{html_style}<script>function copyNotesEn(){{const b='{encoded_notes_en}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnNotesEn').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnNotesEn').innerText='复制英文',1500);}});}}</script><button id="btnNotesEn" onclick="copyNotesEn()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
-                components.html(copy_js_notes_en, height=60)
-            else:
-                def save_notes_edit():
-                    st.session_state.notes_result = st.session_state.notes_result_edit
-
-                st.text_area(
-                    "英文结果",
-                    value=st.session_state.notes_result,
-                    height=320,
-                    key="notes_result_edit",
-                    label_visibility="collapsed",
-                    on_change=save_notes_edit
-                )
-
-                st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
-                copy_js_notes_en = f'''{html_style}<script>function copyNotesEn(){{const iframes=window.parent.document.querySelectorAll('iframe');let thisIframe=null;for(const f of iframes){{if(f.contentWindow===window){{thisIframe=f;break;}}}}if(thisIframe){{const iRect=thisIframe.getBoundingClientRect();const tas=window.parent.document.querySelectorAll('textarea');let closest=null;let minDist=Infinity;for(const ta of tas){{const tRect=ta.getBoundingClientRect();const dist=Math.abs(tRect.bottom-iRect.top)+Math.abs(tRect.left-iRect.left);if(dist<minDist){{minDist=dist;closest=ta;}}}}if(closest&&closest.value){{navigator.clipboard.writeText(closest.value).then(()=>{{document.getElementById('btnNotesEn').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnNotesEn').innerText='复制英文',1500);}});return;}}}}alert('找不到编辑框');}}</script><button id="btnNotesEn" onclick="copyNotesEn()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
-                components.html(copy_js_notes_en, height=60)
-
-        with col_translate:
-            h_c1, h_c2 = st.columns([3, 1])
-            with h_c1:
-                st.subheader("中文翻译")
-            with h_c2:
-                notes_translate_clicked = st.button("翻译", use_container_width=True, type="primary", key="notes_translate_btn")
-
-            with st.container(height=320):
-                if st.session_state.notes_translated_result:
-                    st.markdown(st.session_state.notes_translated_result)
-                else:
-                    st.caption("点击「翻译」按钮生成中文翻译...")
-
-            st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
-            if st.session_state.notes_translated_result:
-                encoded_notes_cn = base64.b64encode(st.session_state.notes_translated_result.encode('utf-8')).decode('utf-8')
-                copy_js_notes_cn = f'''{html_style}<script>function copyNotesCn(){{const b='{encoded_notes_cn}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnNotesCn').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnNotesCn').innerText='复制中文',1500);}});}}</script><button id="btnNotesCn" onclick="copyNotesCn()" style="background:linear-gradient(135deg,#8b5cf6 0%,#00d4ff 100%);box-shadow:0 0 15px rgba(139,92,246,0.3);">复制中文</button>'''
-                components.html(copy_js_notes_cn, height=60)
-            else:
-                st.empty()
-
-            if notes_translate_clicked:
-                user_cfg = st.session_state.user_config
-                api_url_t = user_cfg.get("api_url", DEFAULT_API_URL)
-                api_key_t = user_cfg.get("api_key", DEFAULT_API_KEY)
-                model_t = user_cfg.get("model_translate", user_cfg.get("model", DEFAULT_MODEL))
-
-                with st.spinner("翻译中，请勿切换页面..."):
-                    prompt = TRANSLATE_PROMPT.format(text=st.session_state.notes_result)
-                    result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
-                    if success:
-                        st.session_state.notes_translated_result = normalize_markdown_spacing(result)
-                        st.session_state.play_sound = True
-                        st.rerun()
-                    else:
-                        st.error(result)
+        render_dual_result_panels(
+            result_key="notes_result",
+            translated_key="notes_translated_result",
+            result_title="生成结果（英文）",
+            result_title_style="subheader",
+            result_view_key="notes_view_mode",
+            result_edit_key="notes_result_edit",
+            result_copy_prefix="notes_result",
+            translate_button_key="notes_translate_btn",
+            translate_copy_prefix="notes_translate",
+            height=320,
+            result_textarea_label="英文结果",
+            result_copy_label="复制英文",
+            translation_title="中文翻译",
+            translation_title_style="subheader",
+            translation_empty_caption="点击「翻译」按钮生成中文翻译...",
+            translation_copy_label="复制中文",
+        )
 
 # ==================== 格式质检功能 ====================
 # 导入格式修复工具
@@ -2944,88 +3206,24 @@ with tab2:
     
     # 只有在非"只看问题"模式下，才显示修改后的 Markdown
     if "qc_result" in st.session_state and st.session_state.qc_result and not st.session_state.get("qc_issues_only_mode", False):
-        col_en, col_cn = st.columns(2)
-        
-        with col_en:
-            # 标题 + 预览开关
-            h1, h2 = st.columns([2, 1])
-            with h1: st.markdown("**英文结果**")
-            with h2: qc_view_mode = st.toggle("预览模式", value=True, key="qc_view_mode")
-            
-            if qc_view_mode:
-                with st.container(height=400):
-                    st.markdown(st.session_state.qc_result)
-                # 预览模式：使用预编码内容
-                import streamlit.components.v1 as components
-                html_style = "<style>body{margin:0;padding:0;overflow:hidden;}button{width:100%;height:40px;padding:0;margin:0;display:block;font-size:14px;color:white;border:none;border-radius:5px;cursor:pointer;line-height:40px;font-family:'Source Sans Pro',sans-serif;transition:0.3s;}button:hover{opacity:0.9;}button:active{transform:scale(0.98);}</style>"
-                encoded_qc = base64.b64encode(st.session_state.qc_result.encode('utf-8')).decode('utf-8')
-                copy_js_qc = f'''{html_style}<script>function copyQc(){{const b='{encoded_qc}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnQc').innerText='已复制';setTimeout(()=>document.getElementById('btnQc').innerText='复制英文',1500);}});}}</script><button id="btnQc" onclick="copyQc()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
-                components.html(copy_js_qc, height=60)
-            else:
-                # 使用 on_change 自动保存编辑内容
-                def save_qc_edit():
-                    st.session_state.qc_result = st.session_state.qc_edit_area
-                
-                st.text_area("编辑结果", value=st.session_state.qc_result, height=400, 
-                            key="qc_edit_area", label_visibility="collapsed",
-                            on_change=save_qc_edit)
-                
-                # 编辑模式：找到距离复制按钮最近的 textarea
-                import streamlit.components.v1 as components
-                html_style = "<style>body{margin:0;padding:0;overflow:hidden;}button{width:100%;height:40px;padding:0;margin:0;display:block;font-size:14px;color:white;border:none;border-radius:5px;cursor:pointer;line-height:40px;font-family:'Source Sans Pro',sans-serif;transition:0.3s;}button:hover{opacity:0.9;}button:active{transform:scale(0.98);}</style>"
-                # 找到与当前 iframe 距离最近的 textarea
-                copy_js_qc = f'''{html_style}<script>function copyQc(){{const iframes=window.parent.document.querySelectorAll('iframe');let thisIframe=null;for(const f of iframes){{if(f.contentWindow===window){{thisIframe=f;break;}}}}if(thisIframe){{const iRect=thisIframe.getBoundingClientRect();const tas=window.parent.document.querySelectorAll('textarea');let closest=null;let minDist=Infinity;for(const ta of tas){{const tRect=ta.getBoundingClientRect();const dist=Math.abs(tRect.bottom-iRect.top)+Math.abs(tRect.left-iRect.left);if(dist<minDist){{minDist=dist;closest=ta;}}}}if(closest&&closest.value){{navigator.clipboard.writeText(closest.value).then(()=>{{document.getElementById('btnQc').innerText='已复制';setTimeout(()=>document.getElementById('btnQc').innerText='复制英文',1500);}});return;}}}}alert('找不到编辑框');}}</script><button id="btnQc" onclick="copyQc()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
-                components.html(copy_js_qc, height=60)
-        
-        with col_cn:
-            # 标题 + 翻译按钮
-            h3, h4 = st.columns([2, 1])
-            with h3: st.markdown("**中文翻译**")
-            with h4:
-                # 翻译按钮 - 点击后设置加载状态
-                if st.button("翻译", key="qc_translate_btn", use_container_width=True):
-                    st.session_state.qc_translating = True
-                    st.rerun()
-            
-            # 显示翻译结果
-            if "qc_translated" not in st.session_state:
-                st.session_state.qc_translated = ""
-            if "qc_translating" not in st.session_state:
-                st.session_state.qc_translating = False
-            
-            # 在内容区域显示加载状态或结果
-            if st.session_state.qc_translating:
-                with st.container(height=400):
-                    st.info("正在翻译...")
-                # 执行翻译
-                user_cfg = st.session_state.user_config
-                api_url_t = user_cfg.get("api_url", DEFAULT_API_URL)
-                api_key_t = user_cfg.get("api_key", DEFAULT_API_KEY)
-                model_t = user_cfg.get("model_translate", user_cfg.get("model", DEFAULT_MODEL_TRANSLATE))
-                
-                if api_key_t:
-                    prompt = TRANSLATE_PROMPT.format(text=st.session_state.qc_result)
-                    result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
-                    if success:
-                        st.session_state.qc_translated = normalize_markdown_spacing(result)
-                        st.session_state.play_sound = True  # 翻译完成播放提示音
-                    else:
-                        st.session_state.qc_translated = f"翻译失败: {result}"
-                else:
-                    st.session_state.qc_translated = "请先配置 API Key"
-                st.session_state.qc_translating = False
-                st.rerun()
-            elif st.session_state.qc_translated:
-                with st.container(height=400):
-                    st.markdown(st.session_state.qc_translated)
-                
-                # 复制中文按钮
-                encoded_cn = base64.b64encode(st.session_state.qc_translated.encode('utf-8')).decode('utf-8')
-                copy_js_cn = f'''{html_style}<script>function copyCn(){{const b='{encoded_cn}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnCn').innerText='已复制';setTimeout(()=>document.getElementById('btnCn').innerText='复制中文',1500);}});}}</script><button id="btnCn" onclick="copyCn()" style="background:linear-gradient(135deg,#8b5cf6 0%,#00d4ff 100%);box-shadow:0 0 15px rgba(139,92,246,0.3);">复制中文</button>'''
-                components.html(copy_js_cn, height=60)
-            else:
-                with st.container(height=400):
-                    st.info("点击右上角按钮进行翻译")
+        render_dual_result_panels(
+            result_key="qc_result",
+            translated_key="qc_translated",
+            result_title="英文结果",
+            result_title_style="markdown",
+            result_view_key="qc_view_mode",
+            result_edit_key="qc_edit_area",
+            result_copy_prefix="qc_result",
+            translate_button_key="qc_translate_btn",
+            translate_copy_prefix="qc_translate",
+            height=400,
+            result_textarea_label="编辑结果",
+            result_copy_label="复制英文",
+            translation_title="中文翻译",
+            translation_title_style="markdown",
+            translation_empty_caption="点击「翻译」按钮生成中文翻译...",
+            translation_copy_label="复制中文",
+        )
         
         # 清空按钮
         if st.button("清空结果", key="qc_clear_btn", use_container_width=True):
@@ -3138,86 +3336,24 @@ with tab5:
     
     # 结果显示区域
     if st.session_state.chat_result:
-        col_en, col_cn = st.columns(2)
-        
-        with col_en:
-            # 标题 + 预览开关
-            h1, h2 = st.columns([2, 1])
-            with h1: st.markdown("**修改结果**")
-            with h2: chat_view_mode = st.toggle("预览模式", value=True, key="chat_view_toggle")
-            
-            if chat_view_mode:
-                with st.container(height=400):
-                    st.markdown(st.session_state.chat_result)
-                # 预览模式：使用预编码内容
-                import streamlit.components.v1 as components
-                html_style = "<style>body{margin:0;padding:0;overflow:hidden;}button{width:100%;height:40px;padding:0;margin:0;display:block;font-size:14px;color:white;border:none;border-radius:5px;cursor:pointer;line-height:40px;font-family:'Source Sans Pro',sans-serif;transition:0.3s;}button:hover{opacity:0.9;}button:active{transform:scale(0.98);}</style>"
-                encoded_chat = base64.b64encode(st.session_state.chat_result.encode('utf-8')).decode('utf-8')
-                copy_js_chat = f'''{html_style}<script>function copyChat(){{const b='{encoded_chat}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnChat').innerText='已复制';setTimeout(()=>document.getElementById('btnChat').innerText='复制英文',1500);}});}}</script><button id="btnChat" onclick="copyChat()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
-                components.html(copy_js_chat, height=60)
-            else:
-                # 使用 on_change 自动保存编辑内容
-                def save_chat_edit():
-                    st.session_state.chat_result = st.session_state.chat_edit_area
-                
-                st.text_area("编辑结果", value=st.session_state.chat_result, height=400, 
-                            key="chat_edit_area", label_visibility="collapsed",
-                            on_change=save_chat_edit)
-                
-                # 编辑模式：找到距离复制按钮最近的 textarea
-                import streamlit.components.v1 as components
-                html_style = "<style>body{margin:0;padding:0;overflow:hidden;}button{width:100%;height:40px;padding:0;margin:0;display:block;font-size:14px;color:white;border:none;border-radius:5px;cursor:pointer;line-height:40px;font-family:'Source Sans Pro',sans-serif;transition:0.3s;}button:hover{opacity:0.9;}button:active{transform:scale(0.98);}</style>"
-                # 找到与当前 iframe 距离最近的 textarea
-                copy_js_chat = f'''{html_style}<script>function copyChat(){{const iframes=window.parent.document.querySelectorAll('iframe');let thisIframe=null;for(const f of iframes){{if(f.contentWindow===window){{thisIframe=f;break;}}}}if(thisIframe){{const iRect=thisIframe.getBoundingClientRect();const tas=window.parent.document.querySelectorAll('textarea');let closest=null;let minDist=Infinity;for(const ta of tas){{const tRect=ta.getBoundingClientRect();const dist=Math.abs(tRect.bottom-iRect.top)+Math.abs(tRect.left-iRect.left);if(dist<minDist){{minDist=dist;closest=ta;}}}}if(closest&&closest.value){{navigator.clipboard.writeText(closest.value).then(()=>{{document.getElementById('btnChat').innerText='已复制';setTimeout(()=>document.getElementById('btnChat').innerText='复制英文',1500);}});return;}}}}alert('找不到编辑框');}}</script><button id="btnChat" onclick="copyChat()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
-                components.html(copy_js_chat, height=60)
-        
-        with col_cn:
-            # 标题 + 翻译按钮
-            h3, h4 = st.columns([2, 1])
-            with h3: st.markdown("**中文翻译**")
-            with h4:
-                # 翻译按钮 - 点击后设置加载状态
-                if st.button("翻译", key="chat_translate_btn", use_container_width=True):
-                    st.session_state.chat_translating = True
-                    st.rerun()
-
-            # 初始化翻译状态
-            if "chat_translating" not in st.session_state:
-                st.session_state.chat_translating = False
-            
-            # 在内容区域显示加载状态或结果
-            if st.session_state.chat_translating:
-                with st.container(height=400):
-                    st.info("正在翻译...")
-                # 执行翻译
-                user_cfg = st.session_state.user_config
-                api_url_t = user_cfg.get("api_url", DEFAULT_API_URL)
-                api_key_t = user_cfg.get("api_key", DEFAULT_API_KEY)
-                model_t = user_cfg.get("model_translate", user_cfg.get("model", DEFAULT_MODEL_TRANSLATE))
-                
-                if api_key_t:
-                    prompt = TRANSLATE_PROMPT.format(text=st.session_state.chat_result)
-                    result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
-                    if success:
-                        st.session_state.chat_translated = normalize_markdown_spacing(result)
-                        st.session_state.play_sound = True  # 翻译完成播放提示音
-                    else:
-                        st.session_state.chat_translated = f"翻译失败: {result}"
-                else:
-                    st.session_state.chat_translated = "请先配置 API Key"
-                st.session_state.chat_translating = False
-                st.rerun()
-            elif st.session_state.chat_translated:
-                with st.container(height=400):
-                    st.markdown(st.session_state.chat_translated)
-                
-                # 复制中文按钮
-                encoded_cn = base64.b64encode(st.session_state.chat_translated.encode('utf-8')).decode('utf-8')
-                copy_js_cn = f'''{html_style}<script>function copyChatCn(){{const b='{encoded_cn}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnChatCn').innerText='已复制';setTimeout(()=>document.getElementById('btnChatCn').innerText='复制中文',1500);}});}}</script><button id="btnChatCn" onclick="copyChatCn()" style="background:linear-gradient(135deg,#8b5cf6 0%,#00d4ff 100%);box-shadow:0 0 15px rgba(139,92,246,0.3);">复制中文</button>'''
-                components.html(copy_js_cn, height=60)
-            else:
-                with st.container(height=400):
-                    st.info("点击右上角按钮进行翻译")
+        render_dual_result_panels(
+            result_key="chat_result",
+            translated_key="chat_translated",
+            result_title="修改结果",
+            result_title_style="markdown",
+            result_view_key="chat_view_toggle",
+            result_edit_key="chat_edit_area",
+            result_copy_prefix="chat_result",
+            translate_button_key="chat_translate_btn",
+            translate_copy_prefix="chat_translate",
+            height=400,
+            result_textarea_label="编辑结果",
+            result_copy_label="复制英文",
+            translation_title="中文翻译",
+            translation_title_style="markdown",
+            translation_empty_caption="点击「翻译」按钮生成中文翻译...",
+            translation_copy_label="复制中文",
+        )
         
         # 使用修改结果作为新输入
         col_action1, col_action2 = st.columns(2)
