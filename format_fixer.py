@@ -22,6 +22,102 @@ def find_broken_note_link(line: str):
     return None, None
 
 
+def is_secondary_list_line(line: str) -> bool:
+    """判断一行是否为带缩进的二级列表，支持无序和有序两种形式。"""
+    return bool(re.match(r'^\s+(?:-\s+|\d+\.\s+)', line))
+
+
+def fix_single_h4_section(text: str) -> str:
+    """如果正文中只有一个四级标题，则删除该四级标题，直接保留其内容。"""
+    lines = text.split('\n')
+    h4_indices = [i for i, line in enumerate(lines) if line.startswith('#### ')]
+
+    if len(h4_indices) != 1:
+        return text
+
+    idx = h4_indices[0]
+    lines.pop(idx)
+    return '\n'.join(lines)
+
+
+def _protect_internal_abbr_dots(token: str) -> str:
+    """只保护缩写/时间表达内部的点，保留最后一个点用于正常空格检测。"""
+    if token.count('.') <= 1:
+        return token
+    last_dot_index = token.rfind('.')
+    return token[:last_dot_index].replace('.', '.__ABBR__') + token[last_dot_index:]
+
+
+def protect_spacing_exceptions(text: str) -> str:
+    """保护不应触发“句号后空格”规则的内部点，如 U.S. / p.m. / 4.p.m. / e.g."""
+    # 先保护域名
+    text = re.sub(r'\.(com|org|net|edu|gov|io|co|uk|cn)\b', r'.__DOMAIN_\1__', text, flags=re.IGNORECASE)
+
+    # 保护“缩写 + 数字”写法，如 No.1 / Vol.2 / Fig.3 / Jan.2025
+    text = re.sub(
+        r'\b(?:No|Vol|Fig|Eq|Sec|Art|Ch|Chap|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\.(?=\d)',
+        lambda m: m.group(0).replace('.', '.__ABBR__'),
+        text,
+        flags=re.IGNORECASE
+    )
+
+    # 保护时间写法，如 4.p.m. / 10.a.m.
+    text = re.sub(
+        r'\b\d+\.(?:a|p)\.m\.?',
+        lambda m: _protect_internal_abbr_dots(m.group(0)),
+        text,
+        flags=re.IGNORECASE
+    )
+
+    # 保护多段缩写，如 U.S. / U.K. / e.g. / i.e. / Ph.D.
+    text = re.sub(
+        r'\b(?:[A-Za-z]{1,4}\.){2,}',
+        lambda m: _protect_internal_abbr_dots(m.group(0)),
+        text
+    )
+
+    return text
+
+
+def restore_spacing_exceptions(text: str) -> str:
+    """恢复被保护的内部点和域名。"""
+    text = re.sub(r'\.__DOMAIN_(\w+)__', r'.\1', text)
+    text = text.replace('.__ABBR__', '.')
+    return text
+
+
+def add_short_context_to_issues(issues: list, lines: list) -> list:
+    """为未自带上下文的行级问题补充简短上下文，便于定位。"""
+    enriched = []
+
+    for issue in issues:
+        if "上下文：" in issue:
+            enriched.append(issue)
+            continue
+
+        line_match = re.search(r'第(\d+)行', issue)
+        if not line_match:
+            enriched.append(issue)
+            continue
+
+        line_no = int(line_match.group(1))
+        if line_no < 1 or line_no > len(lines):
+            enriched.append(issue)
+            continue
+
+        snippet = re.sub(r'\s+', ' ', lines[line_no - 1].strip())
+        if not snippet:
+            enriched.append(issue)
+            continue
+
+        if len(snippet) > 60:
+            snippet = snippet[:57] + "..."
+
+        enriched.append(f"{issue}，上下文：...{snippet}...")
+
+    return enriched
+
+
 # ==================== 基础修复函数 ====================
 
 def fix_note_format(text: str) -> str:
@@ -226,10 +322,10 @@ def fix_list_item_period(text: str) -> str:
         if re.match(r'^[\s]*[-\d]+\.?\s', line):
             stripped = line.rstrip()
             
-            # 检查下一行是否是二级列表（有前导空格 + -）
+            # 检查下一行是否是二级列表（有前导空格 + - / 1.）
             # 如果是，则当前行应该以冒号结尾，不需要加句号
             next_is_secondary_list = False
-            if i + 1 < len(lines) and re.match(r'^\s+-', lines[i + 1]):
+            if i + 1 < len(lines) and is_secondary_list_line(lines[i + 1]):
                 next_is_secondary_list = True
             
             # 如果后面跟着二级列表，跳过（让 fix_list_item_colon 处理）
@@ -326,20 +422,12 @@ def fix_spacing_rules(text: str) -> str:
     """修复空格规则：句号/逗号后空格、括号空格、冒号前后空格"""
     # 冒号前移除多余空格（如 "A : B" → "A: B"）
     text = re.sub(r'\s+:', ':', text)
-    # 句号后加空格（排除以下情况）：
-    # 1. 域名如 .com, .org
-    # 2. 缩写如 U.S., e.g., i.e.
-    # 先保护域名
-    text = re.sub(r'\.(com|org|net|edu|gov|io|co|uk|cn)\b', r'.__DOMAIN_\1__', text)
-    # 保护缩写（单个大写字母+句号+大写字母，如 U.S.）
-    text = re.sub(r'([A-Z])\.([A-Z])', r'\1.__ABBR__\2', text)
-    # 保护常见缩写
-    text = re.sub(r'\b(e\.g|i\.e|etc|vs|Dr|Mr|Mrs|Ms|Jr|Sr|St)\b', lambda m: m.group(0).replace('.', '.__ABBR__'), text)
+    # 句号后加空格，但要排除缩写/时间表达内部的点
+    text = protect_spacing_exceptions(text)
     # 句号后加空格
     text = re.sub(r'\.([A-Za-z])', r'. \1', text)
     # 恢复保护的内容
-    text = re.sub(r'\.__DOMAIN_(\w+)__', r'.\1', text)
-    text = re.sub(r'\.__ABBR__', '.', text)
+    text = restore_spacing_exceptions(text)
     # 逗号后加空格
     text = re.sub(r',([A-Za-z])', r', \1', text)
     # 冒号后加空格
@@ -508,7 +596,7 @@ def fix_list_item_colon(text: str) -> str:
     
     for i, line in enumerate(lines):
         # 检查下一行是否是二级列表（有前导空格 + - 或数字列表）
-        next_is_sublist = (i + 1 < len(lines) and re.match(r'^\s+[-\d]', lines[i + 1]))
+        next_is_sublist = (i + 1 < len(lines) and is_secondary_list_line(lines[i + 1]))
         
         # 情况1：一级列表项后跟二级列表，有冒号 → 删除冒号
         # 包括 - **xxx**: 和 - **xxx**: [Note 1](#) 等情况
@@ -613,8 +701,8 @@ def fix_paragraph_spacing(text: str) -> str:
         # 决策空行数量
         target_empty_lines = -1 # -1 表示保持原样（如果不符合规则）
         
-        # 规则1：首段 -> 四级标题：空2行
-        if is_core_end and next_is_h4:
+        # 规则1：首段 -> 四级标题/列表：空2行
+        if is_core_end and (next_is_h4 or next_is_list):
             target_empty_lines = 2
             
         # 规则2：四级标题 -> 列表：空0行
@@ -666,7 +754,7 @@ def fix_note_on_parent_with_sublist(text: str) -> str:
         
         if parent_match:
             # 检查下一行是否是二级列表
-            if i + 1 < len(lines) and re.match(r'^\s+[-\d]', lines[i + 1]):
+            if i + 1 < len(lines) and is_secondary_list_line(lines[i + 1]):
                 parent_content = parent_match.group(1).rstrip()
                 notes = parent_match.group(2)  # 如 [Note 1](#) 或 [Note 1](#)[Note 2](#)
                 
@@ -675,7 +763,7 @@ def fix_note_on_parent_with_sublist(text: str) -> str:
                 i += 1
                 
                 # 将引用添加到每个二级列表项上
-                while i < len(lines) and re.match(r'^\s+[-\d]', lines[i]):
+                while i < len(lines) and is_secondary_list_line(lines[i]):
                     sub_line = lines[i].rstrip()
                     
                     # 检查子项是否已有这些引用，避免重复
@@ -724,6 +812,7 @@ def fix_all_format(text: str) -> str:
     text = fix_colon_after_no_content(text)
     text = fix_list_item_colon(text)  # 修复一级列表项缺少冒号
     text = fix_note_on_parent_with_sublist(text)  # 将父级列表的引用移到子项
+    text = fix_single_h4_section(text)  # 正文只有一个四级标题时，删除该四级标题
     text = fix_paragraph_spacing(text)  # 修复大段落间距
     return text
 
@@ -916,11 +1005,7 @@ def analyze_format_issues(text: str) -> list:
     
     # 检查空格规则（排除缩写如 U.S. U.K. e.g. i.e. etc.）
     for i, line in enumerate(lines, 1):
-        # 先排除常见缩写
-        temp_line = re.sub(r'\b[A-Z]\.[A-Z]\.', '', line)  # U.S. U.K. 等
-        temp_line = re.sub(r'\b(e\.g\.|i\.e\.|etc\.|vs\.|Dr\.|Mr\.|Mrs\.|Ms\.|Jr\.|Sr\.)', '', temp_line)
-        # 排除 .com .org .net 等域名
-        temp_line = re.sub(r'\.(com|org|net|edu|gov|io|co|uk|cn)\b', '', temp_line)
+        temp_line = protect_spacing_exceptions(line)
         # 检查标点后是否缺少空格，但排除标点后跟 [ 的情况（Markdown 链接）
         match = re.search(r'([.,:])[A-Za-z]', temp_line)
         if match:
@@ -957,7 +1042,7 @@ def analyze_format_issues(text: str) -> list:
         match = re.match(r'^-\s+\*\*[^*]+\*\*:\s*$', line)
         if match:
             # 检查下一行是否是二级列表
-            if i < len(lines) and re.match(r'^\s+-', lines[i]):
+            if i < len(lines) and is_secondary_list_line(lines[i]):
                 issues.append(f"第{i}行：一级列表后跟二级列表时，冒号应删除")
                 break
     
@@ -985,16 +1070,29 @@ def analyze_format_issues(text: str) -> list:
         issues.append("⚠️ 第1行：首段主语有引号（需AI判断是否为作品名）")
     
     # 检查四级标题下是否只有一项（一级列表项）
-    sections = re.split(r'(####\s+[^\n]+)', text)
-    for i in range(1, len(sections), 2):
-        if i + 1 < len(sections):
-            title = sections[i]
-            content = sections[i + 1]
-            # 匹配一级列表项：以 `- **xxx**` 开头（可能有冒号也可能没有），且没有前导空格
-            # 排除二级列表（有前导空格的）
-            list_items = re.findall(r'^-\s+\*\*[^*]+\*\*', content, re.MULTILINE)
-            if len(list_items) == 1:
-                issues.append(f"⚠️「{title.strip()}」下只有1个列表项（需AI判断）")
+    # 这属于硬错误：应改为“#### 标题 + 单段正文”，而不是保留单个 bullet。
+    for idx, line in enumerate(lines):
+        if not line.startswith('#### '):
+            continue
+
+        title = line.strip()
+        list_items = 0
+
+        for next_idx in range(idx + 1, len(lines)):
+            next_line = lines[next_idx]
+            if next_line.startswith('#### '):
+                break
+            if re.match(r'^-\s+\*\*[^*]+\*\*', next_line):
+                list_items += 1
+
+        if list_items == 1:
+            issues.append(f"第{idx + 1}行：「{title}」下只有1个列表项，应改为单段正文")
+
+    # 检查正文中是否只存在一个四级标题
+    h4_lines = [(idx + 1, line.strip()) for idx, line in enumerate(lines) if line.startswith('#### ')]
+    if len(h4_lines) == 1:
+        line_no, title = h4_lines[0]
+        issues.append(f"第{line_no}行：正文只有一个四级标题「{title}」，应删除该四级标题，直接保留下面内容")
     
     # 检查四级标题后是否紧跟列表
     # 注意：根据规则，单项内容可以用段落形式，所以需要检查是否是单项内容的情况
@@ -1110,7 +1208,7 @@ def analyze_format_issues(text: str) -> list:
         if match:
             # 排除后面跟二级列表的情况（二级列表时不需要冒号）
             next_line_idx = i  # i 是 1-indexed，所以 i 就是下一行的 0-indexed
-            if next_line_idx < len(lines) and re.match(r'^\s+-', lines[next_line_idx]):
+            if next_line_idx < len(lines) and is_secondary_list_line(lines[next_line_idx]):
                 continue  # 后跟二级列表，不报错
             title = match.group(1)
             issues.append(f"第{i}行：列表项「{title}」小标题后缺少冒号（应为 **{title}**:）")
@@ -1122,7 +1220,7 @@ def analyze_format_issues(text: str) -> list:
             if not re.search(r'\[Note\s*\d+\]', line):
                 # 检查下一行是否是二级列表（如果是，则 Note 应该在二级列表中，不报错）
                 next_line_idx = i  # i 是 1-indexed，所以 i 就是下一行的 0-indexed
-                if next_line_idx < len(lines) and re.match(r'^\s+-', lines[next_line_idx]):
+                if next_line_idx < len(lines) and is_secondary_list_line(lines[next_line_idx]):
                     # 后面跟着二级列表，Note 应该在二级列表项中，跳过检查
                     continue
                 title_match = re.search(r'\*\*([^*]+)\*\*', line)
@@ -1191,7 +1289,7 @@ def analyze_format_issues(text: str) -> list:
     
     # 检查二级列表缩进（应为4空格）
     for i, line in enumerate(lines, 1):
-        match = re.match(r'^(\s+)-\s', line)
+        match = re.match(r'^(\s+)(?:-\s|\d+\.\s)', line)
         if match:
             indent = len(match.group(1))
             if indent > 0 and indent != 4:
@@ -1292,7 +1390,7 @@ def analyze_format_issues(text: str) -> list:
             after_colon = re.search(r'\*\*:\s*(.+)$', line)
             if after_colon and after_colon.group(1).strip():
                 # 检查下一行是否是二级列表
-                if i < len(lines) and re.match(r'^\s+-', lines[i]):
+                if i < len(lines) and is_secondary_list_line(lines[i]):
                     content = after_colon.group(1).strip()[:20]
                     issues.append(f"第{i}行：有二级列表时，一级标题后不应有冒号和额外内容「{content}...」（应删除冒号和内容，仅保留小标题）")
                     break
@@ -1301,7 +1399,7 @@ def analyze_format_issues(text: str) -> list:
     for i, line in enumerate(lines, 1):
         if re.match(r'^\s*-\s+\*\*[^*]+\*\*:\s*$', line):
             # 检查下一行是否是二级列表
-            if i >= len(lines) or not re.match(r'^\s+-', lines[i]):
+            if i >= len(lines) or not is_secondary_list_line(lines[i]):
                 title_match = re.search(r'\*\*([^*]+)\*\*', line)
                 title = title_match.group(1) if title_match else "未知"
                 issues.append(f"第{i}行：列表项「{title}」无后续内容时不应有冒号")
@@ -1380,7 +1478,7 @@ def analyze_format_issues(text: str) -> list:
                     else:
                         break
     
-    return issues
+    return add_short_context_to_issues(issues, lines)
 
 
 # ==================== 测试代码 ====================

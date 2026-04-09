@@ -419,6 +419,8 @@ def render_markdown_result_column(
         st.session_state[edit_widget_key] = content
 
     if view_mode:
+        content_slot.empty()
+        copy_slot.empty()
         with content_slot.container():
             with st.container(height=height):
                 st.markdown(content)
@@ -436,6 +438,8 @@ def render_markdown_result_column(
             if on_save:
                 on_save(new_value)
 
+        content_slot.empty()
+        copy_slot.empty()
         with content_slot.container():
             st.text_area(
                 textarea_label,
@@ -486,6 +490,7 @@ def render_translation_column(
         else:
             previous_translated_text = translated_text
             translated_text = ""
+            content_slot.empty()
             with content_slot.container():
                 with st.container(height=height):
                     render_loading_banner("正在翻译中文", "请保持当前页面不变，完成后会直接显示结果。")
@@ -518,6 +523,7 @@ def render_translation_column(
     if should_play_result_motion(translated_key, translated_text):
         render_result_motion_anchor(f"{copy_prefix}_translation", delay_ms=80 if not translation_updated else 20)
 
+    content_slot.empty()
     with content_slot.container():
         with st.container(height=height):
             if translated_text:
@@ -525,6 +531,7 @@ def render_translation_column(
             else:
                 st.caption(empty_caption)
 
+    copy_slot.empty()
     with copy_slot.container():
         st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
         if translated_text:
@@ -943,8 +950,12 @@ NOTES_ONLY_GENERATE_PROMPT = """## 任务：仅根据参考笔记生成全新答
 8. 所有引用必须保持为精确的 `[Note X](#)` 格式，并放在正确位置
 9. 除作品名外，禁止对任何单词示例、风格词、概念词、学习词汇、普通名词使用双引号
 10. 本页面只输出英文终稿；忽略规则中的默认双语输出要求，中文由页面上的“翻译”按钮单独生成
-11. 如果参考笔记不足以支持答案，按规则执行无答案终止或信息不足处理
-12. 只输出最终英文 Markdown，不要解释、分析、检查过程，也不要用代码块包裹
+11. 首段必须尽量压缩，只回答“它是什么”，不要塞入冗余修饰语、长定语从句、举例、购买方式或制作方式
+12. 只要写到食材、配料、制作动作或 recipe / preparation 内容，必须至少给出一组有序步骤；步骤优先写成 `1. **Preparation**: ... [Note X](#).` 这类格式；如果某个一级列表项下面接步骤或二级列表，父级这一行只能保留列表标题，不得再写冒号和额外正文
+13. 引用必须统一放在句子、段落或整个列表项的末尾；不要在一句话中间先放 `[Note X](#)` 再继续写后文
+14. 任何 `####` 四级标题下如果最终只有 1 个信息点，必须写成单段正文，禁止保留成只有 1 个 bullet 的列表
+15. 如果参考笔记不足以支持答案，按规则执行无答案终止或信息不足处理
+16. 只输出最终英文 Markdown，不要解释、分析、检查过程，也不要用代码块包裹
 """
 
 # 2 步名称
@@ -2192,7 +2203,7 @@ div[data-testid="stNotification"] {
     min-height: 32px !important;
 }
 
-/* Toggle - 保持标签文字区域透明，轨道颜色由脚本精确控制 */
+/* Toggle - 保持标签文字区域透明，并直接用 CSS 跟随选中态 */
 [data-testid="stCheckbox"] [data-testid="stWidgetLabel"],
 [data-testid="stCheckbox"] [data-testid="stWidgetLabel"] *,
 [data-testid="stCheckbox"] label[data-baseweb="checkbox"] > div:last-child,
@@ -2226,7 +2237,7 @@ components.html("""
 components.html("""
 <script>
 (function() {
-    const applyToggleColors = () => {
+    const applyToggleStyles = () => {
         try {
             const parentDoc = window.parent && window.parent.document;
             if (!parentDoc) return;
@@ -2234,24 +2245,16 @@ components.html("""
             const labels = parentDoc.querySelectorAll('[data-testid="stCheckbox"] label[data-baseweb="checkbox"]');
             labels.forEach((label) => {
                 const input = label.querySelector('input[type="checkbox"]');
-                if (!input) return;
-
                 const allDivs = Array.from(label.querySelectorAll('div'));
-                const directDivs = Array.from(label.children).filter((child) => child.tagName === 'DIV');
-                const track = allDivs.find((child) => {
-                    const rect = child.getBoundingClientRect();
-                    const text = (child.textContent || '').trim();
+                const track = allDivs.find((node) => {
+                    const rect = node.getBoundingClientRect();
+                    const text = (node.textContent || '').trim();
                     return !text && rect.width >= 24 && rect.width <= 64 && rect.height >= 14 && rect.height <= 34 && rect.width > rect.height * 1.5;
                 });
-                if (!track) return;
+                const textWrap = label.querySelector('[data-testid="stWidgetLabel"]');
+                if (!input || !track) return;
 
-                const knob = Array.from(track.querySelectorAll('div, span')).find((child) => {
-                    const rect = child.getBoundingClientRect();
-                    const text = (child.textContent || '').trim();
-                    return !text && rect.width >= 10 && rect.width <= 28 && rect.height >= 10 && rect.height <= 28 && Math.abs(rect.width - rect.height) <= 10;
-                });
-                const checked = input.checked || label.getAttribute('aria-checked') === 'true';
-
+                const checked = !!input.checked || label.getAttribute('aria-checked') === 'true';
                 track.style.background = checked
                     ? 'linear-gradient(135deg, #239bb0 0%, #3478c6 100%)'
                     : 'rgba(255, 255, 255, 0.18)';
@@ -2263,36 +2266,34 @@ components.html("""
                     : 'none';
                 track.style.transition = 'background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease';
 
-                if (knob) {
-                    knob.style.background = '#f7fbff';
-                    knob.style.boxShadow = 'none';
-                }
-
-                const labelContent = label.querySelector('[data-testid="stWidgetLabel"]');
-                if (labelContent) {
-                    labelContent.style.background = 'transparent';
-                    labelContent.style.boxShadow = 'none';
-                }
-
-                directDivs.forEach((child) => {
-                    if (child !== track) {
-                        child.style.background = 'transparent';
-                        child.style.boxShadow = 'none';
-                    }
+                Array.from(track.querySelectorAll('div, span')).forEach((node) => {
+                    const rect = node.getBoundingClientRect();
+                    if (rect.width < 8 || rect.height < 8) return;
+                    node.style.background = '#f7fbff';
+                    node.style.boxShadow = 'none';
                 });
+
+                if (textWrap) {
+                    textWrap.style.background = 'transparent';
+                    textWrap.style.boxShadow = 'none';
+                    Array.from(textWrap.querySelectorAll('*')).forEach((node) => {
+                        node.style.background = 'transparent';
+                        node.style.boxShadow = 'none';
+                    });
+                }
             });
         } catch (e) {}
     };
 
     const scheduleApply = () => {
         requestAnimationFrame(() => {
-            applyToggleColors();
+            requestAnimationFrame(applyToggleStyles);
         });
     };
 
     scheduleApply();
-    setTimeout(scheduleApply, 300);
-    setTimeout(scheduleApply, 1200);
+    setTimeout(scheduleApply, 120);
+    setTimeout(scheduleApply, 500);
 
     try {
         const parentDoc = window.parent && window.parent.document;
@@ -2302,7 +2303,7 @@ components.html("""
                 subtree: true,
                 childList: true,
                 attributes: true,
-                attributeFilter: ['class', 'style', 'aria-checked', 'checked']
+                attributeFilter: ['checked', 'aria-checked', 'class', 'style']
             });
         }
     } catch (e) {}
