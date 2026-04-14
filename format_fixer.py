@@ -40,6 +40,21 @@ def fix_single_h4_section(text: str) -> str:
     return '\n'.join(lines)
 
 
+def fix_first_line_initial_capitalization(text: str) -> str:
+    """如果首行句首是小写字母，则改为大写。"""
+    lines = text.split('\n')
+    if not lines:
+        return text
+
+    lines[0] = re.sub(
+        r'^(\s*[^A-Za-z]*)([a-z])',
+        lambda m: m.group(1) + m.group(2).upper(),
+        lines[0],
+        count=1
+    )
+    return '\n'.join(lines)
+
+
 def _protect_internal_abbr_dots(token: str) -> str:
     """只保护缩写/时间表达内部的点，保留最后一个点用于正常空格检测。"""
     if token.count('.') <= 1:
@@ -586,6 +601,27 @@ def fix_colon_after_no_content(text: str) -> str:
     return '\n'.join(result)
 
 
+def fix_parent_list_heading_punctuation(text: str) -> str:
+    """当父级一级列表项后面跟着二级列表时，移除标题末尾多余的句号/问号/感叹号。"""
+    lines = text.split('\n')
+    result = []
+
+    for i, line in enumerate(lines):
+        next_is_sublist = (i + 1 < len(lines) and is_secondary_list_line(lines[i + 1]))
+        if next_is_sublist:
+            match = re.match(
+                r'^((?:-\s+|\d+\.\s+)\*\*[^*]+\*\*)([.!?])\s*((?:\[Note\s*\d+\]\(#\))*)\s*$',
+                line
+            )
+            if match:
+                prefix = match.group(1)
+                notes = match.group(3).strip()
+                line = prefix + (f' {notes}' if notes else '')
+        result.append(line)
+
+    return '\n'.join(result)
+
+
 def fix_list_item_colon(text: str) -> str:
     """修复一级列表项冒号的问题：
     1. 后面有二级列表时，应删除冒号（因为二级列表已经是展开形式）
@@ -793,6 +829,7 @@ def fix_note_on_parent_with_sublist(text: str) -> str:
 
 def fix_all_format(text: str) -> str:
     """应用所有格式修复"""
+    text = fix_first_line_initial_capitalization(text)
     text = fix_note_format(text)
     text = fix_highlight_spaces(text)
     text = fix_period_position(text)
@@ -810,6 +847,7 @@ def fix_all_format(text: str) -> str:
     text = fix_colon_capitalization(text)
     text = fix_taiwan_reference(text)
     text = fix_colon_after_no_content(text)
+    text = fix_parent_list_heading_punctuation(text)
     text = fix_list_item_colon(text)  # 修复一级列表项缺少冒号
     text = fix_note_on_parent_with_sublist(text)  # 将父级列表的引用移到子项
     text = fix_single_h4_section(text)  # 正文只有一个四级标题时，删除该四级标题
@@ -1045,6 +1083,17 @@ def analyze_format_issues(text: str) -> list:
             if i < len(lines) and is_secondary_list_line(lines[i]):
                 issues.append(f"第{i}行：一级列表后跟二级列表时，冒号应删除")
                 break
+
+    # 检查一级列表后跟二级列表时的句号（应删除）
+    for i, line in enumerate(lines, 1):
+        match = re.match(
+            r'^((?:-\s+|\d+\.\s+)\*\*[^*]+\*\*)([.!?])\s*((?:\[Note\s*\d+\]\(#\))*)\s*$',
+            line
+        )
+        if match:
+            if i < len(lines) and is_secondary_list_line(lines[i]):
+                issues.append(f"第{i}行：一级列表后跟二级列表时，标题后不应有句号")
+                break
     
     # 检查冒号后小写（包括列表小标题后的内容）
     for i, line in enumerate(lines, 1):
@@ -1068,6 +1117,10 @@ def analyze_format_issues(text: str) -> list:
     # 检查主语是否有引号
     if re.match(r'^"[^"]+"\s+(is|are|refers)', text):
         issues.append("⚠️ 第1行：首段主语有引号（需AI判断是否为作品名）")
+
+    # 检查首行句首首字母大写
+    if lines and re.match(r'^\s*[^A-Za-z]*[a-z]', lines[0]):
+        issues.append("第1行：句首首字母应大写")
     
     # 检查四级标题下是否只有一项（一级列表项）
     # 这属于硬错误：应改为“#### 标题 + 单段正文”，而不是保留单个 bullet。
@@ -1076,17 +1129,36 @@ def analyze_format_issues(text: str) -> list:
             continue
 
         title = line.strip()
-        list_items = 0
+        top_level_item_indices = []
 
         for next_idx in range(idx + 1, len(lines)):
             next_line = lines[next_idx]
             if next_line.startswith('#### '):
                 break
             if re.match(r'^-\s+\*\*[^*]+\*\*', next_line):
-                list_items += 1
+                top_level_item_indices.append(next_idx)
 
-        if list_items == 1:
-            issues.append(f"第{idx + 1}行：「{title}」下只有1个列表项，应改为单段正文")
+        if len(top_level_item_indices) == 1:
+            item_idx = top_level_item_indices[0]
+            has_sublist = False
+            item_title_match = re.search(r'^\-\s+\*\*([^*]+)\*\*', lines[item_idx])
+            item_title = item_title_match.group(1).strip() if item_title_match else "该列表项"
+
+            for sub_idx in range(item_idx + 1, len(lines)):
+                sub_line = lines[sub_idx]
+                if sub_line.startswith('#### ') or re.match(r'^-\s+\*\*[^*]+\*\*', sub_line):
+                    break
+                if is_secondary_list_line(sub_line):
+                    has_sublist = True
+                    break
+
+            if has_sublist:
+                issues.append(
+                    f"第{idx + 1}行：「{title}」下只有1个一级列表项「{item_title}」，"
+                    f"不应保留单独一级列表项包装；应改为更准确的四级标题并直接承接二级步骤"
+                )
+            else:
+                issues.append(f"第{idx + 1}行：「{title}」下只有1个列表项，应改为单段正文")
 
     # 检查正文中是否只存在一个四级标题
     h4_lines = [(idx + 1, line.strip()) for idx, line in enumerate(lines) if line.startswith('#### ')]
