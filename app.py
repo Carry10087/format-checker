@@ -14,7 +14,6 @@ if len(sys.argv) == 1 and not os.environ.get("STREAMLIT_RUNTIME") and not os.env
     sys.exit()
 
 import streamlit as st
-import streamlit.components.v1 as components
 
 # from streamlit_option_menu import option_menu  # 已改用 st.tabs
 import re
@@ -36,6 +35,48 @@ from api import (
 HAS_PASTE_BUTTON = False
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def render_html_iframe(body, *, height, width="stretch", tab_index=None):
+    """Compat wrapper for deprecated st.components.v1.html."""
+    is_tiny_frame = isinstance(height, int) and height <= 1
+    resolved_height = 1 if isinstance(height, int) and height <= 0 else height
+    resolved_width = 1 if is_tiny_frame and width == "stretch" else width
+    resolved_tab_index = -1 if tab_index is None and is_tiny_frame else tab_index
+    resolved_body = body
+    if is_tiny_frame and isinstance(body, str):
+        resolved_body = f"""
+        <script>
+        (() => {{
+            const hideSelf = () => {{
+                try {{
+                    const parentDoc = window.parent && window.parent.document;
+                    if (!parentDoc) return;
+                    const iframe = Array.from(parentDoc.querySelectorAll('iframe'))
+                        .find((node) => node.contentWindow === window);
+                    if (!iframe) return;
+
+                    iframe.setAttribute('aria-hidden', 'true');
+                    iframe.tabIndex = -1;
+                    iframe.style.cssText += ';position:absolute !important;width:0 !important;height:0 !important;border:0 !important;opacity:0 !important;pointer-events:none !important;';
+
+                    const host = iframe.closest('[data-testid="stElementContainer"]') || iframe.parentElement;
+                    if (host) {{
+                        host.setAttribute('aria-hidden', 'true');
+                        host.style.cssText += ';display:none !important;width:0 !important;height:0 !important;min-height:0 !important;margin:0 !important;padding:0 !important;overflow:hidden !important;';
+                    }}
+                }} catch (e) {{}}
+            }};
+
+            requestAnimationFrame(() => {{
+                requestAnimationFrame(hideSelf);
+            }});
+            setTimeout(hideSelf, 60);
+        }})();
+        </script>
+        {body}
+        """
+    st.iframe(resolved_body, width=resolved_width, height=resolved_height, tab_index=resolved_tab_index)
 
 # 用户数据目录
 USERS_DIR = "users"
@@ -309,7 +350,7 @@ def render_loading_banner(title, detail=""):
 
 def render_result_motion_anchor(anchor_id, delay_ms=0):
     safe_anchor = re.sub(r"\W+", "_", anchor_id)
-    components.html(
+    render_html_iframe(
         f"""
         <script>
         (() => {{
@@ -359,13 +400,13 @@ def render_copy_button(text, button_id, label, copied_label="已复制", button_
     encoded = base64.b64encode(text.encode("utf-8")).decode("utf-8")
     js_name = re.sub(r"\W+", "_", button_id)
     copy_js = f"""{COPY_BUTTON_HTML_STYLE}{COPY_JS_HELPERS}<script>function copy_{js_name}(){{const b='{encoded}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);copyWithFallback(t, ()=>{{const btn=document.getElementById('{button_id}');if(btn){{btn.innerText='{copied_label}';setTimeout(()=>btn.innerText='{label}',1500);}}}}, ()=>alert('复制失败'));}}</script><button id="{button_id}" onclick="copy_{js_name}()" style="{button_style}">{label}</button>"""
-    components.html(copy_js, height=70)
+    render_html_iframe(copy_js, height=70)
 
 
 def render_copy_nearest_textarea_button(button_id, label, copied_label="已复制", button_style=EN_COPY_BUTTON_STYLE):
     js_name = re.sub(r"\W+", "_", button_id)
     copy_js = f"""{COPY_BUTTON_HTML_STYLE}{COPY_JS_HELPERS}<script>function copy_{js_name}(){{const iframes=window.parent.document.querySelectorAll('iframe');let thisIframe=null;for(const f of iframes){{if(f.contentWindow===window){{thisIframe=f;break;}}}}let closest=null;if(thisIframe){{const iRect=thisIframe.getBoundingClientRect();const tas=window.parent.document.querySelectorAll('textarea');let minDist=Infinity;for(const ta of tas){{const tRect=ta.getBoundingClientRect();const dist=Math.abs(tRect.bottom-iRect.top)+Math.abs(tRect.left-iRect.left);if(dist<minDist){{minDist=dist;closest=ta;}}}}}}if(closest&&closest.value!=null){{copyWithFallback(closest.value, ()=>{{const btn=document.getElementById('{button_id}');if(btn){{btn.innerText='{copied_label}';setTimeout(()=>btn.innerText='{label}',1500);}}}}, ()=>alert('复制失败'));return;}}alert('找不到编辑框');}}</script><button id="{button_id}" onclick="copy_{js_name}()" style="{button_style}">{label}</button>"""
-    components.html(copy_js, height=70)
+    render_html_iframe(copy_js, height=70)
 
 
 def render_markdown_result_column(
@@ -1776,6 +1817,20 @@ pre code,
     height: 0 !important;
 }
 
+.stTabs button[aria-label="Scroll tabs left"],
+.stTabs button[aria-label="Scroll tabs right"] {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
 .stTabs [data-baseweb="tab-list"]::before {
     content: '';
     position: absolute;
@@ -2218,7 +2273,7 @@ div[data-testid="stNotification"] {
 """
 st.markdown(custom_style, unsafe_allow_html=True)
 
-components.html("""
+render_html_iframe("""
 <script>
 (function() {
     const markReady = () => {
@@ -2237,7 +2292,7 @@ components.html("""
 </script>
 """, height=0)
 
-components.html("""
+render_html_iframe("""
 <script>
 (function() {
     const applyToggleStyles = () => {
@@ -2414,7 +2469,7 @@ def play_notification_sound():
     })();
     </script>
     """
-    st.components.v1.html(sound_js, height=1)
+    render_html_iframe(sound_js, width=1, height=1, tab_index=-1)
 
 
 # 确保用户目录存在
@@ -3137,7 +3192,7 @@ if False:
                 st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
                 encoded_en = base64.b64encode(st.session_state.final_result.encode('utf-8')).decode('utf-8')
                 copy_js_en = f'''{html_style}<script>function copyEn(){{const b='{encoded_en}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnEn').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnEn').innerText='复制英文',1500);}});}}</script><button id="btnEn" onclick="copyEn()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
-                components.html(copy_js_en, height=60)
+                render_html_iframe(copy_js_en, height=60)
             else:
                 # 使用 on_change 自动保存编辑内容
                 def save_main_edit():
@@ -3154,7 +3209,7 @@ if False:
                 st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
                 # 找到与当前 iframe 距离最近的 textarea
                 copy_js_en = f'''{html_style}<script>function copyEn(){{const iframes=window.parent.document.querySelectorAll('iframe');let thisIframe=null;for(const f of iframes){{if(f.contentWindow===window){{thisIframe=f;break;}}}}if(thisIframe){{const iRect=thisIframe.getBoundingClientRect();const tas=window.parent.document.querySelectorAll('textarea');let closest=null;let minDist=Infinity;for(const ta of tas){{const tRect=ta.getBoundingClientRect();const dist=Math.abs(tRect.bottom-iRect.top)+Math.abs(tRect.left-iRect.left);if(dist<minDist){{minDist=dist;closest=ta;}}}}if(closest&&closest.value){{navigator.clipboard.writeText(closest.value).then(()=>{{document.getElementById('btnEn').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnEn').innerText='复制英文',1500);}});return;}}}}alert('找不到编辑框');}}</script><button id="btnEn" onclick="copyEn()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
-                components.html(copy_js_en, height=60)
+                render_html_iframe(copy_js_en, height=60)
         
         with col_translate:
             # 标题栏放翻译按钮
@@ -3176,7 +3231,7 @@ if False:
             if st.session_state.translated_result:
                 encoded_cn = base64.b64encode(st.session_state.translated_result.encode('utf-8')).decode('utf-8')
                 copy_js_cn = f'''{html_style}<script>function copyCn(){{const b='{encoded_cn}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnCn').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnCn').innerText='复制中文',1500);}});}}</script><button id="btnCn" onclick="copyCn()" style="background:linear-gradient(135deg,#8b5cf6 0%,#00d4ff 100%);box-shadow:0 0 15px rgba(139,92,246,0.3);">复制中文</button>'''
-                components.html(copy_js_cn, height=60)
+                render_html_iframe(copy_js_cn, height=60)
             else:
                 st.empty()
 
