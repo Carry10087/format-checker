@@ -383,13 +383,17 @@ def render_result_motion_anchor(anchor_id, delay_ms=0):
 
 def should_play_result_motion(state_key, content):
     motion_key = f"{state_key}__motion_signature"
+    skip_motion_key = f"{state_key}__skip_motion_once"
     if not content:
         st.session_state.pop(motion_key, None)
+        st.session_state.pop(skip_motion_key, None)
         return False
 
     signature = hashlib.sha256(content.encode("utf-8")).hexdigest()
     previous_signature = st.session_state.get(motion_key)
     st.session_state[motion_key] = signature
+    if st.session_state.pop(skip_motion_key, False):
+        return False
     return previous_signature != signature
 
 
@@ -421,13 +425,14 @@ def render_markdown_result_column(
     textarea_label="英文结果",
     copy_label="复制英文",
     on_save=None,
+    show_copy=True,
 ):
     content = st.session_state.get(content_key, "")
     h1, h2 = st.columns([3, 1])
     with h1:
         render_section_title(title, title_style)
     with h2:
-        view_mode = st.toggle("预览模式", value=st.session_state.get(view_key, True), key=view_key)
+        view_mode = st.toggle("预览", value=st.session_state.get(view_key, True), key=view_key)
 
     motion_slot = st.empty()
     content_slot = st.empty()
@@ -465,9 +470,10 @@ def render_markdown_result_column(
         with content_slot.container():
             with st.container(height=height):
                 st.markdown(content)
-        with copy_slot.container():
-            st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
-            render_copy_button(content, f"{copy_prefix}_preview", copy_label, button_style=EN_COPY_BUTTON_STYLE)
+        if show_copy:
+            with copy_slot.container():
+                st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
+                render_copy_button(content, f"{copy_prefix}_preview", copy_label, button_style=EN_COPY_BUTTON_STYLE)
     else:
         if edit_widget_key not in st.session_state:
             st.session_state[edit_widget_key] = content
@@ -476,6 +482,7 @@ def render_markdown_result_column(
             new_value = st.session_state.get(edit_widget_key, "")
             st.session_state[content_key] = new_value
             st.session_state[edit_source_key] = new_value
+            st.session_state[f"{content_key}__skip_motion_once"] = True
             if on_save:
                 on_save(new_value)
 
@@ -489,9 +496,10 @@ def render_markdown_result_column(
                 label_visibility="collapsed",
                 on_change=handle_edit_save
             )
-        with copy_slot.container():
-            st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
-            render_copy_nearest_textarea_button(f"{copy_prefix}_edit", copy_label, button_style=EN_COPY_BUTTON_STYLE)
+        if show_copy:
+            with copy_slot.container():
+                st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
+                render_copy_nearest_textarea_button(f"{copy_prefix}_edit", copy_label, button_style=EN_COPY_BUTTON_STYLE)
 
     st.session_state[last_view_mode_key] = view_mode
 
@@ -508,6 +516,7 @@ def render_translation_column(
     empty_caption="点击「翻译」按钮生成中文翻译...",
     copy_label="复制中文",
     on_save=None,
+    show_copy=True,
 ):
     translated_text = st.session_state.get(translated_key, "")
     h1, h2 = st.columns([3, 1])
@@ -573,10 +582,11 @@ def render_translation_column(
                 st.caption(empty_caption)
 
     copy_slot.empty()
-    with copy_slot.container():
-        st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
-        if translated_text:
-            render_copy_button(translated_text, f"{copy_prefix}_copy", copy_label, button_style=CN_COPY_BUTTON_STYLE)
+    if show_copy:
+        with copy_slot.container():
+            st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
+            if translated_text:
+                render_copy_button(translated_text, f"{copy_prefix}_copy", copy_label, button_style=CN_COPY_BUTTON_STYLE)
 
 
 def render_dual_result_panels(
@@ -614,6 +624,7 @@ def render_dual_result_panels(
             textarea_label=result_textarea_label,
             copy_label=result_copy_label,
             on_save=on_result_save,
+            show_copy=False,
         )
 
     with col_translate:
@@ -628,7 +639,38 @@ def render_dual_result_panels(
             empty_caption=translation_empty_caption,
             copy_label=translation_copy_label,
             on_save=on_translation_save,
+            show_copy=False,
         )
+
+    copy_col_result, copy_col_translate = st.columns(2)
+    view_mode = st.session_state.get(result_view_key, True)
+    translated_text = st.session_state.get(translated_key, "")
+
+    with copy_col_result:
+        st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
+        if view_mode:
+            render_copy_button(
+                st.session_state.get(result_key, ""),
+                f"{result_copy_prefix}_preview_row",
+                result_copy_label,
+                button_style=EN_COPY_BUTTON_STYLE,
+            )
+        else:
+            render_copy_nearest_textarea_button(
+                f"{result_copy_prefix}_edit_row",
+                result_copy_label,
+                button_style=EN_COPY_BUTTON_STYLE,
+            )
+
+    with copy_col_translate:
+        st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
+        if translated_text:
+            render_copy_button(
+                translated_text,
+                f"{translate_copy_prefix}_copy_row",
+                translation_copy_label,
+                button_style=CN_COPY_BUTTON_STYLE,
+            )
 
 def create_user_dir(username):
     """创建用户目录并初始化文件"""
@@ -1147,6 +1189,20 @@ hr, .stDivider {
 [data-testid="column"].result-panel-shell [data-testid="stVerticalBlockBorderWrapper"],
 [data-testid="stVerticalBlock"].result-panel-shell [data-testid="stVerticalBlockBorderWrapper"] {
     box-shadow: 0 10px 28px rgba(7, 14, 30, 0.22), 0 0 0 1px rgba(0, 212, 255, 0.06) !important;
+    overflow-anchor: none;
+}
+[data-testid="column"].result-panel-shell [data-testid="stMarkdownContainer"],
+[data-testid="stVerticalBlock"].result-panel-shell [data-testid="stMarkdownContainer"] {
+    display: flow-root;
+    padding: 0.2rem 0 0.3rem 0;
+}
+[data-testid="column"].result-panel-shell [data-testid="stMarkdownContainer"] > *:first-child,
+[data-testid="stVerticalBlock"].result-panel-shell [data-testid="stMarkdownContainer"] > *:first-child {
+    margin-top: 0 !important;
+}
+[data-testid="column"].result-panel-shell [data-testid="stMarkdownContainer"] > *:last-child,
+[data-testid="stVerticalBlock"].result-panel-shell [data-testid="stMarkdownContainer"] > *:last-child {
+    margin-bottom: 0 !important;
 }
 [data-testid="column"].result-panel-enter,
 [data-testid="stVerticalBlock"].result-panel-enter {
@@ -3168,93 +3224,39 @@ if False:
     # 最终结果和复制按钮
     if st.session_state.final_result:
         st.divider()
-        col_result, col_translate = st.columns(2)
-        
-        import base64
-        
-        # 统一按钮样式
-        # 增加 body margin:0 防止 iframe 滚动条或截断
-        html_style = "<style>body{margin:0;padding:0;overflow:hidden;}button{width:100%;height:40px;padding:0;margin:0;display:block;font-size:14px;color:white;border:none;border-radius:5px;cursor:pointer;line-height:40px;font-family:'Source Sans Pro',sans-serif;transition:0.3s;}button:hover{opacity:0.9;}button:active{transform:scale(0.98);}</style>"
-        
-        with col_result:
-            # 标题栏 + 模式切换
-            h_en1, h_en2 = st.columns([3, 1])
-            with h_en1:
-                st.subheader("修改结果（英文）")
-            with h_en2:
-                # view_mode = st.radio("", ["预览", "编辑"], horizontal=True, key="en_view_mode", label_visibility="collapsed")
-                view_mode = st.toggle("预览模式", value=True, key="en_view_mode")
-            
-            if view_mode: # 预览模式
-                with st.container(height=300):
-                    st.markdown(st.session_state.final_result)
-                # 预览模式：使用预编码内容
-                st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
-                encoded_en = base64.b64encode(st.session_state.final_result.encode('utf-8')).decode('utf-8')
-                copy_js_en = f'''{html_style}<script>function copyEn(){{const b='{encoded_en}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnEn').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnEn').innerText='复制英文',1500);}});}}</script><button id="btnEn" onclick="copyEn()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
-                render_html_iframe(copy_js_en, height=60)
-            else:
-                # 使用 on_change 自动保存编辑内容
-                def save_main_edit():
-                    st.session_state.final_result = st.session_state.result_en_edit
-                    if st.session_state.history and st.session_state.current_history_idx >= 0:
-                        st.session_state.history[st.session_state.current_history_idx]["final"] = st.session_state.result_en_edit
-                        save_history(st.session_state.history)
-                
-                st.text_area("英文结果", value=st.session_state.final_result, height=300, 
-                            key="result_en_edit", label_visibility="collapsed",
-                            on_change=save_main_edit)
-                
-                # 编辑模式：找到距离复制按钮最近的 textarea
-                st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
-                # 找到与当前 iframe 距离最近的 textarea
-                copy_js_en = f'''{html_style}<script>function copyEn(){{const iframes=window.parent.document.querySelectorAll('iframe');let thisIframe=null;for(const f of iframes){{if(f.contentWindow===window){{thisIframe=f;break;}}}}if(thisIframe){{const iRect=thisIframe.getBoundingClientRect();const tas=window.parent.document.querySelectorAll('textarea');let closest=null;let minDist=Infinity;for(const ta of tas){{const tRect=ta.getBoundingClientRect();const dist=Math.abs(tRect.bottom-iRect.top)+Math.abs(tRect.left-iRect.left);if(dist<minDist){{minDist=dist;closest=ta;}}}}if(closest&&closest.value){{navigator.clipboard.writeText(closest.value).then(()=>{{document.getElementById('btnEn').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnEn').innerText='复制英文',1500);}});return;}}}}alert('找不到编辑框');}}</script><button id="btnEn" onclick="copyEn()" style="background:linear-gradient(135deg,#00d4ff 0%,#8b5cf6 100%);box-shadow:0 0 15px rgba(0,212,255,0.3);">复制英文</button>'''
-                render_html_iframe(copy_js_en, height=60)
-        
-        with col_translate:
-            # 标题栏放翻译按钮
-            h_c1, h_c2 = st.columns([3, 1])
-            with h_c1:
-                st.subheader("中文翻译")
-            with h_c2:
-                translate_clicked = st.button("翻译", use_container_width=True, type="primary", key="trans_btn_header")
-            
-            # 使用 container + markdown 显示翻译结果，更清晰
-            with st.container(height=300):
-                if st.session_state.translated_result:
-                    st.markdown(st.session_state.translated_result)
-                else:
-                    st.caption("点击「翻译」按钮生成中文翻译...")
-            
-            # 复制中文按钮
-            st.markdown('<div style="height: 5px;"></div>', unsafe_allow_html=True)
-            if st.session_state.translated_result:
-                encoded_cn = base64.b64encode(st.session_state.translated_result.encode('utf-8')).decode('utf-8')
-                copy_js_cn = f'''{html_style}<script>function copyCn(){{const b='{encoded_cn}';const bytes=Uint8Array.from(atob(b),c=>c.charCodeAt(0));const t=new TextDecoder('utf-8').decode(bytes);navigator.clipboard.writeText(t).then(()=>{{document.getElementById('btnCn').innerText='✅ 已复制';setTimeout(()=>document.getElementById('btnCn').innerText='复制中文',1500);}});}}</script><button id="btnCn" onclick="copyCn()" style="background:linear-gradient(135deg,#8b5cf6 0%,#00d4ff 100%);box-shadow:0 0 15px rgba(139,92,246,0.3);">复制中文</button>'''
-                render_html_iframe(copy_js_cn, height=60)
-            else:
-                st.empty()
 
-            # 处理翻译逻辑
-            if translate_clicked:
-                # 从 session_state 获取 API 配置
-                user_cfg = st.session_state.user_config
-                api_url_t = user_cfg.get("api_url", DEFAULT_API_URL)
-                api_key_t = user_cfg.get("api_key", DEFAULT_API_KEY)
-                model_t = user_cfg.get("model_translate", user_cfg.get("model", DEFAULT_MODEL))
-                
-                with st.spinner("翻译中，请勿切换页面..."):
-                    prompt = TRANSLATE_PROMPT.format(text=st.session_state.final_result)
-                    result, success, _ = call_single_step(prompt, api_url_t, api_key_t, model_t)
-                    if success:
-                        st.session_state.translated_result = normalize_markdown_spacing(result)
-                        if st.session_state.history and st.session_state.current_history_idx >= 0:
-                            st.session_state.history[st.session_state.current_history_idx]["translated"] = st.session_state.translated_result
-                            save_history(st.session_state.history)
-                        st.session_state.play_sound = True  # 翻译完成也播放提示音
-                        st.rerun()
-                    else:
-                        st.error(result)
+        def save_main_result(value):
+            st.session_state.final_result = value
+            if st.session_state.history and st.session_state.current_history_idx >= 0:
+                st.session_state.history[st.session_state.current_history_idx]["final"] = value
+                save_history(st.session_state.history)
+
+        def save_main_translation(value):
+            st.session_state.translated_result = value
+            if st.session_state.history and st.session_state.current_history_idx >= 0:
+                st.session_state.history[st.session_state.current_history_idx]["translated"] = value
+                save_history(st.session_state.history)
+
+        render_dual_result_panels(
+            result_key="final_result",
+            translated_key="translated_result",
+            result_title="英文结果",
+            result_title_style="subheader",
+            result_view_key="en_view_mode",
+            result_edit_key="result_en_edit",
+            result_copy_prefix="main_result",
+            translate_button_key="trans_btn_header",
+            translate_copy_prefix="main_translate",
+            height=300,
+            result_textarea_label="英文结果",
+            result_copy_label="复制英文",
+            translation_title="中文翻译",
+            translation_title_style="subheader",
+            translation_empty_caption="点击「翻译」按钮生成中文翻译...",
+            translation_copy_label="复制中文",
+            on_result_save=save_main_result,
+            on_translation_save=save_main_translation,
+        )
 
 # ==================== 参考笔记生成功能 ====================
 with tab3:

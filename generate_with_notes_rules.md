@@ -49,6 +49,7 @@
 - **精确匹配优先**：优先保留与搜索词拼写完全一致的实体。
 - **排除部分重合**：仅部分单词重合但整体不同的内容，视为无关。
 - **弱匹配降级**：拼写相近但不完全一致的内容，只有在没有更强匹配且笔记能明确支持时才可保留。
+- **错拼默认不强行纠正**：如果用户问题或搜索词本身是 `cotch` 这类拼写，而参考笔记里只有 `Catch`，且笔记没有明确说明两者是同一对象、别名、常见误拼或正确拼写关系，则必须视为“笔记中找不到该查询”，不得擅自按 `Catch` 作答。
 
 ### 多义词与同名实体
 
@@ -62,8 +63,9 @@
 以下情况禁止编造，直接结束回答：
 
 - **意图不明**：输出 `No relevant information was found for XXX.`
-- **参考笔记无相关内容**：输出 `Reference materials do not contain specific information about XXX.`
+- **参考笔记无相关内容**：输出 `Specific information about "XXX" is not provided in the reference material.`
 - **只有弱相关、错误或不可用信息**：按无相关内容处理
+- **仅有近似拼写命中**：如果参考笔记里只有与查询词拼写相近但不完全一致的词，且没有明确证据证明是同一对象，也按无相关内容处理，并输出 `Specific information about "XXX" is not provided in the reference material.`
 
 如果只是信息较少，但仍能支持一个最小答案，可以输出精简答案，不要强行扩写。
 
