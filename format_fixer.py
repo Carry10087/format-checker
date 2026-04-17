@@ -27,6 +27,26 @@ def is_secondary_list_line(line: str) -> bool:
     return bool(re.match(r'^\s+(?:-\s+|\d+\.\s+)', line))
 
 
+NOTE_TOKEN_RE = re.compile(r'\[Note\s*(\d+)\]\(#\)')
+NOTE_GROUP_RE = re.compile(r'(?:\[Note\s*\d+\]\(#\))+')
+
+
+def is_terminal_note_suffix(text: str) -> bool:
+    """判断 Note 后剩余内容是否属于合法句尾。"""
+    stripped = text.strip()
+    if not stripped:
+        return True
+    return bool(re.fullmatch(r'[.?!]["\')\]]*', stripped))
+
+
+def find_embedded_note_match(line: str):
+    """查找不在句尾的 Note 引用组。"""
+    for match in NOTE_GROUP_RE.finditer(line):
+        if not is_terminal_note_suffix(line[match.end():]):
+            return match
+    return None
+
+
 def fix_single_h4_section(text: str) -> str:
     """如果正文中只有一个四级标题，则删除该四级标题，直接保留其内容。"""
     lines = text.split('\n')
@@ -195,47 +215,43 @@ def fix_note_format(text: str) -> str:
     # 排除 )[Note 的情况（这是连续引用）
     text = re.sub(r'([^\s\)])\[Note\s', r'\1 [Note ', text)
     
-    # 步骤7：修复段中note - 将段落中所有引用移到段落末尾
-    # 情况1：引用后面还有内容（无句号）
-    # 例如：The product [Note 1](#) is good. → The product is good [Note 1](#).
-    def move_mid_note_to_end(match):
-        before_note = match.group(1)  # 引用前的内容
-        notes = match.group(2)  # 引用（可能有多个）
-        after_note = match.group(3)  # 引用后、句号前的内容
-        # 将引用移到句号前，确保空格正确
-        return before_note.rstrip() + ' ' + after_note.strip() + ' ' + notes + '.'
-    # 匹配模式：内容 + 引用 + 更多内容 + 句号
-    text = re.sub(
-        r'([^.]+?)\s*(\[Note\s*\d+\]\(#\)(?:\[Note\s*\d+\]\(#\))*)\s+([A-Za-z][^.]*)\.',
-        move_mid_note_to_end,
-        text
-    )
-    
-    # 情况2：多句段落中间的引用（引用后有句号，句号后还有新句子）
-    # 例如：content [Note 1](#). Some more [Note 2](#). → content. Some more [Note 1](#)[Note 2](#).
+    # 步骤7：修复段中 note - 将句中间的引用统一移到句尾
+    # 例如：
+    # The product [Note 1](#) is good. → The product is good [Note 1](#).
+    # ...formulas [Note 1](#)[Note 8](#), and ... [Note 3](#). → ...formulas, and ... [Note 1](#)[Note 8](#)[Note 3](#).
     def merge_notes_to_line_end(line):
-        # 检查是否有段中引用（引用后有句号，句号后还有新内容）
-        if not re.search(r'\[Note\s*\d+\]\(#\)\.\s+[A-Z]', line):
+        embedded_match = find_embedded_note_match(line)
+        if not embedded_match:
             return line
-        # 收集所有引用
-        all_notes = re.findall(r'\[Note\s*\d+\]\(#\)', line)
-        if not all_notes:
+
+        seen = set()
+        ordered_notes = []
+        for note_match in NOTE_TOKEN_RE.finditer(line):
+            note_number = note_match.group(1)
+            if note_number not in seen:
+                seen.add(note_number)
+                ordered_notes.append(f'[Note {note_number}](#)')
+
+        if not ordered_notes:
             return line
-        # 移除所有引用（保留句号）
-        clean_line = re.sub(r'\s*\[Note\s*\d+\]\(#\)(?:\[Note\s*\d+\]\(#\))*', '', line)
-        # 去除末尾句号（如果有）
-        clean_line = clean_line.rstrip()
-        if clean_line.endswith('.'):
-            clean_line = clean_line[:-1]
-        # 在末尾添加所有引用（去重并按数字排序）
-        # 提取数字并排序
-        note_numbers = set()
-        for n in all_notes:
-            num_match = re.search(r'\d+', n)
-            if num_match:
-                note_numbers.add(int(num_match.group()))
-        sorted_notes = ['[Note {}](#)'.format(n) for n in sorted(note_numbers)]
-        return clean_line + ' ' + ''.join(sorted_notes) + '.'
+
+        clean_line = NOTE_GROUP_RE.sub('', line)
+        clean_line = re.sub(r'\s+([,.;:!?])', r'\1', clean_line)
+
+        leading_whitespace_match = re.match(r'^\s*', clean_line)
+        leading_whitespace = leading_whitespace_match.group(0) if leading_whitespace_match else ''
+        content = clean_line[len(leading_whitespace):].strip()
+        content = re.sub(r' {2,}', ' ', content)
+        clean_line = leading_whitespace + content
+
+        terminal_match = re.search(r'([.?!]["\')\]]*)\s*$', clean_line)
+        notes_block = ''.join(ordered_notes)
+        if terminal_match:
+            core = clean_line[:terminal_match.start()].rstrip()
+            terminal = terminal_match.group(1)
+            return f'{core} {notes_block}{terminal}'
+
+        return f'{clean_line.rstrip()} {notes_block}'
     
     lines = text.split('\n')
     text = '\n'.join(merge_notes_to_line_end(line) for line in lines)
@@ -894,13 +910,7 @@ def analyze_format_issues(text: str) -> list:
     
     # 检查段中note（引用应在段落末尾，不应在段落中间）
     for i, line in enumerate(lines, 1):
-        # 情况1：引用后面直接跟字母（没有句号）
-        # 错误格式：内容 [Note X](#) 还有更多内容...
-        match1 = re.search(r'\[Note\s*\d+\]\(#\)(?!\.)(?!\[Note)(?!$)\s*[A-Za-z]', line)
-        # 情况2：引用后有句号，句号后还有新内容（多句段落中间的引用）
-        # 错误格式：内容 [Note X](#). Some more content...
-        match2 = re.search(r'\[Note\s*\d+\]\(#\)\.\s+[A-Z]', line)
-        if match1 or match2:
+        if find_embedded_note_match(line):
             issues.append(f"第{i}行：引用应在段落末尾，不应在段落中间")
             break
     
@@ -1443,9 +1453,7 @@ def analyze_format_issues(text: str) -> list:
     # 错误：Sentence A.[Note 1](#) Sentence B.
     # 正确：Sentence A. Sentence B.[Note 1](#)
     for i, line in enumerate(lines, 1):
-        # 匹配 [Note X](#) 后面跟着非 Note 的内容（排除空格、换行、更多 Note）
-        # 模式：[Note X](#) 后面有字母或数字开头的内容
-        match = re.search(r'\[Note\s*\d+\](\(#\))?\s+[A-Za-z0-9]', line)
+        match = find_embedded_note_match(line)
         if match:
             # 找到具体位置用于显示上下文
             context_start = max(0, match.start() - 20)

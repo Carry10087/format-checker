@@ -672,6 +672,35 @@ def render_dual_result_panels(
                 button_style=CN_COPY_BUTTON_STYLE,
             )
 
+
+def clear_qc_result_state():
+    """输入变化后清空上一轮独立质检结果，避免旧结果残留。"""
+    st.session_state.qc_result = ""
+    st.session_state.qc_issues = ""
+    st.session_state.qc_tokens = {}
+    st.session_state.qc_translated = ""
+    st.session_state.qc_auto_fixed = False
+    st.session_state.qc_issues_only_mode = False
+    for key in (
+        "qc_edit_area__widget",
+        "qc_edit_area__source",
+        "qc_view_mode",
+        "qc_view_mode__last",
+        "qc_result__motion_signature",
+        "qc_translated__motion_signature",
+    ):
+        st.session_state.pop(key, None)
+
+
+def sync_qc_result_editor_state(content: str):
+    """程序写入 qc_result 后，同步刷新结果面板缓存。"""
+    st.session_state.qc_result = content
+    st.session_state["qc_edit_area__widget"] = content
+    st.session_state["qc_edit_area__source"] = content
+    st.session_state["qc_view_mode"] = True
+    st.session_state["qc_view_mode__last"] = True
+
+
 def create_user_dir(username):
     """创建用户目录并初始化文件"""
     user_dir = os.path.join(USERS_DIR, username)
@@ -3408,7 +3437,8 @@ with tab2:
     # 输入区域
     qc_input = st.text_area("待检查的回答", height=300, 
                             placeholder="粘贴需要质检的回答...", 
-                            key="qc_input_area")
+                            key="qc_input_area",
+                            on_change=clear_qc_result_state)
     
     # AI质检时显示可选的参考笔记输入
     qc_notes = ""
@@ -3432,7 +3462,7 @@ with tab2:
                 issues = analyze_format_issues(qc_input)
                 
                 # 保存结果
-                st.session_state.qc_result = fixed_text
+                sync_qc_result_editor_state(fixed_text)
                 st.session_state.qc_issues = "\n".join([f"- {issue}" for issue in issues]) if issues else "未发现可自动修复的格式问题"
                 st.session_state.qc_tokens = {}
                 st.session_state.qc_auto_fixed = True
@@ -3610,7 +3640,7 @@ with tab2:
                                 fixed = ""
                             
                             st.session_state.qc_issues = issues
-                            st.session_state.qc_result = fixed
+                            sync_qc_result_editor_state(fixed)
                             st.session_state.qc_tokens = token_info
                             st.session_state.qc_auto_fixed = False
                             st.session_state.qc_issues_only_mode = qc_issues_only  # 保存当前模式
@@ -3689,10 +3719,7 @@ with tab2:
         
         # 清空按钮
         if st.button("清空结果", key="qc_clear_btn", use_container_width=True):
-            st.session_state.qc_result = ""
-            st.session_state.qc_issues = ""
-            st.session_state.qc_tokens = {}
-            st.session_state.qc_translated = ""
+            clear_qc_result_state()
             st.rerun()
 
 # ==================== AI 对话功能 ====================
