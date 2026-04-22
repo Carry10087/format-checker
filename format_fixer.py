@@ -29,6 +29,62 @@ def is_secondary_list_line(line: str) -> bool:
 
 NOTE_TOKEN_RE = re.compile(r'\[Note\s*(\d+)\]\(#\)')
 NOTE_GROUP_RE = re.compile(r'(?:\[Note\s*\d+\]\(#\))+')
+TITLE_CASE_MINOR_WORDS = {
+    'a', 'an', 'the', 'and', 'but', 'or', 'nor', 'for', 'yet', 'so',
+    'in', 'on', 'at', 'to', 'of', 'with', 'by', 'from', 'as',
+    'into', 'through', 'during', 'before', 'after', 'above', 'below',
+    'between', 'under', 'over'
+}
+
+
+def split_title_word_edges(word: str):
+    """拆分标题词外层标点，便于检测/修复引号里的小写词。"""
+    prefix = re.match(r'^[^A-Za-z]*', word).group(0)
+    remainder = word[len(prefix):]
+    suffix_match = re.search(r'[^A-Za-z]*$', remainder)
+    suffix = suffix_match.group(0) if suffix_match else ''
+    core = remainder[:len(remainder) - len(suffix)] if suffix else remainder
+    return prefix, core, suffix
+
+
+def get_title_word_core(word: str) -> str:
+    return split_title_word_edges(word)[1]
+
+
+def capitalize_title_word(word: str) -> str:
+    """保留外层引号/括号，只把内部单词首字母大写。"""
+    prefix, core, suffix = split_title_word_edges(word)
+    if not core:
+        return word
+
+    def capitalize_part(part: str) -> str:
+        alpha_match = re.search(r'[A-Za-z]', part)
+        if not alpha_match:
+            return part
+        idx = alpha_match.start()
+        return part[:idx] + part[idx].upper() + part[idx + 1:]
+
+    return prefix + '-'.join(capitalize_part(part) for part in core.split('-')) + suffix
+
+
+def lowercase_title_word(word: str) -> str:
+    prefix, core, suffix = split_title_word_edges(word)
+    return prefix + core.lower() + suffix if core else word
+
+
+def title_word_needs_capitalization(word: str, idx: int, total: int, lowercase_exceptions=None) -> bool:
+    """Title Case 检测：忽略外层引号/括号后再判断首字母。"""
+    exceptions = lowercase_exceptions or TITLE_CASE_MINOR_WORDS
+    core = get_title_word_core(word)
+    if not core:
+        return False
+
+    first_alpha = re.search(r'[A-Za-z]', core)
+    if not first_alpha:
+        return False
+
+    must_capitalize = idx == 0 or idx == total - 1 or core.lower() not in exceptions
+    return must_capitalize and first_alpha.group(0).islower()
 
 
 def is_terminal_note_suffix(text: str) -> bool:
@@ -484,19 +540,6 @@ def fix_single_asterisk_symbol(text: str) -> str:
 
 def fix_title_case(text: str) -> str:
     """修复四级标题和列表小标题的 Title Case"""
-    # 不需要大写的词（介词、冠词、连词）
-    lowercase_words = {'a', 'an', 'the', 'and', 'but', 'or', 'nor', 'for', 'yet', 'so',
-                       'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'as',
-                       'into', 'through', 'during', 'before', 'after', 'above', 'below',
-                       'between', 'under', 'over'}
-    
-    def capitalize_compound_word(word: str) -> str:
-        """将复合词的每一部分首字母大写，如 Well-being → Well-Being"""
-        if '-' in word:
-            parts = word.split('-')
-            return '-'.join(p.capitalize() if p else p for p in parts)
-        return word.capitalize()
-    
     def to_title_case(title: str) -> str:
         """将标题转换为 Title Case"""
         words = title.split()
@@ -504,12 +547,12 @@ def fix_title_case(text: str) -> str:
         for i, word in enumerate(words):
             # 第一个词和最后一个词总是大写
             if i == 0 or i == len(words) - 1:
-                result.append(capitalize_compound_word(word))
+                result.append(capitalize_title_word(word))
             # 介词、冠词等小写（除非是第一个词）
-            elif word.lower() in lowercase_words:
-                result.append(word.lower())
+            elif get_title_word_core(word).lower() in TITLE_CASE_MINOR_WORDS:
+                result.append(lowercase_title_word(word))
             else:
-                result.append(capitalize_compound_word(word))
+                result.append(capitalize_title_word(word))
         return ' '.join(result)
     
     lines = text.split('\n')
@@ -987,9 +1030,8 @@ def analyze_format_issues(text: str) -> list:
         if h4_match:
             title = h4_match.group(1)
             words = title.split()
-            lowercase_exceptions = {'a', 'an', 'the', 'and', 'or', 'of', 'in', 'on', 'at', 'to', 'for', 'with', 'by'}
-            for w in words:
-                if w and w[0].islower() and w.lower() not in lowercase_exceptions:
+            for idx, w in enumerate(words):
+                if title_word_needs_capitalization(w, idx, len(words)):
                     issues.append(f"第{i}行：四级标题未使用 Title Case「{title}」")
                     break
             break
@@ -1043,10 +1085,9 @@ def analyze_format_issues(text: str) -> list:
         if paren_match:
             content = paren_match.group(1)
             words = content.split()
-            lowercase_exceptions = {'a', 'an', 'the', 'and', 'or', 'of', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'as'}
             for idx, w in enumerate(words):
                 # 第一个词或非介词词必须首字母大写
-                if w and w[0].islower() and (idx == 0 or w.lower() not in lowercase_exceptions):
+                if title_word_needs_capitalization(w, idx, len(words)):
                     issues.append(f"第{i}行：括号内容未使用 Title Case「({content})」→ 应为「({content.title()})」")
                     break
             break
@@ -1421,9 +1462,8 @@ def analyze_format_issues(text: str) -> list:
         if match:
             title = match.group(1)
             words = title.split()
-            lowercase_exceptions = {'a', 'an', 'the', 'and', 'or', 'of', 'in', 'on', 'at', 'to', 'for', 'with', 'by'}
-            for w in words:
-                if w and w[0].islower() and w.lower() not in lowercase_exceptions:
+            for idx, w in enumerate(words):
+                if title_word_needs_capitalization(w, idx, len(words)):
                     issues.append(f"第{i}行：列表小标题未使用 Title Case「{title}」")
                     break
             else:
